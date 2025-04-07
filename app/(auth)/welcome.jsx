@@ -1,18 +1,20 @@
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import React from "react";
 import Colors from "../../constant/Colors";
-import { useRouter } from "expo-router"; // ✅ Correct hook for Expo Router
+import { useRouter } from "expo-router";
+import { setLocalStorage } from "../../service/Storage";
 
 export default function Welcome() {
-  const router = useRouter(); // ✅ Correct usage
+  const router = useRouter();
+
+  const handleContinue = async () => {
+    await setLocalStorage("firstTime", true);
+    router.push("/(auth)/login");
+  };
 
   return (
     <View
-      style={{
-        padding: 25,
-        backgroundColor: Colors.PRIMARY,
-        height: "50%",
-      }}
+      style={{ padding: 25, backgroundColor: Colors.PRIMARY, height: "50%" }}
     >
       <Text
         style={{
@@ -35,16 +37,9 @@ export default function Welcome() {
         Record maintenance history, Make reminder for next service.
       </Text>
 
-      <TouchableOpacity
-        style={styles.button}
-        onPress={() => router.push("/(auth)/login")} // ✅ Include `/` in the path
-      >
+      <TouchableOpacity style={styles.button} onPress={handleContinue}>
         <Text
-          style={{
-            fontSize: 16,
-            color: Colors.PRIMARY,
-            textAlign: "center",
-          }}
+          style={{ fontSize: 16, color: Colors.PRIMARY, textAlign: "center" }}
         >
           Continue
         </Text>

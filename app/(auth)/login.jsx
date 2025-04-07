@@ -6,9 +6,13 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  ToastAndroid,
 } from "react-native";
 import React, { useState } from "react";
 import { useRouter } from "expo-router";
+import { auth } from "../../config/FirebaseConfig";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { setLocalStorage } from "../../service/Storage";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -16,8 +20,36 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
 
   const handleLogin = () => {
-    // Add your login logic here
-    router.replace("/(tabs)/"); // Replace with your main tab screen
+    if (!email || !password) {
+      ToastAndroid.show("Please enter email and password", ToastAndroid.SHORT);
+      return;
+    }
+
+    signInWithEmailAndPassword(auth, email, password)
+      .then(async (userCredential) => {
+        const user = userCredential.user;
+
+        await setLocalStorage("userDetail", user);
+
+        console.log("Login successful:", user);
+        ToastAndroid.show("Welcome back!", ToastAndroid.SHORT);
+
+        router.replace("/(tabs)"); // Navigate only after successful login
+      })
+      .catch((error) => {
+        const errorCode = error.code;
+        console.log("Login error:", errorCode);
+
+        if (errorCode === "auth/invalid-email") {
+          ToastAndroid.show("Invalid email format", ToastAndroid.SHORT);
+        } else if (errorCode === "auth/user-not-found") {
+          ToastAndroid.show("User not found", ToastAndroid.SHORT);
+        } else if (errorCode === "auth/wrong-password") {
+          ToastAndroid.show("Incorrect password", ToastAndroid.SHORT);
+        } else {
+          ToastAndroid.show("Login failed", ToastAndroid.SHORT);
+        }
+      });
   };
 
   return (
@@ -57,6 +89,13 @@ export default function LoginScreen() {
           style={{ marginTop: 10 }}
         >
           <Text style={styles.link}>Don't have an account? Register</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => router.push("/(auth)/forgot-password")}
+          style={{ marginTop: 10 }}
+        >
+          <Text style={styles.link}>Forgot Password?</Text>
         </TouchableOpacity>
 
         <Text style={styles.termsText}>

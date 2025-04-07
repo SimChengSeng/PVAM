@@ -5,7 +5,7 @@ export default function Index() {
   return (
     <View style={styles.container}>
       <Text style={styles.text}>Home screen</Text>
-      <Redirect href="/(auth)/welcome" />
+      {/* <Redirect href="/(auth)/welcome" /> */}
     </View>
   );
 }

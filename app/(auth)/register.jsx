@@ -6,9 +6,13 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  ToastAndroid,
+  Alert,
 } from "react-native";
 import React, { useState } from "react";
 import { useRouter } from "expo-router";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { auth } from "./../../config/FirebaseConfig";
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -18,8 +22,48 @@ export default function RegisterScreen() {
   const [confirmPassword, setConfirmPassword] = useState("");
 
   const handleRegister = () => {
-    // Add your register logic here
-    router.replace("/(auth)/login"); // After registering, go back to login
+    if (!name || !email || !password || !confirmPassword) {
+      ToastAndroid.show("Please fill all fields", ToastAndroid.SHORT);
+      Alert.alert("Please Enter Email and Password");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      ToastAndroid.show("Passwords do not match", ToastAndroid.SHORT);
+      return;
+    }
+
+    createUserWithEmailAndPassword(auth, email, password)
+      .then(async (userCredential) => {
+        const user = userCredential.user;
+
+        await updateProfile(user, {
+          displayName: name,
+        });
+
+        await setLocalStorage("userDetail", user);
+
+        console.log("User registered:", user);
+        ToastAndroid.show("Registration successful", ToastAndroid.SHORT);
+        router.replace("(tabs)");
+      })
+      .catch((error) => {
+        const errorCode = error.code;
+        console.log("Register error:", errorCode);
+
+        if (errorCode === "auth/email-already-in-use") {
+          ToastAndroid.show("Email already exists", ToastAndroid.SHORT);
+        } else if (errorCode === "auth/invalid-email") {
+          ToastAndroid.show("Invalid email format", ToastAndroid.SHORT);
+        } else if (errorCode === "auth/weak-password") {
+          ToastAndroid.show(
+            "Password should be at least 6 characters",
+            ToastAndroid.SHORT
+          );
+        } else {
+          ToastAndroid.show("Registration failed", ToastAndroid.SHORT);
+        }
+      });
   };
 
   return (
