@@ -1,107 +1,269 @@
-import React, { useState } from "react";
+import React from "react";
+import { db } from "../config/FirebaseConfig";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { View, ScrollView, StyleSheet } from "react-native";
 import {
-  View,
-  Text,
   TextInput,
   Button,
-  StyleSheet,
-  ActivityIndicator,
-} from "react-native";
+  Text,
+  Switch,
+  HelperText,
+  RadioButton,
+} from "react-native-paper";
+import { useForm, Controller } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 
-export default function AddVehicleForm() {
-  const [form, setForm] = useState({
-    make: "",
-    model: "",
-    year: "",
-    licensePlate: "",
-    vin: "",
-    color: "",
-    type: "",
-    fuelType: "",
-    mileage: "",
-    notes: "",
+const vehicleSchema = z.object({
+  vehicleName: z.string().min(2, "Vehicle name is required"),
+  vehicleType: z.string().min(1, "Select a vehicle type"),
+  plate: z.string().min(4, "License plate is required"),
+  brand: z.string().min(2, "Brand is required"),
+  model: z.string().min(1, "Model is required"),
+  year: z
+    .string()
+    .regex(/^\d{4}$/, "Year must be in YYYY format")
+    .refine(
+      (val) =>
+        parseInt(val) >= 1990 && parseInt(val) <= new Date().getFullYear(),
+      {
+        message: "Enter a valid year",
+      }
+    ),
+  odometer: z.string().regex(/^\d+$/, "Odometer must be a number"),
+  fuel: z.string().min(1, "Select fuel type"),
+  isDefault: z.boolean().optional(),
+});
+
+export default function AddNewVehicleForm() {
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+    watch,
+    reset,
+  } = useForm({
+    resolver: zodResolver(vehicleSchema),
+    defaultValues: {
+      vehicleName: "",
+      vehicleType: "",
+      plate: "",
+      brand: "",
+      model: "",
+      year: "",
+      odometer: "",
+      fuel: "",
+      isDefault: false,
+    },
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleChange = (name, value) => {
-    setForm({ ...form, [name]: value });
-  };
-
-  const handleSubmit = async () => {
-    setIsSubmitting(true);
+  const onSubmit = async (data) => {
     try {
-      await firestore().collection("vehicles").add(form);
-      alert("Vehicle added successfully");
-      setForm({
-        make: "",
-        model: "",
-        year: "",
-        licensePlate: "",
-        vin: "",
-        color: "",
-        type: "",
-        fuelType: "",
-        mileage: "",
-        notes: "",
+      const vehicleRef = collection(db, "vehicles"); // "vehicles" collection
+      await addDoc(vehicleRef, {
+        ...data,
+        createdAt: serverTimestamp(),
       });
+
+      alert("Vehicle added successfully!");
+      reset();
     } catch (error) {
-      alert("Error adding vehicle: " + error.message);
-    } finally {
-      setIsSubmitting(false);
+      console.error("Error adding vehicle:", error);
+      alert("Something went wrong. Try again.");
     }
   };
 
   return (
-    <Card className="p-4 space-y-4 max-w-md mx-auto">
-      <h2 className="text-xl font-semibold">Add New Vehicle</h2>
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text variant="titleLarge" style={styles.title}>
+        Add New Vehicle
+      </Text>
 
-      <Input label="Vehicle Name" {...register("vehicleName")} />
-      <Select
-        label="Vehicle Type"
-        options={["Sedan", "SUV", "Truck"]}
-        {...register("vehicleType")}
+      <Controller
+        control={control}
+        name="vehicleName"
+        render={({ field: { onChange, value } }) => (
+          <>
+            <TextInput
+              label="Vehicle Name"
+              value={value}
+              onChangeText={onChange}
+              mode="outlined"
+            />
+            <HelperText type="error" visible={!!errors.vehicleName}>
+              {errors.vehicleName?.message}
+            </HelperText>
+          </>
+        )}
       />
-      <Input
-        label="License Plate Number"
-        {...register("plate")}
-        className="uppercase"
-      />
-      <Input label="Brand" {...register("brand")} />
-      <Input label="Model" {...register("model")} />
-      <Input label="Year of Manufacture" type="number" {...register("year")} />
-      <Input label="Odometer (km)" type="number" {...register("odometer")} />
-      <Select
-        label="Fuel Type"
-        options={["Petrol", "Diesel", "Hybrid", "Electric"]}
-        {...register("fuel")}
-      />
-      <div className="flex items-center justify-between">
-        <label>Default Vehicle?</label>
-        <Switch {...register("isDefault")} />
-      </div>
 
-      <Button type="submit" className="w-full">
+      <Controller
+        control={control}
+        name="vehicleType"
+        render={({ field: { onChange, value } }) => (
+          <>
+            <TextInput
+              label="Vehicle Type (e.g., Sedan, SUV)"
+              value={value}
+              onChangeText={onChange}
+              mode="outlined"
+            />
+            <HelperText type="error" visible={!!errors.vehicleType}>
+              {errors.vehicleType?.message}
+            </HelperText>
+          </>
+        )}
+      />
+
+      <Controller
+        control={control}
+        name="plate"
+        render={({ field: { onChange, value } }) => (
+          <>
+            <TextInput
+              label="License Plate"
+              value={value.toUpperCase()}
+              onChangeText={(val) => onChange(val.toUpperCase())}
+              mode="outlined"
+            />
+            <HelperText type="error" visible={!!errors.plate}>
+              {errors.plate?.message}
+            </HelperText>
+          </>
+        )}
+      />
+
+      <Controller
+        control={control}
+        name="brand"
+        render={({ field: { onChange, value } }) => (
+          <>
+            <TextInput
+              label="Brand"
+              value={value}
+              onChangeText={onChange}
+              mode="outlined"
+            />
+            <HelperText type="error" visible={!!errors.brand}>
+              {errors.brand?.message}
+            </HelperText>
+          </>
+        )}
+      />
+
+      <Controller
+        control={control}
+        name="model"
+        render={({ field: { onChange, value } }) => (
+          <>
+            <TextInput
+              label="Model"
+              value={value}
+              onChangeText={onChange}
+              mode="outlined"
+            />
+            <HelperText type="error" visible={!!errors.model}>
+              {errors.model?.message}
+            </HelperText>
+          </>
+        )}
+      />
+
+      <Controller
+        control={control}
+        name="year"
+        render={({ field: { onChange, value } }) => (
+          <>
+            <TextInput
+              label="Year"
+              value={value}
+              onChangeText={onChange}
+              mode="outlined"
+              keyboardType="numeric"
+            />
+            <HelperText type="error" visible={!!errors.year}>
+              {errors.year?.message}
+            </HelperText>
+          </>
+        )}
+      />
+
+      <Controller
+        control={control}
+        name="odometer"
+        render={({ field: { onChange, value } }) => (
+          <>
+            <TextInput
+              label="Odometer (km)"
+              value={value}
+              onChangeText={onChange}
+              mode="outlined"
+              keyboardType="numeric"
+            />
+            <HelperText type="error" visible={!!errors.odometer}>
+              {errors.odometer?.message}
+            </HelperText>
+          </>
+        )}
+      />
+
+      <Controller
+        control={control}
+        name="fuel"
+        render={({ field: { onChange, value } }) => (
+          <>
+            <TextInput
+              label="Fuel Type (Petrol / Diesel / Electric)"
+              value={value}
+              onChangeText={onChange}
+              mode="outlined"
+            />
+            <HelperText type="error" visible={!!errors.fuel}>
+              {errors.fuel?.message}
+            </HelperText>
+          </>
+        )}
+      />
+
+      <Controller
+        control={control}
+        name="isDefault"
+        render={({ field: { onChange, value } }) => (
+          <View style={styles.switchContainer}>
+            <Text>Set as Default Vehicle</Text>
+            <Switch value={value} onValueChange={onChange} />
+          </View>
+        )}
+      />
+
+      <Button
+        mode="contained"
+        onPress={handleSubmit(onSubmit)}
+        style={styles.button}
+      >
         Add Vehicle
       </Button>
-    </Card>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     padding: 20,
-    backgroundColor: "#fff",
+    gap: 12,
   },
   title: {
-    fontSize: 24,
-    marginBottom: 20,
+    marginBottom: 16,
+    fontWeight: "bold",
+    textAlign: "center",
   },
-  input: {
-    height: 40,
-    borderColor: "#ccc",
-    borderWidth: 1,
-    marginBottom: 10,
-    paddingHorizontal: 10,
+  switchContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 8,
+  },
+  button: {
+    marginTop: 20,
   },
 });
