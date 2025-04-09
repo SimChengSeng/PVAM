@@ -6,7 +6,8 @@ import VehicleTypeSelection from "../../components/VehicleTypeSelection";
 export default function AddNewVehicle() {
   return (
     <View>
-      <Text>eghreh</Text>
+      <VehicleTypeSelection />
+      <AddVehicleForm />
     </View>
   );
 }
