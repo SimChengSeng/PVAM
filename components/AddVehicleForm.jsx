@@ -16,7 +16,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 
 const vehicleSchema = z.object({
   vehicleName: z.string().min(2, "Vehicle name is required"),
-  vehicleType: z.string().min(1, "Select a vehicle type"),
+  vehicleCategory: z.string().min(1, "Select a vehicle type"),
   plate: z.string().min(4, "License plate is required"),
   brand: z.string().min(2, "Brand is required"),
   model: z.string().min(1, "Model is required"),
@@ -33,9 +33,11 @@ const vehicleSchema = z.object({
   odometer: z.string().regex(/^\d+$/, "Odometer must be a number"),
   fuel: z.string().min(1, "Select fuel type"),
   isDefault: z.boolean().optional(),
+  engineSize: z.string().optional(),
+  cargoCapacity: z.string().optional(),
 });
 
-export default function AddNewVehicleForm() {
+export default function AddNewVehicleForm({ vehicleType }) {
   const {
     control,
     handleSubmit,
@@ -45,8 +47,9 @@ export default function AddNewVehicleForm() {
   } = useForm({
     resolver: zodResolver(vehicleSchema),
     defaultValues: {
+      vehicleType: vehicleType || "",
       vehicleName: "",
-      vehicleType: "",
+      vehicleCategory: "",
       plate: "",
       brand: "",
       model: "",
@@ -76,7 +79,7 @@ export default function AddNewVehicleForm() {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text variant="titleLarge" style={styles.title}>
-        Add New Vehicle
+        Add New {vehicleType}
       </Text>
 
       <Controller
@@ -99,17 +102,17 @@ export default function AddNewVehicleForm() {
 
       <Controller
         control={control}
-        name="vehicleType"
+        name="vehicleCategory"
         render={({ field: { onChange, value } }) => (
           <>
             <TextInput
-              label="Vehicle Type (e.g., Sedan, SUV)"
+              label="Vehicle Category (e.g., Sedan, SUV)"
               value={value}
               onChangeText={onChange}
               mode="outlined"
             />
-            <HelperText type="error" visible={!!errors.vehicleType}>
-              {errors.vehicleType?.message}
+            <HelperText type="error" visible={!!errors.vehicleCategory}>
+              {errors.vehicleCategory?.message}
             </HelperText>
           </>
         )}
@@ -235,6 +238,48 @@ export default function AddNewVehicleForm() {
           </View>
         )}
       />
+
+      {vehicleType === "motorcycle" && (
+        <Controller
+          control={control}
+          name="engineSize"
+          render={({ field: { onChange, value } }) => (
+            <>
+              <TextInput
+                label="Engine Size (cc)"
+                value={value}
+                onChangeText={onChange}
+                mode="outlined"
+                keyboardType="numeric"
+              />
+              <HelperText type="error" visible={!!errors.engineSize}>
+                {errors.engineSize?.message}
+              </HelperText>
+            </>
+          )}
+        />
+      )}
+
+      {vehicleType === "truck" && (
+        <Controller
+          control={control}
+          name="cargoCapacity"
+          render={({ field: { onChange, value } }) => (
+            <>
+              <TextInput
+                label="Cargo Capacity (kg)"
+                value={value}
+                onChangeText={onChange}
+                mode="outlined"
+                keyboardType="numeric"
+              />
+              <HelperText type="error" visible={!!errors.cargoCapacity}>
+                {errors.cargoCapacity?.message}
+              </HelperText>
+            </>
+          )}
+        />
+      )}
 
       <Button
         mode="contained"
