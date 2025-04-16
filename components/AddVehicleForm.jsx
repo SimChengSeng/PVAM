@@ -1,22 +1,23 @@
-import React from "react";
+import React, { useState } from "react";
 import { db } from "../config/FirebaseConfig";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { View, ScrollView, StyleSheet } from "react-native";
+import { View, ScrollView, StyleSheet, Alert } from "react-native";
 import {
   TextInput,
   Button,
   Text,
   Switch,
   HelperText,
-  RadioButton,
+  ActivityIndicator,
 } from "react-native-paper";
+import { Dropdown } from "react-native-paper-dropdown";
 import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { getLocalStorage } from "../service/Storage";
+import { useRouter } from "expo-router";
 
 const vehicleSchema = z.object({
-  vehicleName: z.string().min(2, "Vehicle name is required"),
-  vehicleCategory: z.string().min(1, "Select a vehicle type"),
   plate: z.string().min(4, "License plate is required"),
   brand: z.string().min(2, "Brand is required"),
   model: z.string().min(1, "Model is required"),
@@ -31,28 +32,33 @@ const vehicleSchema = z.object({
       }
     ),
   odometer: z.string().regex(/^\d+$/, "Odometer must be a number"),
-  fuel: z.string().min(1, "Select fuel type"),
+  vehicleType: z.string(),
+  vehicleCategory: z.string(),
+  color: z.string(),
   isDefault: z.boolean().optional(),
   engineSize: z.string().optional(),
   cargoCapacity: z.string().optional(),
 });
 
-export default function AddNewVehicleForm({ vehicleType }) {
+export default function AddNewVehicleForm({
+  vehicleType,
+  vehicleColor,
+  vehicleCategory,
+}) {
   const {
     control,
     handleSubmit,
     formState: { errors },
-    watch,
     reset,
   } = useForm({
     resolver: zodResolver(vehicleSchema),
     defaultValues: {
       vehicleType: vehicleType || "",
-      vehicleName: "",
-      vehicleCategory: "",
+      vehicleCategory: vehicleCategory || "",
       plate: "",
       brand: "",
       model: "",
+      color: vehicleColor || "",
       year: "",
       odometer: "",
       fuel: "",
@@ -60,19 +66,31 @@ export default function AddNewVehicleForm({ vehicleType }) {
     },
   });
 
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
   const onSubmit = async (data) => {
+    const user = await getLocalStorage("userDetail");
+    setLoading(true);
     try {
       const vehicleRef = collection(db, "vehicles"); // "vehicles" collection
       await addDoc(vehicleRef, {
         ...data,
+        userEmail: user?.email,
         createdAt: serverTimestamp(),
       });
-
-      alert("Vehicle added successfully!");
+      setLoading(false);
+      Alert.alert("Great!", "Vehicle added successfully!", [
+        {
+          text: "ok",
+          onPress: () => router.push("../(tabs)"),
+        },
+      ]);
       reset();
     } catch (error) {
       console.error("Error adding vehicle:", error);
       alert("Something went wrong. Try again.");
+      setLoading(false);
     }
   };
 
@@ -81,42 +99,6 @@ export default function AddNewVehicleForm({ vehicleType }) {
       <Text variant="titleLarge" style={styles.title}>
         Add New {vehicleType}
       </Text>
-
-      <Controller
-        control={control}
-        name="vehicleName"
-        render={({ field: { onChange, value } }) => (
-          <>
-            <TextInput
-              label="Vehicle Name"
-              value={value}
-              onChangeText={onChange}
-              mode="outlined"
-            />
-            <HelperText type="error" visible={!!errors.vehicleName}>
-              {errors.vehicleName?.message}
-            </HelperText>
-          </>
-        )}
-      />
-
-      <Controller
-        control={control}
-        name="vehicleCategory"
-        render={({ field: { onChange, value } }) => (
-          <>
-            <TextInput
-              label="Vehicle Category (e.g., Sedan, SUV)"
-              value={value}
-              onChangeText={onChange}
-              mode="outlined"
-            />
-            <HelperText type="error" visible={!!errors.vehicleCategory}>
-              {errors.vehicleCategory?.message}
-            </HelperText>
-          </>
-        )}
-      />
 
       <Controller
         control={control}
@@ -171,14 +153,13 @@ export default function AddNewVehicleForm({ vehicleType }) {
           </>
         )}
       />
-
       <Controller
         control={control}
         name="year"
         render={({ field: { onChange, value } }) => (
           <>
             <TextInput
-              label="Year"
+              label="Select year of manufacture"
               value={value}
               onChangeText={onChange}
               mode="outlined"
@@ -209,24 +190,29 @@ export default function AddNewVehicleForm({ vehicleType }) {
           </>
         )}
       />
-
-      <Controller
+      {/* <Controller
         control={control}
         name="fuel"
         render={({ field: { onChange, value } }) => (
           <>
-            <TextInput
-              label="Fuel Type (Petrol / Diesel / Electric)"
-              value={value}
-              onChangeText={onChange}
+            <Dropdown
+              label="Fuel Type"
+              placeholder="Select Fuel Type"
               mode="outlined"
+              options={[
+                { label: "Petrol", value: "Petrol" },
+                { label: "Diesel", value: "Diesel" },
+                { label: "Electric", value: "Electric" },
+              ]}
+              value={value}
+              onSelect={onChange}
             />
             <HelperText type="error" visible={!!errors.fuel}>
               {errors.fuel?.message}
             </HelperText>
           </>
         )}
-      />
+      /> */}
 
       <Controller
         control={control}
@@ -280,14 +266,21 @@ export default function AddNewVehicleForm({ vehicleType }) {
           )}
         />
       )}
-
-      <Button
-        mode="contained"
-        onPress={handleSubmit(onSubmit)}
-        style={styles.button}
-      >
-        Add Vehicle
-      </Button>
+      {loading ? (
+        <ActivityIndicator
+          animating={true}
+          size="large"
+          style={styles.button}
+        />
+      ) : (
+        <Button
+          mode="contained"
+          onPress={handleSubmit(onSubmit)}
+          style={styles.button}
+        >
+          Add Vehicle
+        </Button>
+      )}
     </ScrollView>
   );
 }
@@ -310,5 +303,6 @@ const styles = StyleSheet.create({
   },
   button: {
     marginTop: 20,
+    marginBottom: 200,
   },
 });

@@ -9,6 +9,16 @@ import {
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { getLocalStorage } from "../../service/Storage";
+import { db } from "../../config/FirebaseConfig";
+import {
+  collection,
+  addDoc,
+  serverTimestamp,
+  query,
+  where,
+  getDocs,
+} from "firebase/firestore";
 
 export default function Index() {
   const router = useRouter();
@@ -23,32 +33,46 @@ export default function Index() {
     return "Good evening";
   };
 
-  const fetchVehicles = async () => {
-    // Simulate fetching from backend
-    setTimeout(() => {
-      setVehicles([
-        { id: "1", name: "Toyota Corolla", mileage: 12345 },
-        { id: "2", name: "Honda Civic", mileage: 54321 },
-      ]);
-      setRefreshing(false);
-    }, 1000);
-  };
-
   useEffect(() => {
-    fetchVehicles();
+    GetVehicleList();
   }, []);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    fetchVehicles();
+    GetVehicleList();
   }, []);
 
   const renderVehicle = ({ item }) => (
     <View style={styles.card}>
-      <Text style={styles.vehicleName}>{item.name}</Text>
-      <Text style={styles.mileage}>Mileage: {item.mileage} km</Text>
+      <Text style={styles.vehicleName}>
+        {item.plate} - {item.brand} {item.model}
+      </Text>
+      <Text style={styles.mileage}>Mileage: {item.odometer} km</Text>
     </View>
   );
+
+  const GetVehicleList = async () => {
+    const user = await getLocalStorage("userDetail");
+    try {
+      const q = query(
+        collection(db, "vehicles"),
+        where("userEmail", "==", user?.email)
+      );
+
+      const querySnapshot = await getDocs(q);
+      const vehicleList = [];
+
+      querySnapshot.forEach((doc) => {
+        vehicleList.push({ id: doc.id, ...doc.data() });
+      });
+
+      setVehicles(vehicleList);
+      setRefreshing(false); // Stop the refresh spinner
+    } catch (e) {
+      console.log("Error fetching vehicles:", e);
+      setRefreshing(false);
+    }
+  };
 
   return (
     <View style={styles.container}>

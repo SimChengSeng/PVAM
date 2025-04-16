@@ -1,39 +1,70 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, Pressable } from "react-native";
 import VehicleTypeSelection from "../../components/VehicleTypeSelection";
 import VehicleColourSelection from "../../components/VehicleColourSelection";
 import AddVehicleForm from "../../components/AddVehicleForm";
+import VehicleCategorySelection from "../../components/VehicleCategorySelection";
+import { Provider as PaperProvider } from "react-native-paper";
 
 export default function AddNewVehicle() {
   const [selectedType, setSelectedType] = useState(null);
   const [selectedColor, setSelectedColor] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState(null);
 
   // Determine current step
-  const currentStep = !selectedType ? 1 : !selectedColor ? 2 : 3;
+  const currentStep = !selectedType
+    ? 1
+    : !selectedColor
+    ? 2
+    : !selectedCategory
+    ? 3
+    : 4;
+
+  const goBack = () => {
+    if (currentStep === 4) {
+      setSelectedCategory(null); // Go back to category selection
+    } else if (currentStep === 3) {
+      setSelectedColor(null); // Go back to color selection
+    } else if (currentStep === 2) {
+      setSelectedType(null); // Go back to type selection
+    }
+  };
 
   return (
-    <View style={styles.container}>
-      <StepIndicator currentStep={currentStep} />
+    <PaperProvider>
+      <View style={styles.container}>
+        <StepIndicator currentStep={currentStep} />
 
-      {currentStep === 1 && (
-        <VehicleTypeSelection onSelectType={setSelectedType} />
-      )}
-      {currentStep === 2 && (
-        <VehicleColourSelection onSelectType={setSelectedColor} />
-      )}
-      {currentStep === 3 && (
-        <AddVehicleForm
-          vehicleType={selectedType}
-          vehicleColor={selectedColor}
-        />
-      )}
-    </View>
+        {currentStep > 1 && (
+          <Pressable onPress={goBack} style={styles.backButton}>
+            <Text style={styles.backText}>← Back</Text>
+          </Pressable>
+        )}
+
+        {currentStep === 1 && (
+          <VehicleTypeSelection onSelectType={setSelectedType} />
+        )}
+        {currentStep === 2 && (
+          <VehicleColourSelection onSelectType={setSelectedColor} />
+        )}
+        {currentStep === 3 && (
+          <VehicleCategorySelection onSelectType={setSelectedCategory} />
+        )}
+        {currentStep === 4 && (
+          <AddVehicleForm
+            vehicleType={selectedType}
+            vehicleColor={selectedColor}
+            vehicleCategory={selectedCategory}
+          />
+        )}
+      </View>
+    </PaperProvider>
   );
 }
 
 // 🎯 Simple Step Indicator Component
 function StepIndicator({ currentStep }) {
-  const steps = ["Type", "Colour", "Details"];
+  const steps = ["Type", "Colour", "Category", "Details"];
 
   return (
     <View style={styles.stepContainer}>
@@ -111,5 +142,24 @@ const styles = StyleSheet.create({
   activeLabel: {
     color: "#4a90e2",
     fontWeight: "600",
+  },
+  backButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+    alignSelf: "flex-start",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: "#f0f0f0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  backText: {
+    fontSize: 16,
+    color: "#333",
   },
 });
