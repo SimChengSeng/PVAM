@@ -11,31 +11,43 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { getLocalStorage } from "../../service/Storage";
 import { db } from "../../config/FirebaseConfig";
-import {
-  collection,
-  addDoc,
-  serverTimestamp,
-  query,
-  where,
-  getDocs,
-} from "firebase/firestore";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { useFocusEffect } from "@react-navigation/native";
+import { getAuth } from "firebase/auth";
 
 export default function Index() {
   const router = useRouter();
   const [vehicles, setVehicles] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [userName, setUserName] = useState("");
 
   // Dynamic greeting
   const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return "Good morning";
-    if (hour < 18) return "Good afternoon";
+    const now = new Date();
+    const hour = now.getHours();
+    console.log("Current hour:", hour); // Debug log
+
+    if (hour >= 5 && hour < 12) return "Good morning";
+    if (hour >= 12 && hour < 18) return "Good afternoon";
     return "Good evening";
   };
 
   useEffect(() => {
-    GetVehicleList();
+    const loadUser = async () => {
+      const user = await getLocalStorage("userDetail");
+      if (user?.displayName) {
+        setUserName(user.displayName);
+      }
+      console.log("User details **", user);
+    };
+    loadUser();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      GetVehicleList();
+    }, [])
+  );
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -43,12 +55,18 @@ export default function Index() {
   }, []);
 
   const renderVehicle = ({ item }) => (
-    <View style={styles.card}>
-      <Text style={styles.vehicleName}>
-        {item.plate} - {item.brand} {item.model}
-      </Text>
-      <Text style={styles.mileage}>Mileage: {item.odometer} km</Text>
-    </View>
+    <Pressable
+      onPress={() =>
+        router.push({ pathname: "vehicle-manage/update-vehicle", params: item })
+      }
+    >
+      <View style={styles.card}>
+        <Text style={styles.vehicleName}>
+          {item.plate} - {item.brand} {item.model}
+        </Text>
+        <Text style={styles.mileage}>Mileage: {item.odometer} km</Text>
+      </View>
+    </Pressable>
   );
 
   const GetVehicleList = async () => {
@@ -76,7 +94,9 @@ export default function Index() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.greeting}>{getGreeting()}, Jamie!</Text>
+      <Text style={styles.greeting}>
+        {getGreeting()}, {userName}!
+      </Text>
       <Text style={styles.subText}>You have {vehicles.length} vehicle(s)</Text>
 
       <FlatList

@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
-import VehicleTypeSelection from "../../components/VehicleTypeSelection";
-import VehicleColourSelection from "../../components/VehicleColourSelection";
-import AddVehicleForm from "../../components/AddVehicleForm";
-import VehicleCategorySelection from "../../components/VehicleCategorySelection";
+import VehicleTypeSelection from "../../components/AddVehicle/VehicleTypeSelection";
+import VehicleColourSelection from "../../components/AddVehicle/VehicleColourSelection";
+import AddVehicleForm from "../../components/AddVehicle/AddVehicleForm";
+import VehicleCategorySelection from "../../components/AddVehicle/VehicleCategorySelection";
 import { Provider as PaperProvider } from "react-native-paper";
 
 export default function AddNewVehicle() {

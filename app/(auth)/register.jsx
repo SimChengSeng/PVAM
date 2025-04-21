@@ -11,7 +11,11 @@ import {
 } from "react-native";
 import React, { useState } from "react";
 import { useRouter } from "expo-router";
-import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import {
+  createUserWithEmailAndPassword,
+  updateProfile,
+  sendEmailVerification,
+} from "firebase/auth";
 import { auth } from "./../../config/FirebaseConfig";
 
 export default function RegisterScreen() {
@@ -24,7 +28,7 @@ export default function RegisterScreen() {
   const handleRegister = () => {
     if (!name || !email || !password || !confirmPassword) {
       ToastAndroid.show("Please fill all fields", ToastAndroid.SHORT);
-      Alert.alert("Please Enter Email and Password");
+      Alert.alert("Please enter all the required fields");
       return;
     }
 
@@ -35,17 +39,24 @@ export default function RegisterScreen() {
 
     createUserWithEmailAndPassword(auth, email, password)
       .then(async (userCredential) => {
-        const user = userCredential.user;
+        try {
+          const user = userCredential.user;
 
-        await updateProfile(user, {
-          displayName: name,
-        });
+          await updateProfile(user, {
+            displayName: name,
+          });
 
-        await setLocalStorage("userDetail", user);
+          await sendEmailVerification(user);
 
-        console.log("User registered:", user);
-        ToastAndroid.show("Registration successful", ToastAndroid.SHORT);
-        router.replace("(tabs)");
+          // await setLocalStorage("userDetail", user);
+
+          console.log("User registered:", user);
+          ToastAndroid.show("Registration successful", ToastAndroid.SHORT);
+          router.replace("(tabs)");
+        } catch (err) {
+          console.log("Post-registration error:", err);
+          ToastAndroid.show("Something went wrong", ToastAndroid.SHORT);
+        }
       })
       .catch((error) => {
         const errorCode = error.code;
@@ -80,7 +91,7 @@ export default function RegisterScreen() {
 
         <TextInput
           style={styles.input}
-          placeholder="Full Name"
+          placeholder="User Name"
           value={name}
           onChangeText={setName}
         />
