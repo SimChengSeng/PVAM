@@ -1,13 +1,13 @@
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import React from "react";
-import { Car, Truck, Bike } from "lucide-react-native";
+import { Car, Truck, Bike, CircleChevronRight } from "lucide-react-native";
 
 export default function VehicleTypeSelection({ onSelectType }) {
   const vehicleTypes = [
     { label: "Car", icon: <Car size={40} color="#000" /> },
     { label: "Motorcycle", icon: <Bike size={40} color="#000" /> },
     { label: "Truck", icon: <Truck size={40} color="#000" /> },
-    { label: "Others", icon: <Car size={40} color="#000" /> },
+    { label: "Others", icon: <CircleChevronRight size={40} color="#000" /> },
   ];
 
   return (

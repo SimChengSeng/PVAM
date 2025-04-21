@@ -1,13 +1,9 @@
-import { View, Text, LogBox } from "react-native";
 import { Tabs, useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
-import { auth } from "../../config/FirebaseConfig";
-import { onAuthStateChanged } from "firebase/auth";
+import { useEffect, useState } from "react";
 import { getLocalStorage } from "../../service/Storage";
 
 export default function TabLayout() {
   const router = useRouter();
-  const [authenticated, setAuthenticated] = useState(null);
 
   useEffect(() => {
     GetUserDetail();
@@ -21,7 +17,7 @@ export default function TabLayout() {
   };
 
   return (
-    <Tabs>
+    <Tabs screenOptions={{ headerShown: false }}>
       <Tabs.Screen name="index" />
     </Tabs>
   );

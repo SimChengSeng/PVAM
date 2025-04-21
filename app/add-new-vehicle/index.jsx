@@ -1,17 +1,24 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, Pressable } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  BackHandler,
+  Alert,
+} from "react-native";
 import VehicleTypeSelection from "../../components/AddVehicle/VehicleTypeSelection";
 import VehicleColourSelection from "../../components/AddVehicle/VehicleColourSelection";
 import AddVehicleForm from "../../components/AddVehicle/AddVehicleForm";
 import VehicleCategorySelection from "../../components/AddVehicle/VehicleCategorySelection";
 import { Provider as PaperProvider } from "react-native-paper";
+import { useFocusEffect } from "@react-navigation/native";
 
 export default function AddNewVehicle() {
   const [selectedType, setSelectedType] = useState(null);
   const [selectedColor, setSelectedColor] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
 
-  // Determine current step
   const currentStep = !selectedType
     ? 1
     : !selectedColor
@@ -19,6 +26,23 @@ export default function AddNewVehicle() {
     : !selectedCategory
     ? 3
     : 4;
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const onBackPress = () => {
+        if (currentStep === 1) {
+          return false;
+        } else {
+          goBack();
+          return true;
+        }
+      };
+      BackHandler.addEventListener("hardwareBackPress", onBackPress);
+      return () => {
+        BackHandler.removeEventListener("hardwareBackPress", onBackPress);
+      };
+    }, [currentStep])
+  );
 
   const goBack = () => {
     if (currentStep === 4) {
@@ -35,11 +59,11 @@ export default function AddNewVehicle() {
       <View style={styles.container}>
         <StepIndicator currentStep={currentStep} />
 
-        {currentStep > 1 && (
+        {/* {currentStep > 1 && (
           <Pressable onPress={goBack} style={styles.backButton}>
             <Text style={styles.backText}>← Back</Text>
           </Pressable>
-        )}
+        )} */}
 
         {currentStep === 1 && (
           <VehicleTypeSelection onSelectType={setSelectedType} />
@@ -48,7 +72,10 @@ export default function AddNewVehicle() {
           <VehicleColourSelection onSelectType={setSelectedColor} />
         )}
         {currentStep === 3 && (
-          <VehicleCategorySelection onSelectType={setSelectedCategory} />
+          <VehicleCategorySelection
+            onSelectType={setSelectedCategory}
+            vehicleType={selectedType}
+          />
         )}
         {currentStep === 4 && (
           <AddVehicleForm

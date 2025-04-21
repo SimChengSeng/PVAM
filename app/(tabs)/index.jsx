@@ -1,36 +1,34 @@
 import {
-  Text,
   View,
-  StyleSheet,
   FlatList,
+  StyleSheet,
   Pressable,
   RefreshControl,
+  ActivityIndicator,
 } from "react-native";
-import { useEffect, useState, useCallback } from "react";
+import { Avatar, Text, Card, Button } from "react-native-paper";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { getLocalStorage } from "../../service/Storage";
 import { db } from "../../config/FirebaseConfig";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { useFocusEffect } from "@react-navigation/native";
-import { getAuth } from "firebase/auth";
 
 export default function Index() {
   const router = useRouter();
   const [vehicles, setVehicles] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [userName, setUserName] = useState("");
 
-  // Dynamic greeting
-  const getGreeting = () => {
+  const greeting = useMemo(() => {
     const now = new Date();
     const hour = now.getHours();
-    console.log("Current hour:", hour); // Debug log
-
     if (hour >= 5 && hour < 12) return "Good morning";
     if (hour >= 12 && hour < 18) return "Good afternoon";
     return "Good evening";
-  };
+  }, []);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -38,7 +36,6 @@ export default function Index() {
       if (user?.displayName) {
         setUserName(user.displayName);
       }
-      console.log("User details **", user);
     };
     loadUser();
   }, []);
@@ -54,6 +51,14 @@ export default function Index() {
     GetVehicleList();
   }, []);
 
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "N/A";
+    const date = new Date(dateStr);
+    return new Intl.DateTimeFormat("en-MY", { dateStyle: "medium" }).format(
+      date
+    );
+  };
+
   const renderVehicle = ({ item }) => (
     <Pressable
       onPress={() =>
@@ -64,7 +69,10 @@ export default function Index() {
         <Text style={styles.vehicleName}>
           {item.plate} - {item.brand} {item.model}
         </Text>
-        <Text style={styles.mileage}>Mileage: {item.odometer} km</Text>
+        <Text style={styles.vehicleDetail}>
+          Vehicle Color: {item.color ?? "N/A"}
+        </Text>
+        <Text style={styles.vehicleDetail}>Year: {item.year}</Text>
       </View>
     </Pressable>
   );
@@ -85,32 +93,109 @@ export default function Index() {
       });
 
       setVehicles(vehicleList);
-      setRefreshing(false); // Stop the refresh spinner
     } catch (e) {
       console.log("Error fetching vehicles:", e);
+    } finally {
+      setLoading(false);
       setRefreshing(false);
     }
   };
 
-  return (
-    <View style={styles.container}>
-      <Text style={styles.greeting}>
-        {getGreeting()}, {userName}!
-      </Text>
-      <Text style={styles.subText}>You have {vehicles.length} vehicle(s)</Text>
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: "center" }]}>
+        <ActivityIndicator size="large" color="#3b82f6" />
+      </View>
+    );
+  }
 
+  return (
+    <>
       <FlatList
         data={vehicles}
         keyExtractor={(item) => item.id}
         renderItem={renderVehicle}
-        style={{ width: "100%", marginTop: 20 }}
-        contentContainerStyle={{ paddingHorizontal: 16 }}
+        style={styles.list}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
             tintColor="#fff"
           />
+        }
+        contentContainerStyle={{
+          paddingHorizontal: 16,
+          paddingTop: 60,
+          paddingBottom: 120,
+        }}
+        ListHeaderComponent={
+          <>
+            <Text style={styles.greeting}>
+              {greeting}, {userName}!
+            </Text>
+            <Text style={styles.subText}>
+              You have {vehicles.length} vehicle(s)
+            </Text>
+
+            <Card style={styles.maintenanceCard}>
+              <Card.Title
+                title="Upcoming Maintenance"
+                subtitle="Scheduled maintenance for your vehicles"
+                titleStyle={{ color: "#fff" }}
+                subtitleStyle={{ color: "#ccc" }}
+                left={() => (
+                  <Avatar.Icon
+                    icon="wrench"
+                    size={48}
+                    style={{ backgroundColor: "#f44336" }}
+                  />
+                )}
+              />
+              <Card.Content>
+                {vehicles.length > 0 ? (
+                  vehicles.map((vehicle) => (
+                    <View key={vehicle.id} style={styles.maintenanceItem}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.vehicleName}>
+                          {vehicle.brand} {vehicle.model}
+                        </Text>
+                        <Text style={styles.serviceDetail}>
+                          Service on {formatDate(vehicle.NextServiceDate)}
+                        </Text>
+                        <Text style={styles.serviceDetail}>
+                          Mileage: {vehicle.NextServiceMileage ?? "N/A"} km
+                        </Text>
+                      </View>
+                      <Ionicons name="calendar" size={24} color="#fff" />
+                    </View>
+                  ))
+                ) : (
+                  <Text style={[styles.serviceDetail, { marginTop: 8 }]}>
+                    No maintenance scheduled.
+                  </Text>
+                )}
+              </Card.Content>
+              <Card.Actions>
+                <Button
+                  mode="contained"
+                  buttonColor="#f44336"
+                  textColor="#fff"
+                  onPress={() => router.push("/maintenance/add")}
+                >
+                  Add Maintenance
+                </Button>
+              </Card.Actions>
+            </Card>
+          </>
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <Ionicons name="car-outline" size={64} color="#777" />
+            <Text style={styles.emptyTitle}>No vehicles added yet</Text>
+            <Text style={styles.emptyMessage}>
+              Tap the button below to add your first vehicle
+            </Text>
+          </View>
         }
       />
 
@@ -121,7 +206,7 @@ export default function Index() {
         <Ionicons name="add-circle" size={28} color="#fff" />
         <Text style={styles.addText}>Add Vehicle</Text>
       </Pressable>
-    </View>
+    </>
   );
 }
 
@@ -130,7 +215,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#1e1e2f",
     alignItems: "center",
-    paddingTop: 60,
+  },
+  list: {
+    flex: 1,
+    backgroundColor: "#1e1e2f",
   },
   greeting: {
     fontSize: 22,
@@ -140,6 +228,7 @@ const styles = StyleSheet.create({
   subText: {
     marginTop: 4,
     color: "#bbb",
+    marginBottom: 12,
   },
   card: {
     backgroundColor: "#2a2a3d",
@@ -153,7 +242,7 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "bold",
   },
-  mileage: {
+  vehicleDetail: {
     marginTop: 4,
     color: "#aaa",
   },
@@ -176,5 +265,44 @@ const styles = StyleSheet.create({
     color: "#fff",
     marginLeft: 8,
     fontWeight: "600",
+  },
+  serviceDetail: {
+    marginTop: 4,
+    color: "#aaa",
+  },
+  maintenanceCard: {
+    backgroundColor: "#2a2a3d",
+    borderRadius: 16,
+    marginTop: 20,
+    width: "100%",
+    alignSelf: "center",
+    paddingBottom: 12,
+  },
+  maintenanceItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: "#444",
+  },
+  emptyState: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 60,
+    paddingHorizontal: 20,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    color: "#ccc",
+    marginTop: 12,
+    fontWeight: "600",
+  },
+  emptyMessage: {
+    fontSize: 14,
+    color: "#888",
+    textAlign: "center",
+    marginTop: 4,
   },
 });

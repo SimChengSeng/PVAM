@@ -18,7 +18,7 @@ export default function UpdateVehicle() {
   const [plate, setPlate] = useState(params.plate);
   const [brand, setBrand] = useState(params.brand);
   const [model, setModel] = useState(params.model);
-  const [odometer, setOdometer] = useState(params.odometer.toString());
+  const [Mileage, setMileage] = useState(params.Mileage.toString());
 
   const handleUpdate = async () => {
     try {
@@ -27,7 +27,7 @@ export default function UpdateVehicle() {
         plate,
         brand,
         model,
-        odometer: parseInt(odometer),
+        Mileage: parseInt(Mileage),
       });
       Alert.alert("Success", "Vehicle updated successfully");
       router.back();
@@ -70,11 +70,11 @@ export default function UpdateVehicle() {
       <Text style={styles.label}>Model</Text>
       <TextInput style={styles.input} value={model} onChangeText={setModel} />
 
-      <Text style={styles.label}>Odometer</Text>
+      <Text style={styles.label}>Mileage</Text>
       <TextInput
         style={styles.input}
-        value={odometer}
-        onChangeText={setOdometer}
+        value={Mileage}
+        onChangeText={setMileage}
         keyboardType="numeric"
       />
 

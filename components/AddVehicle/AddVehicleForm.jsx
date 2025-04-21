@@ -31,9 +31,11 @@ const vehicleSchema = z.object({
         message: "Enter a valid year",
       }
     ),
-  odometer: z.string().regex(/^\d+$/, "Odometer must be a number"),
+  Mileage: z.string().regex(/^\d+$/, "Mileage must be a number"),
+  NextServiceMileage: z.string().regex(/^\d+$/, "Mileage must be a number"),
   vehicleType: z.string(),
   vehicleCategory: z.string(),
+  NextServiceDate: z.string().date(),
   color: z.string(),
   isDefault: z.boolean().optional(),
   engineSize: z.string().optional(),
@@ -60,8 +62,10 @@ export default function AddNewVehicleForm({
       model: "",
       color: vehicleColor || "",
       year: "",
-      odometer: "",
+      Mileage: "",
       fuel: "",
+      NextServiceDate: "",
+      NextServiceMileage: "",
       isDefault: false,
     },
   });
@@ -96,9 +100,8 @@ export default function AddNewVehicleForm({
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text variant="titleLarge" style={styles.title}>
-        Add New {vehicleType}
-      </Text>
+      <Text style={styles.title}>Vehicle Information</Text>
+      <Text style={styles.subtitle}>Enter the details of your vehicle</Text>
 
       <Controller
         control={control}
@@ -174,18 +177,54 @@ export default function AddNewVehicleForm({
 
       <Controller
         control={control}
-        name="odometer"
+        name="Mileage"
         render={({ field: { onChange, value } }) => (
           <>
             <TextInput
-              label="Odometer (km)"
+              label="Mileage (km)"
               value={value}
               onChangeText={onChange}
               mode="outlined"
               keyboardType="numeric"
             />
-            <HelperText type="error" visible={!!errors.odometer}>
-              {errors.odometer?.message}
+            <HelperText type="error" visible={!!errors.Mileage}>
+              {errors.Mileage?.message}
+            </HelperText>
+          </>
+        )}
+      />
+      <Controller
+        control={control}
+        name="NextServiceDate"
+        render={({ field: { onChange, value } }) => (
+          <>
+            <TextInput
+              label="Next Service Date (YYYY-MM-DD)"
+              value={value}
+              onChangeText={onChange}
+              mode="outlined"
+              keyboardType="numeric"
+            />
+            <HelperText type="error" visible={!!errors.NextServiceDate}>
+              {errors.NextServiceDate?.message}
+            </HelperText>
+          </>
+        )}
+      />
+      <Controller
+        control={control}
+        name="NextServiceMileage"
+        render={({ field: { onChange, value } }) => (
+          <>
+            <TextInput
+              label="Next Service Mileage (Km)"
+              value={value}
+              onChangeText={onChange}
+              mode="outlined"
+              keyboardType="numeric"
+            />
+            <HelperText type="error" visible={!!errors.NextServiceMileage}>
+              {errors.NextServiceMileage?.message}
             </HelperText>
           </>
         )}
@@ -287,13 +326,20 @@ export default function AddNewVehicleForm({
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
-    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 32,
   },
   title: {
-    marginBottom: 16,
-    fontWeight: "bold",
+    fontSize: 24,
+    fontWeight: "700",
     textAlign: "center",
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+    textAlign: "center",
+    color: "#666",
+    marginBottom: 24,
   },
   switchContainer: {
     flexDirection: "row",
