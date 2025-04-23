@@ -109,6 +109,30 @@ export default function Index() {
     );
   }
 
+  const getRemainingTime = (dateStr) => {
+    if (!dateStr) return "Date not set";
+
+    const today = new Date();
+    const nextDate = new Date(dateStr);
+    const diffTime = nextDate - today;
+
+    if (diffTime <= 0) return "Past due";
+
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffMonths = Math.floor(diffDays / 30);
+
+    if (diffMonths >= 1) {
+      const remainingDays = diffDays % 30;
+      return `${diffMonths} month${diffMonths > 1 ? "s" : ""}${
+        remainingDays
+          ? ` ${remainingDays} day${remainingDays > 1 ? "s" : ""}`
+          : ""
+      } left`;
+    }
+
+    return `${diffDays} day${diffDays > 1 ? "s" : ""} left`;
+  };
+
   return (
     <>
       <FlatList
@@ -160,8 +184,10 @@ export default function Index() {
                           {vehicle.brand} {vehicle.model}
                         </Text>
                         <Text style={styles.serviceDetail}>
-                          Service on {formatDate(vehicle.NextServiceDate)}
+                          Service on {formatDate(vehicle.NextServiceDate)} (
+                          {getRemainingTime(vehicle.NextServiceDate)})
                         </Text>
+
                         <Text style={styles.serviceDetail}>
                           Mileage: {vehicle.NextServiceMileage ?? "N/A"} km
                         </Text>
