@@ -5,6 +5,8 @@ import {
   Pressable,
   RefreshControl,
   ActivityIndicator,
+  BackHandler, // Import BackHandler
+  Alert, // Import Alert for confirmation dialog
 } from "react-native";
 import { Avatar, Text, Card, Button } from "react-native-paper";
 import { useEffect, useState, useCallback, useMemo } from "react";
@@ -43,6 +45,27 @@ export default function Index() {
   useFocusEffect(
     useCallback(() => {
       GetVehicleList();
+
+      const onBackPress = () => {
+        // Show a confirmation dialog before exiting
+        Alert.alert(
+          "Exit App",
+          "Are you sure you want to exit?",
+          [
+            { text: "Cancel", style: "cancel" },
+            { text: "Exit", onPress: () => BackHandler.exitApp() },
+          ],
+          { cancelable: true }
+        );
+        return true; // Prevent default back navigation
+      };
+
+      // Add the back handler
+      BackHandler.addEventListener("hardwareBackPress", onBackPress);
+
+      // Cleanup the back handler when the screen is unfocused
+      return () =>
+        BackHandler.removeEventListener("hardwareBackPress", onBackPress);
     }, [])
   );
 
