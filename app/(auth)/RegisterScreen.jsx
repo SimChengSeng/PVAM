@@ -16,7 +16,9 @@ import {
   updateProfile,
   sendEmailVerification,
 } from "firebase/auth";
-import { auth } from "./../../config/FirebaseConfig";
+import { auth } from "../../config/FirebaseConfig";
+import { db } from "../../config/FirebaseConfig"; // Firestore instance
+import { doc, setDoc, serverTimestamp } from "firebase/firestore"; // Firestore functions
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -39,20 +41,31 @@ export default function RegisterScreen() {
 
     createUserWithEmailAndPassword(auth, email, password)
       .then(async (userCredential) => {
-        try {
-          const user = userCredential.user;
+        const user = userCredential.user;
 
+        try {
+          // Update the user's profile with the name
           await updateProfile(user, {
             displayName: name,
           });
 
-          await sendEmailVerification(user);
+          // Add the user to Firestore
+          await setDoc(doc(db, "users", user.uid), {
+            name: name,
+            email: email,
+            role: "owner", // Default role
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          });
 
-          // await setLocalStorage("userDetail", user);
+          // Send email verification
+          await sendEmailVerification(user);
 
           console.log("User registered:", user);
           ToastAndroid.show("Registration successful", ToastAndroid.SHORT);
-          router.replace("(tabs)");
+
+          // Navigate to another screen
+          router.replace("/(auth)/LoginScreen"); // Navigate to LoginScreen
         } catch (err) {
           console.log("Post-registration error:", err);
           ToastAndroid.show("Something went wrong", ToastAndroid.SHORT);

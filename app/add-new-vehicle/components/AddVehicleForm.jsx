@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { db } from "../../config/FirebaseConfig";
+import { db } from "../../../config/FirebaseConfig";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { View, ScrollView, StyleSheet, Alert } from "react-native";
 import {
@@ -14,7 +14,7 @@ import { Dropdown } from "react-native-paper-dropdown";
 import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { getLocalStorage } from "../../service/Storage";
+import { getLocalStorage } from "../../../service/Storage";
 import { useRouter } from "expo-router";
 
 const vehicleSchema = z.object({

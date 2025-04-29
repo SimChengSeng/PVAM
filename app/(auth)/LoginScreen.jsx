@@ -85,14 +85,14 @@ export default function LoginScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => router.push("/(auth)/register")}
+          onPress={() => router.push("/(auth)/RegisterScreen")}
           style={{ marginTop: 10 }}
         >
           <Text style={styles.link}>Don't have an account? Register</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => router.push("/(auth)/forgot-password")}
+          onPress={() => router.push("/(auth)/ForgotPasswordScreen")}
           style={{ marginTop: 10 }}
         >
           <Text style={styles.link}>Forgot Password?</Text>

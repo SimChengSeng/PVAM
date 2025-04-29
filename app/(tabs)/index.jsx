@@ -102,6 +102,12 @@ export default function Index() {
 
   const GetVehicleList = async () => {
     const user = await getLocalStorage("userDetail");
+
+    if (!user || !user.email) {
+      console.error("User email is undefined");
+      return;
+    }
+
     try {
       const q = query(
         collection(db, "vehicles"),
