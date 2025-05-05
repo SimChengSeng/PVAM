@@ -16,6 +16,7 @@ import { getLocalStorage } from "../../service/Storage";
 import { db } from "../../config/FirebaseConfig";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { useFocusEffect } from "@react-navigation/native";
+import { globalStyles } from "../../styles/globalStyles";
 
 export default function Index() {
   const router = useRouter();
@@ -88,14 +89,14 @@ export default function Index() {
         router.push({ pathname: "vehicle-manage/update-vehicle", params: item })
       }
     >
-      <View style={styles.card}>
-        <Text style={styles.vehicleName}>
+      <View style={globalStyles.card}>
+        <Text style={globalStyles.vehicleName}>
           {item.plate} - {item.brand} {item.model}
         </Text>
-        <Text style={styles.vehicleDetail}>
+        <Text style={globalStyles.textDetail}>
           Vehicle Color: {item.color ?? "N/A"}
         </Text>
-        <Text style={styles.vehicleDetail}>Year: {item.year}</Text>
+        <Text style={globalStyles.textDetail}>Year: {item.year}</Text>
       </View>
     </Pressable>
   );
@@ -132,7 +133,7 @@ export default function Index() {
 
   if (loading) {
     return (
-      <View style={[styles.container, { justifyContent: "center" }]}>
+      <View style={[globalStyles.container, { justifyContent: "center" }]}>
         <ActivityIndicator size="large" color="#3b82f6" />
       </View>
     );
@@ -168,7 +169,7 @@ export default function Index() {
         data={vehicles}
         keyExtractor={(item) => item.id}
         renderItem={renderVehicle}
-        style={styles.list}
+        style={globalStyles.list}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -194,8 +195,8 @@ export default function Index() {
               <Card.Title
                 title="Upcoming Maintenance"
                 subtitle="Scheduled maintenance for your vehicles"
-                titleStyle={{ color: "#fff" }}
-                subtitleStyle={{ color: "#ccc" }}
+                titleStyle={{ color: "#333", fontWeight: "bold" }}
+                subtitleStyle={{ color: "#333" }}
                 left={() => (
                   <Avatar.Icon
                     icon="wrench"
@@ -209,15 +210,15 @@ export default function Index() {
                   vehicles.map((vehicle) => (
                     <View key={vehicle.id} style={styles.maintenanceItem}>
                       <View style={{ flex: 1 }}>
-                        <Text style={styles.vehicleName}>
+                        <Text style={globalStyles.vehicleName}>
                           {vehicle.brand} {vehicle.model}
                         </Text>
-                        <Text style={styles.serviceDetail}>
+                        <Text style={globalStyles.textDetail}>
                           Service on {formatDate(vehicle.NextServiceDate)} (
                           {getRemainingTime(vehicle.NextServiceDate)})
                         </Text>
 
-                        <Text style={styles.serviceDetail}>
+                        <Text style={globalStyles.textDetail}>
                           Mileage: {vehicle.NextServiceMileage ?? "N/A"} km
                         </Text>
                       </View>
@@ -225,7 +226,7 @@ export default function Index() {
                     </View>
                   ))
                 ) : (
-                  <Text style={[styles.serviceDetail, { marginTop: 8 }]}>
+                  <Text style={[globalStyles.textDetail, { marginTop: 8 }]}>
                     No maintenance scheduled.
                   </Text>
                 )}
@@ -244,10 +245,10 @@ export default function Index() {
           </>
         }
         ListEmptyComponent={
-          <View style={styles.emptyState}>
+          <View style={globalStyles.emptyState}>
             <Ionicons name="car-outline" size={64} color="#777" />
-            <Text style={styles.emptyTitle}>No vehicles added yet</Text>
-            <Text style={styles.emptyMessage}>
+            <Text style={globalStyles.emptyTitle}>No vehicles added yet</Text>
+            <Text style={globalStyles.emptyMessage}>
               Tap the button below to add your first vehicle
             </Text>
           </View>
@@ -255,83 +256,38 @@ export default function Index() {
       />
 
       <Pressable
-        style={styles.addButton}
+        style={globalStyles.addButton}
         onPress={() => router.push("/add-new-vehicle")}
       >
         <Ionicons name="add-circle" size={28} color="#fff" />
-        <Text style={styles.addText}>Add Vehicle</Text>
+        <Text style={globalStyles.addText}>Add Vehicle</Text>
       </Pressable>
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#1e1e2f",
-    alignItems: "center",
-  },
-  list: {
-    flex: 1,
-    backgroundColor: "#1e1e2f",
-  },
   greeting: {
     fontSize: 22,
-    fontWeight: "600",
-    color: "#fff",
+    fontWeight: "bold",
+    color: "#333", // Darker text for light theme
   },
   subText: {
     marginTop: 4,
-    color: "#bbb",
+    color: "#666", // Medium gray for light theme
     marginBottom: 12,
   },
-  card: {
-    backgroundColor: "#2a2a3d",
-    borderRadius: 12,
-    padding: 16,
-    marginVertical: 8,
-    elevation: 4,
-  },
-  vehicleName: {
-    fontSize: 16,
-    color: "#fff",
-    fontWeight: "bold",
-  },
-  vehicleDetail: {
-    marginTop: 4,
-    color: "#aaa",
-  },
-  addButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#3b82f6",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 25,
-    position: "absolute",
-    bottom: 30,
-    right: 30,
-    shadowColor: "#000",
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 6,
-  },
-  addText: {
-    color: "#fff",
-    marginLeft: 8,
-    fontWeight: "600",
-  },
-  serviceDetail: {
-    marginTop: 4,
-    color: "#aaa",
-  },
   maintenanceCard: {
-    backgroundColor: "#2a2a3d",
+    backgroundColor: "#ffffff", // White background for light theme
     borderRadius: 16,
     marginTop: 20,
     width: "100%",
     alignSelf: "center",
     paddingBottom: 12,
+    elevation: 4, // Add shadow for better visibility
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   maintenanceItem: {
     flexDirection: "row",
@@ -340,24 +296,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     paddingVertical: 6,
     borderBottomWidth: 1,
-    borderBottomColor: "#444",
-  },
-  emptyState: {
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 60,
-    paddingHorizontal: 20,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    color: "#ccc",
-    marginTop: 12,
-    fontWeight: "600",
-  },
-  emptyMessage: {
-    fontSize: 14,
-    color: "#888",
-    textAlign: "center",
-    marginTop: 4,
+    borderBottomColor: "#ddd", // Light gray for borders
   },
 });

@@ -7,6 +7,7 @@ import { auth } from "../../config/FirebaseConfig";
 import { useRouter } from "expo-router"; // Use expo-router's useRouter
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../../config/FirebaseConfig";
+import { globalStyles } from "../../styles/globalStyles";
 
 export default function ProfileScreen() {
   const [user, setUser] = useState({});
@@ -57,8 +58,8 @@ export default function ProfileScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Card style={styles.card}>
+    <View style={globalStyles.container}>
+      <Card style={globalStyles.card}>
         <Card.Title
           title={user.displayName || "User Name"}
           subtitle={user.email || "Email Address"}
@@ -73,17 +74,17 @@ export default function ProfileScreen() {
         <Card.Content>
           {isEditing ? (
             <>
-              <Text style={styles.label}>Display Name:</Text>
+              <Text style={globalStyles.label}>Display Name:</Text>
               <TextInput
-                style={styles.input}
+                style={globalStyles.input}
                 value={updatedDetails.displayName}
                 onChangeText={(text) =>
                   setUpdatedDetails({ ...updatedDetails, displayName: text })
                 }
               />
-              <Text style={styles.label}>Phone Number:</Text>
+              <Text style={globalStyles.label}>Phone Number:</Text>
               <TextInput
-                style={styles.input}
+                style={globalStyles.input}
                 value={updatedDetails.phoneNumber}
                 onChangeText={(text) =>
                   setUpdatedDetails({ ...updatedDetails, phoneNumber: text })
@@ -94,8 +95,8 @@ export default function ProfileScreen() {
             </>
           ) : (
             <>
-              <Text style={styles.label}>Phone:</Text>
-              <Text style={styles.value}>
+              <Text style={globalStyles.label}>Phone:</Text>
+              <Text style={globalStyles.value}>
                 {user.phoneNumber || "Not available"}
               </Text>
             </>
@@ -136,30 +137,3 @@ export default function ProfileScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    padding: 20,
-    backgroundColor: "#1e1e2f",
-  },
-  card: {
-    borderRadius: 12,
-  },
-  label: {
-    marginTop: 8,
-    fontWeight: "bold",
-    color: "#fff",
-  },
-  value: {
-    marginBottom: 12,
-    color: "#fff",
-  },
-  input: {
-    backgroundColor: "#fff",
-    padding: 10,
-    borderRadius: 8,
-    marginBottom: 12,
-  },
-});

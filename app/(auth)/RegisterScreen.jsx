@@ -26,6 +26,7 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const customUserId = Date.now().toString(); // Generate a unique customUserId
 
   const handleRegister = () => {
     if (!name || !email || !password || !confirmPassword) {
@@ -51,9 +52,13 @@ export default function RegisterScreen() {
 
           // Add the user to Firestore
           await setDoc(doc(db, "users", user.uid), {
+            customUserId: customUserId,
             name: name,
             email: email,
+            phone: "",
+            profileImage: "", // Placeholder for profile image URL
             role: "owner", // Default role
+
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
           });

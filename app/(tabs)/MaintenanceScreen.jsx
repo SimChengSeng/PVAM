@@ -1,67 +1,192 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
-  TextInput,
-  Button,
   FlatList,
   StyleSheet,
+  TouchableOpacity,
+  RefreshControl,
+  Pressable,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  updateDoc,
+  doc,
+} from "firebase/firestore";
+import { db } from "../../config/FirebaseConfig"; // Firebase configuration
+import { getLocalStorage } from "../../service/Storage"; // Local storage utility
+import { globalStyles } from "../../styles/globalStyles";
+import { useRouter } from "expo-router";
+import CarMaintenanceViewer from "../vehicle-manage/components/CarMaintenanceViewer"; // 3D car viewer component
+import { GestureHandlerRootView } from "react-native-gesture-handler"; // Gesture handler for 3D viewer
 
 const MaintenanceScreen = () => {
-  const [vehicle, setVehicle] = useState("");
-  const [maintenanceType, setMaintenanceType] = useState("");
-  const [date, setDate] = useState("");
+  const router = useRouter();
   const [records, setRecords] = useState([]);
+  const [activeTab, setActiveTab] = useState("upcoming"); // upcoming, completed, all
+  const [refreshing, setRefreshing] = useState(false);
 
-  const addRecord = () => {
-    if (vehicle && maintenanceType && date) {
-      setRecords([
-        ...records,
-        { id: Date.now().toString(), vehicle, maintenanceType, date },
-      ]);
-      setVehicle("");
-      setMaintenanceType("");
-      setDate("");
+  // Fetch maintenance records from Firestore
+  const fetchMaintenanceRecords = async () => {
+    const user = await getLocalStorage("userDetail");
+
+    if (!user || !user.email) {
+      console.error("User email is undefined");
+      return;
+    }
+
+    try {
+      const q = query(
+        collection(db, "maintenanceRecords"),
+        where("userEmail", "==", user.email)
+      );
+
+      const querySnapshot = await getDocs(q);
+      const maintenanceList = [];
+
+      querySnapshot.forEach((doc) => {
+        maintenanceList.push({ id: doc.id, ...doc.data() });
+      });
+
+      setRecords(maintenanceList);
+    } catch (error) {
+      console.error("Error fetching maintenance records:", error);
     }
   };
 
-  const renderItem = ({ item }) => (
-    <View style={styles.record}>
-      <Text style={styles.recordText}>Vehicle: {item.vehicle}</Text>
-      <Text style={styles.recordText}>Maintenance: {item.maintenanceType}</Text>
-      <Text style={styles.recordText}>Date: {item.date}</Text>
+  // Mark a maintenance record as complete
+  const markComplete = async (recordId) => {
+    try {
+      const recordRef = doc(db, "maintenanceRecords", recordId);
+      await updateDoc(recordRef, {
+        statusDone: true,
+        updatedAt: new Date(),
+      });
+      fetchMaintenanceRecords(); // Refresh the list
+    } catch (error) {
+      console.error("Error marking record as complete:", error);
+    }
+  };
+
+  // Filter records based on the active tab
+  const filterRecords = () => {
+    if (activeTab === "upcoming") {
+      return records.filter((record) => !record.statusDone);
+    } else if (activeTab === "completed") {
+      return records.filter((record) => record.statusDone);
+    }
+    return records; // Default: all records
+  };
+
+  // Refresh handler
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchMaintenanceRecords();
+    setRefreshing(false);
+  };
+
+  // Fetch data on component mount
+  useEffect(() => {
+    fetchMaintenanceRecords();
+  }, []);
+
+  const renderRecord = ({ item }) => (
+    <View style={styles.recordCard}>
+      <View style={styles.recordInfo}>
+        <Text style={styles.recordType}>{item.type}</Text>
+        <Text style={styles.recordVehicle}>{item.vehicleName}</Text>
+        <Text style={styles.recordDate}>
+          Due on: {item.nextServiceDate} ({item.nextServiceMileage} km)
+        </Text>
+      </View>
+      <View style={styles.recordActions}>
+        <TouchableOpacity style={styles.detailsButton}>
+          <Text style={styles.detailsButtonText}>View Details</Text>
+        </TouchableOpacity>
+        {!item.statusDone && (
+          <TouchableOpacity
+            style={styles.completeButton}
+            onPress={() => markComplete(item.id)}
+          >
+            <Text style={styles.completeButtonText}>Mark Complete</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Vehicle Maintenance</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Vehicle Name/ID"
-        value={vehicle}
-        onChangeText={setVehicle}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Maintenance Type"
-        value={maintenanceType}
-        onChangeText={setMaintenanceType}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Date (YYYY-MM-DD)"
-        value={date}
-        onChangeText={setDate}
-      />
-      <Button title="Add Record" onPress={addRecord} />
+      <CarMaintenanceViewer />
+      {/* Removed the semicolon here */}
+      <Text style={styles.title}>Maintenance</Text>
+      <Text style={styles.subtitle}>Track and manage vehicle maintenance.</Text>
+
+      {/* Tabs for filtering */}
+      <View style={styles.tabs}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === "upcoming" && styles.activeTab]}
+          onPress={() => setActiveTab("upcoming")}
+        >
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === "upcoming" && styles.activeTabText,
+            ]}
+          >
+            Upcoming
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === "completed" && styles.activeTab]}
+          onPress={() => setActiveTab("completed")}
+        >
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === "completed" && styles.activeTabText,
+            ]}
+          >
+            Completed
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === "all" && styles.activeTab]}
+          onPress={() => setActiveTab("all")}
+        >
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === "all" && styles.activeTabText,
+            ]}
+          >
+            All Records
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Maintenance Records */}
       <FlatList
-        data={records}
+        data={filterRecords()}
         keyExtractor={(item) => item.id}
-        renderItem={renderItem}
+        renderItem={renderRecord}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
         style={styles.list}
       />
+
+      <Pressable
+        style={globalStyles.addButton}
+        onPress={() => router.push("/add-new-maintenance")}
+      >
+        <Ionicons name="add-circle" size={28} color="#fff" />
+        <Text style={globalStyles.addText}>Add Vehicle</Text>
+      </Pressable>
     </View>
   );
 };
@@ -75,30 +200,90 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: "bold",
+    marginBottom: 4,
+    textAlign: "center",
+  },
+  subtitle: {
+    fontSize: 14,
+    color: "#666",
     marginBottom: 20,
     textAlign: "center",
   },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 5,
-    padding: 10,
-    marginBottom: 10,
-    backgroundColor: "#fff",
+  tabs: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    marginBottom: 16,
+  },
+  tab: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: "#e0e0e0",
+  },
+  activeTab: {
+    backgroundColor: "#007aff",
+  },
+  tabText: {
+    fontSize: 14,
+    color: "#666",
+  },
+  activeTabText: {
+    color: "#fff",
+    fontWeight: "bold",
   },
   list: {
-    marginTop: 20,
+    marginTop: 10,
   },
-  record: {
-    padding: 15,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 5,
-    marginBottom: 10,
+  recordCard: {
     backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  recordText: {
+  recordInfo: {
+    marginBottom: 8,
+  },
+  recordType: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#333",
+  },
+  recordVehicle: {
     fontSize: 16,
+    color: "#666",
+  },
+  recordDate: {
+    fontSize: 14,
+    color: "#999",
+  },
+  recordActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 8,
+  },
+  detailsButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: "#007aff",
+  },
+  detailsButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+  completeButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: "#4caf50",
+  },
+  completeButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
   },
 });
 
