@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { db } from "../../../config/FirebaseConfig";
+import { db } from "../../../../config/FirebaseConfig";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { View, ScrollView, StyleSheet, Alert } from "react-native";
 import {
@@ -14,7 +14,7 @@ import { Dropdown } from "react-native-paper-dropdown";
 import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { getLocalStorage } from "../../../service/Storage";
+import { getLocalStorage } from "../../../../service/Storage";
 import { useRouter } from "expo-router";
 
 const vehicleSchema = z.object({
@@ -77,22 +77,45 @@ export default function AddNewVehicleForm({
     const user = await getLocalStorage("userDetail");
     setLoading(true);
     try {
-      const vehicleRef = collection(db, "vehicles"); // "vehicles" collection
-      await addDoc(vehicleRef, {
+      // Add the new vehicle to the "vehicles" collection
+      const vehicleRef = collection(db, "vehicles");
+      const vehicleDoc = await addDoc(vehicleRef, {
         ...data,
         userEmail: user?.email,
         createdAt: serverTimestamp(),
       });
+
+      // Automatically add a default maintenance record for the new vehicle
+      const maintenanceRef = collection(db, "maintenanceRecords");
+      await addDoc(maintenanceRef, {
+        userEmail: user?.email,
+        vehicleId: vehicleDoc.id, // Reference to the newly added vehicle
+        type: "Initial Maintenance",
+        mechanic: "N/A",
+        cost: 0,
+        notes: "Default maintenance record added upon vehicle creation.",
+        nextServiceDate: data.NextServiceDate,
+        nextServiceMileage: parseInt(data.NextServiceMileage, 10),
+        currentServiceMileage: parseInt(data.Mileage, 10),
+        statusDone: false,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+
       setLoading(false);
-      Alert.alert("Great!", "Vehicle added successfully!", [
-        {
-          text: "ok",
-          onPress: () => router.push("../(tabs)"),
-        },
-      ]);
+      Alert.alert(
+        "Great!",
+        "Vehicle and default maintenance record added successfully!",
+        [
+          {
+            text: "ok",
+            onPress: () => router.push("../(tabs)"),
+          },
+        ]
+      );
       reset();
     } catch (error) {
-      console.error("Error adding vehicle:", error);
+      console.error("Error adding vehicle or maintenance record:", error);
       alert("Something went wrong. Try again.");
       setLoading(false);
     }

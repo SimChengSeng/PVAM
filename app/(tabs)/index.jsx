@@ -86,7 +86,10 @@ export default function Index() {
   const renderVehicle = ({ item }) => (
     <Pressable
       onPress={() =>
-        router.push({ pathname: "vehicle-manage/update-vehicle", params: item })
+        router.push({
+          pathname: "vehicleManage/VehicleDetailScreen",
+          params: item,
+        })
       }
     >
       <View style={globalStyles.card}>
@@ -257,7 +260,7 @@ export default function Index() {
 
       <Pressable
         style={globalStyles.addButton}
-        onPress={() => router.push("/add-new-vehicle")}
+        onPress={() => router.push("/vehicleManage/add-new-vehicle")}
       >
         <Ionicons name="add-circle" size={28} color="#fff" />
         <Text style={globalStyles.addText}>Add Vehicle</Text>

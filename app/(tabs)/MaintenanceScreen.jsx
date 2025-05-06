@@ -21,7 +21,7 @@ import { db } from "../../config/FirebaseConfig"; // Firebase configuration
 import { getLocalStorage } from "../../service/Storage"; // Local storage utility
 import { globalStyles } from "../../styles/globalStyles";
 import { useRouter } from "expo-router";
-import CarMaintenanceViewer from "../vehicle-manage/components/CarMaintenanceViewer"; // 3D car viewer component
+// import CarMaintenanceViewer from "../vehicle-manage/components/CarMaintenanceViewer"; // 3D car viewer component
 import { GestureHandlerRootView } from "react-native-gesture-handler"; // Gesture handler for 3D viewer
 
 const MaintenanceScreen = () => {
@@ -121,7 +121,7 @@ const MaintenanceScreen = () => {
 
   return (
     <View style={styles.container}>
-      <CarMaintenanceViewer />
+      {/* <CarMaintenanceViewer /> */}
       {/* Removed the semicolon here */}
       <Text style={styles.title}>Maintenance</Text>
       <Text style={styles.subtitle}>Track and manage vehicle maintenance.</Text>
