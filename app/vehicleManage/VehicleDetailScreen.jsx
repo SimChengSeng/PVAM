@@ -16,8 +16,11 @@ import {
   query,
   where,
   getDocs,
+  deleteDoc,
 } from "firebase/firestore";
 import { db } from "../../config/FirebaseConfig";
+import { Ionicons } from "@expo/vector-icons";
+import { globalStyles } from "../../styles/globalStyles";
 
 export default function VehicleDetailScreen() {
   const router = useRouter();
@@ -26,8 +29,8 @@ export default function VehicleDetailScreen() {
   const [plate, setPlate] = useState(params.plate);
   const [brand, setBrand] = useState(params.brand);
   const [model, setModel] = useState(params.model);
-  const [year, setYear] = useState(params.year || "2020");
-  const [color, setColor] = useState(params.color || "Silver");
+  const [year, setYear] = useState(params.year);
+  const [color, setColor] = useState(params.color);
   const [vehicleCategory, setVehicleCategory] = useState(
     params.vehicleCategory
   );
@@ -130,92 +133,99 @@ export default function VehicleDetailScreen() {
   ];
 
   return (
-    <FlatList
-      data={maintenanceRecords}
-      keyExtractor={(item) => item.id}
-      renderItem={renderMaintenanceRecord}
-      ListHeaderComponent={
-        <>
-          {/* Vehicle Overview */}
-          <View style={styles.vehicleCard}>
-            <Text style={styles.vehicleTitle}>{plate}</Text>
-            <Text style={styles.vehicleSubtitle}>
-              {brand} {model} • {year}
-            </Text>
-            <Text style={styles.vehicleOverviewTitle}>Vehicle Overview</Text>
-            <Text style={styles.vehicleOverviewSubtitle}>
-              View and manage your vehicle details and maintenance
-            </Text>
+    <View style={{ flex: 1 }}>
+      <FlatList
+        data={maintenanceRecords}
+        keyExtractor={(item) => item.id}
+        renderItem={renderMaintenanceRecord}
+        ListHeaderComponent={
+          <>
+            {/* Vehicle Overview */}
+            <View style={styles.vehicleCard}>
+              <Text style={styles.vehicleTitle}>{plate}</Text>
+              <Text style={styles.vehicleSubtitle}>
+                {brand} {model} • {year}
+              </Text>
+              <Text style={styles.vehicleOverviewTitle}>Vehicle Overview</Text>
+              <Text style={styles.vehicleOverviewSubtitle}>
+                View and manage your vehicle details and maintenance
+              </Text>
 
-            <View style={styles.vehicleDetails}>
-              <Text style={styles.detailLabel}>Vehicle Category</Text>
-              <Text style={styles.detailValue}>{vehicleCategory}</Text>
+              <View style={styles.vehicleDetails}>
+                <Text style={styles.detailLabel}>Vehicle Category</Text>
+                <Text style={styles.detailValue}>{vehicleCategory}</Text>
 
-              <Text style={styles.detailLabel}>Color</Text>
-              <Text style={styles.detailValue}>{color}</Text>
-              {/* <View
-                style={[
-                  styles.colorCircle,
-                  {
-                    backgroundColor:
-                      vehicleColour.find((item) => item.label === color)
-                        ?.colorCode || "#000", // Default to black if no match is found
-                  },
-                ]}
-              /> */}
-              <Text style={styles.detailLabel}>Mileage</Text>
-              <Text style={styles.detailValue}>{Mileage}</Text>
-            </View>
-
-            {/* Health Score */}
-            <View style={styles.healthScoreCard}>
-              <Text style={styles.healthScoreLabel}>Health Score</Text>
-              <View style={styles.healthScoreBar}>
-                <View
-                  style={[styles.healthScoreFill, { width: `${healthScore}%` }]}
-                />
+                <Text style={styles.detailLabel}>Color</Text>
+                <Text style={styles.detailValue}>{color}</Text>
+                <Text style={styles.detailLabel}>Mileage</Text>
+                <Text style={styles.detailValue}>{Mileage}</Text>
               </View>
-              <Text style={styles.healthScoreValue}>{healthScore}%</Text>
-            </View>
-          </View>
 
-          {/* Mileage Update */}
-          <View style={styles.mileageCard}>
-            <Text style={styles.sectionTitle}>Update Mileage</Text>
-            <TextInput
-              style={styles.input}
-              value={Mileage}
-              onChangeText={setMileage}
-              keyboardType="numeric"
-              placeholder="Enter new mileage"
-            />
-            <Pressable style={styles.updateButton} onPress={handleUpdate}>
-              <Text style={styles.updateButtonText}>Update Mileage</Text>
+              {/* Health Score */}
+              <View style={styles.healthScoreCard}>
+                <Text style={styles.healthScoreLabel}>Health Score</Text>
+                <View style={styles.healthScoreBar}>
+                  <View
+                    style={[
+                      styles.healthScoreFill,
+                      { width: `${healthScore}%` },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.healthScoreValue}>{healthScore}%</Text>
+              </View>
+            </View>
+
+            {/* Mileage Update */}
+            <View style={styles.mileageCard}>
+              <Text style={styles.sectionTitle}>Update Mileage</Text>
+              <TextInput
+                style={styles.input}
+                value={Mileage}
+                onChangeText={setMileage}
+                keyboardType="numeric"
+                placeholder="Enter new mileage"
+              />
+              <Pressable style={styles.updateButton} onPress={handleUpdate}>
+                <Text style={styles.updateButtonText}>Update Mileage</Text>
+              </Pressable>
+            </View>
+
+            {/* Maintenance Records Section Title */}
+            <Text style={styles.sectionTitle}>Maintenance Records</Text>
+          </>
+        }
+        ListFooterComponent={
+          <View>
+            <Text style={styles.sectionTitle}>Maintenance Tips</Text>
+            <View style={styles.tipsCard}>
+              <Text style={styles.tip}>• Check your oil level regularly.</Text>
+              <Text style={styles.tip}>
+                • Rotate your tires every 10,000 km.
+              </Text>
+              <Text style={styles.tip}>
+                • Replace air filters every 15,000 km.
+              </Text>
+              <Text style={styles.tip}>• Inspect brakes every 20,000 km.</Text>
+            </View>
+            <Pressable style={styles.deleteButton} onPress={handleDelete}>
+              <Text style={styles.deleteButtonText}>Delete Vehicle</Text>
             </Pressable>
           </View>
+        }
+        contentContainerStyle={styles.container}
+      />
 
-          {/* Maintenance Records Section Title */}
-          <Text style={styles.sectionTitle}>Maintenance Records</Text>
-        </>
-      }
-      ListFooterComponent={
-        <View>
-          <Text style={styles.sectionTitle}>Maintenance Tips</Text>
-          <View style={styles.tipsCard}>
-            <Text style={styles.tip}>• Check your oil level regularly.</Text>
-            <Text style={styles.tip}>• Rotate your tires every 10,000 km.</Text>
-            <Text style={styles.tip}>
-              • Replace air filters every 15,000 km.
-            </Text>
-            <Text style={styles.tip}>• Inspect brakes every 20,000 km.</Text>
-          </View>
-          <Pressable style={styles.deleteButton} onPress={handleDelete}>
-            <Text style={styles.deleteButtonText}>Delete Vehicle</Text>
-          </Pressable>
-        </View>
-      }
-      contentContainerStyle={styles.container}
-    />
+      {/* Floating Add Maintenance Button */}
+      <View style={styles.fabContainer}>
+        <Pressable
+          style={styles.fabButton}
+          onPress={() => router.push("/vehicleManage/add-new-vehicle")}
+        >
+          <Ionicons name="add" size={28} color="#fff" />
+        </Pressable>
+      </View>
+    </View>
   );
 }
 
@@ -392,5 +402,19 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderWidth: 1,
     borderColor: "#ddd",
+  },
+  fabContainer: {
+    position: "absolute",
+    bottom: 16,
+    right: 16,
+  },
+  fabButton: {
+    backgroundColor: "#007bff",
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 4,
   },
 });

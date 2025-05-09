@@ -14,6 +14,26 @@ export default function VehicleCategorySelection({
 }) {
   const carCategories = [
     {
+      label: "Sedan",
+      image: require("../../../../assets/images/vehicleType/Sedan.jpg"),
+    },
+    {
+      label: "Hatchback",
+      image: require("../../../../assets/images/vehicleType/Hatchback.jpg"),
+    },
+    {
+      label: "SUV",
+      image: require("../../../../assets/images/vehicleType/SUV.jpg"),
+    },
+    {
+      label: "CUV",
+      image: require("../../../../assets/images/vehicleType/CUV.jpg"),
+    },
+    {
+      label: "Pickup",
+      image: require("../../../../assets/images/vehicleType/Pickup.jpg"),
+    },
+    {
       label: "Coupe",
       image: require("../../../../assets/images/vehicleType/Coupe.jpg"),
     },
@@ -22,32 +42,12 @@ export default function VehicleCategorySelection({
       image: require("../../../../assets/images/vehicleType/Cabriolet.jpg"),
     },
     {
-      label: "CUV",
-      image: require("../../../../assets/images/vehicleType/CUV.jpg"),
-    },
-    {
       label: "Micro",
       image: require("../../../../assets/images/vehicleType/Micro.jpg"),
     },
     {
-      label: "Sedan",
-      image: require("../../../../assets/images/vehicleType/Sedan.jpg"),
-    },
-    {
-      label: "SUV",
-      image: require("../../../../assets/images/vehicleType/SUV.jpg"),
-    },
-    {
       label: "Supercar",
       image: require("../../../../assets/images/vehicleType/Supercar.jpg"),
-    },
-    {
-      label: "Hatchback",
-      image: require("../../../../assets/images/vehicleType/Hatchback.jpg"),
-    },
-    {
-      label: "Pickup",
-      image: require("../../../../assets/images/vehicleType/Pickup.jpg"),
     },
     {
       label: "Roadster",

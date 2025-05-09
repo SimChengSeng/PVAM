@@ -1,6 +1,12 @@
 import React, { useState } from "react";
 import { db } from "../../../../config/FirebaseConfig";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import {
+  collection,
+  addDoc,
+  serverTimestamp,
+  doc,
+  getDoc,
+} from "firebase/firestore";
 import { View, ScrollView, StyleSheet, Alert } from "react-native";
 import {
   TextInput,
@@ -32,10 +38,10 @@ const vehicleSchema = z.object({
       }
     ),
   Mileage: z.string().regex(/^\d+$/, "Mileage must be a number"),
-  NextServiceMileage: z.string().regex(/^\d+$/, "Mileage must be a number"),
+  // NextServiceMileage: z.string().regex(/^\d+$/, "Mileage must be a number"),
   vehicleType: z.string(),
   vehicleCategory: z.string(),
-  NextServiceDate: z.string().date(),
+  // NextServiceDate: z.string().date(),
   color: z.string(),
   isDefault: z.boolean().optional(),
   engineSize: z.string().optional(),
@@ -76,6 +82,7 @@ export default function AddNewVehicleForm({
   const onSubmit = async (data) => {
     const user = await getLocalStorage("userDetail");
     setLoading(true);
+
     try {
       // Add the new vehicle to the "vehicles" collection
       const vehicleRef = collection(db, "vehicles");
@@ -85,18 +92,47 @@ export default function AddNewVehicleForm({
         createdAt: serverTimestamp(),
       });
 
-      // Automatically add a default maintenance record for the new vehicle
+      // Fetch maintenance details from Firestore
+      const maintenanceDetailsRef = doc(
+        db,
+        "maintenanceDetails",
+        data.brand,
+        data.vehicleCategory,
+        data.model
+      );
+      const maintenanceDetailsSnap = await getDoc(maintenanceDetailsRef);
+
+      if (!maintenanceDetailsSnap.exists()) {
+        throw new Error("Maintenance details not found for this vehicle.");
+      }
+
+      const maintenanceDetails = maintenanceDetailsSnap.data();
+
+      // Compare current mileage to estimate next service
+      const currentMileage = parseInt(data.Mileage, 10);
+      const nextService = maintenanceDetails.serviceIntervals.find(
+        (interval) => interval.interval.km > currentMileage
+      );
+
+      if (!nextService) {
+        throw new Error("No next service interval found for this mileage.");
+      }
+
+      // Automatically add a next maintenance record for the new vehicle
       const maintenanceRef = collection(db, "maintenanceRecords");
       await addDoc(maintenanceRef, {
         userEmail: user?.email,
         vehicleId: vehicleDoc.id, // Reference to the newly added vehicle
-        type: "Initial Maintenance",
+        type: nextService.services.map((service) => service.name).join(", "),
+        services: nextService.services,
         mechanic: "N/A",
-        cost: 0,
-        notes: "Default maintenance record added upon vehicle creation.",
-        nextServiceDate: data.NextServiceDate,
-        nextServiceMileage: parseInt(data.NextServiceMileage, 10),
-        currentServiceMileage: parseInt(data.Mileage, 10),
+        laborCost: nextService.laborCost,
+        serviceTax: nextService.serviceTax,
+        cost: nextService.totalCost,
+        notes: nextService.specialNote,
+        nextServiceDate: "N/A", // Use the provided next service date
+        nextServiceMileage: nextService.interval.km,
+        currentServiceMileage: currentMileage,
         statusDone: false,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -105,7 +141,7 @@ export default function AddNewVehicleForm({
       setLoading(false);
       Alert.alert(
         "Great!",
-        "Vehicle and default maintenance record added successfully!",
+        "Vehicle and next maintenance record added successfully!",
         [
           {
             text: "ok",
@@ -216,7 +252,7 @@ export default function AddNewVehicleForm({
           </>
         )}
       />
-      <Controller
+      {/* <Controller
         control={control}
         name="NextServiceDate"
         render={({ field: { onChange, value } }) => (
@@ -251,7 +287,7 @@ export default function AddNewVehicleForm({
             </HelperText>
           </>
         )}
-      />
+      /> */}
       {/* <Controller
         control={control}
         name="fuel"
