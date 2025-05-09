@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { db } from "../../../../config/FirebaseConfig";
 import {
   collection,
@@ -6,6 +6,7 @@ import {
   serverTimestamp,
   doc,
   getDoc,
+  getDocs,
 } from "firebase/firestore";
 import { View, ScrollView, StyleSheet, Alert } from "react-native";
 import {
@@ -52,6 +53,7 @@ export default function AddNewVehicleForm({
   vehicleType,
   vehicleColor,
   vehicleCategory,
+  vehicleBrand,
 }) {
   const {
     control,
@@ -64,7 +66,7 @@ export default function AddNewVehicleForm({
       vehicleType: vehicleType || "",
       vehicleCategory: vehicleCategory || "",
       plate: "",
-      brand: "",
+      brand: vehicleBrand || "",
       model: "",
       color: vehicleColor || "",
       year: "",
@@ -77,7 +79,46 @@ export default function AddNewVehicleForm({
   });
 
   const [loading, setLoading] = useState(false);
+  const [modelList, setModelList] = useState([]);
+  const [modelLoading, setModelLoading] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    const fetchModels = async () => {
+      if (!vehicleBrand || !vehicleCategory) return;
+
+      setModelLoading(true);
+      try {
+        // Reference to the category collection
+        const categoryRef = collection(
+          db,
+          "maintenanceDetails",
+          vehicleBrand,
+          vehicleCategory
+        );
+
+        // Fetch all documents (models) under the category
+        const snapshot = await getDocs(categoryRef);
+
+        if (snapshot.empty) {
+          console.warn("No models found for the selected brand and category.");
+          setModelList([]);
+          return;
+        }
+
+        // Map document IDs (model names) to the model list
+        const models = snapshot.docs.map((doc) => doc.id);
+        setModelList(models);
+      } catch (error) {
+        console.error("Error fetching models:", error);
+        setModelList([]);
+      } finally {
+        setModelLoading(false);
+      }
+    };
+
+    fetchModels();
+  }, [vehicleBrand, vehicleCategory]);
 
   const onSubmit = async (data) => {
     const user = await getLocalStorage("userDetail");
@@ -130,7 +171,7 @@ export default function AddNewVehicleForm({
         serviceTax: nextService.serviceTax,
         cost: nextService.totalCost,
         notes: nextService.specialNote,
-        nextServiceDate: "N/A", // Use the provided next service date
+        nextServiceDate: nextService.interval.month || "N/A", // Use the provided next service date
         nextServiceMileage: nextService.interval.km,
         currentServiceMileage: currentMileage,
         statusDone: false,
@@ -203,11 +244,17 @@ export default function AddNewVehicleForm({
         name="model"
         render={({ field: { onChange, value } }) => (
           <>
-            <TextInput
+            <Dropdown
               label="Model"
-              value={value}
-              onChangeText={onChange}
+              placeholder="Select Model"
               mode="outlined"
+              loading={modelLoading}
+              options={modelList.map((model) => ({
+                label: model,
+                value: model,
+              }))}
+              value={value}
+              onSelect={onChange}
             />
             <HelperText type="error" visible={!!errors.model}>
               {errors.model?.message}
@@ -215,17 +262,25 @@ export default function AddNewVehicleForm({
           </>
         )}
       />
+
       <Controller
         control={control}
         name="year"
         render={({ field: { onChange, value } }) => (
           <>
-            <TextInput
-              label="Select year of manufacture"
-              value={value}
-              onChangeText={onChange}
+            <Dropdown
+              label="Year of Manufacture"
+              placeholder="Select Year"
               mode="outlined"
-              keyboardType="numeric"
+              options={Array.from(
+                { length: new Date().getFullYear() - 1989 },
+                (_, i) => {
+                  const year = 1990 + i;
+                  return { label: year.toString(), value: year.toString() };
+                }
+              )}
+              value={value}
+              onSelect={onChange}
             />
             <HelperText type="error" visible={!!errors.year}>
               {errors.year?.message}
@@ -237,20 +292,33 @@ export default function AddNewVehicleForm({
       <Controller
         control={control}
         name="Mileage"
-        render={({ field: { onChange, value } }) => (
-          <>
-            <TextInput
-              label="Mileage (km)"
-              value={value}
-              onChangeText={onChange}
-              mode="outlined"
-              keyboardType="numeric"
-            />
-            <HelperText type="error" visible={!!errors.Mileage}>
-              {errors.Mileage?.message}
-            </HelperText>
-          </>
-        )}
+        render={({ field: { onChange, value } }) => {
+          // Format the mileage with commas for display
+          const formatMileage = (num) => {
+            if (!num) return "";
+            return num.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+          };
+
+          // Remove commas for the actual value
+          const unformatMileage = (num) => {
+            return num.replace(/,/g, "");
+          };
+
+          return (
+            <>
+              <TextInput
+                label="Mileage (km)"
+                value={formatMileage(value)}
+                onChangeText={(val) => onChange(unformatMileage(val))}
+                mode="outlined"
+                keyboardType="numeric"
+              />
+              <HelperText type="error" visible={!!errors.Mileage}>
+                {errors.Mileage?.message}
+              </HelperText>
+            </>
+          );
+        }}
       />
       {/* <Controller
         control={control}

@@ -11,21 +11,25 @@ import VehicleTypeSelection from "./components/VehicleTypeSelection";
 import VehicleColourSelection from "./components/VehicleColourSelection";
 import AddVehicleForm from "./components/AddVehicleForm";
 import VehicleCategorySelection from "./components/VehicleCategorySelection";
+import VehicleBrandSelection from "./components/VehicleBrandSelection";
 import { Provider as PaperProvider } from "react-native-paper";
 import { useFocusEffect } from "@react-navigation/native";
 
 export default function AddNewVehicle() {
   const [selectedType, setSelectedType] = useState(null);
   const [selectedColor, setSelectedColor] = useState(null);
+  const [selectedBrand, setSelectedBrand] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
 
   const currentStep = !selectedType
     ? 1
     : !selectedColor
     ? 2
-    : !selectedCategory
+    : !selectedBrand
     ? 3
-    : 4;
+    : !selectedCategory
+    ? 4
+    : 5;
 
   useFocusEffect(
     React.useCallback(() => {
@@ -45,8 +49,10 @@ export default function AddNewVehicle() {
   );
 
   const goBack = () => {
-    if (currentStep === 4) {
+    if (currentStep === 5) {
       setSelectedCategory(null); // Go back to category selection
+    } else if (currentStep === 4) {
+      setSelectedBrand(null); // Go back to brand selection
     } else if (currentStep === 3) {
       setSelectedColor(null); // Go back to color selection
     } else if (currentStep === 2) {
@@ -59,12 +65,6 @@ export default function AddNewVehicle() {
       <View style={styles.container}>
         <StepIndicator currentStep={currentStep} />
 
-        {/* {currentStep > 1 && (
-          <Pressable onPress={goBack} style={styles.backButton}>
-            <Text style={styles.backText}>← Back</Text>
-          </Pressable>
-        )} */}
-
         {currentStep === 1 && (
           <VehicleTypeSelection onSelectType={setSelectedType} />
         )}
@@ -72,16 +72,21 @@ export default function AddNewVehicle() {
           <VehicleColourSelection onSelectType={setSelectedColor} />
         )}
         {currentStep === 3 && (
+          <VehicleBrandSelection onSelectBrand={setSelectedBrand} />
+        )}
+        {currentStep === 4 && (
           <VehicleCategorySelection
             onSelectType={setSelectedCategory}
             vehicleType={selectedType}
+            vehicleBrand={selectedBrand}
           />
         )}
-        {currentStep === 4 && (
+        {currentStep === 5 && (
           <AddVehicleForm
             vehicleType={selectedType}
             vehicleColor={selectedColor}
             vehicleCategory={selectedCategory}
+            vehicleBrand={selectedBrand}
           />
         )}
       </View>
@@ -89,9 +94,8 @@ export default function AddNewVehicle() {
   );
 }
 
-// 🎯 Simple Step Indicator Component
 function StepIndicator({ currentStep }) {
-  const steps = ["Type", "Colour", "Category", "Details"];
+  const steps = ["Type", "Colour", "Category", "Brand", "Details"];
 
   return (
     <View style={styles.stepContainer}>

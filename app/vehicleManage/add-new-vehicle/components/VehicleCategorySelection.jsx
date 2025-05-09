@@ -140,7 +140,7 @@ export default function VehicleCategorySelection({
           <Pressable
             key={Category.label}
             style={styles.card}
-            onPress={() => onSelectType(Category.label.toLowerCase())}
+            onPress={() => onSelectType(Category.label)}
           >
             <Image source={Category.image} style={styles.image} />
             <Text style={styles.label}>{Category.label}</Text>
