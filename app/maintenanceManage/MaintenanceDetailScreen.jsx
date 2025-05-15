@@ -1,18 +1,21 @@
 import React from "react";
-import { View, Text, StyleSheet, ScrollView } from "react-native";
-import { useLocalSearchParams } from "expo-router";
+import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { Card, Divider } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 
 export default function MaintenanceDetailScreen() {
   const params = useLocalSearchParams();
+  const router = useRouter();
 
-  const services =
-    typeof params.services === "string"
-      ? []
-      : Array.isArray(params.services)
-      ? params.services
-      : [];
+  const services = (() => {
+    try {
+      return params.services ? JSON.parse(params.services) : [];
+    } catch (error) {
+      console.error("Error parsing services:", error);
+      return [];
+    }
+  })();
 
   const formatCurrency = (val) => `RM ${Number(val).toFixed(2)}`;
 
@@ -20,7 +23,6 @@ export default function MaintenanceDetailScreen() {
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Maintenance Record</Text>
       <Text style={styles.subtitle}>Here is the detailed record</Text>
-
       <Text style={styles.sectionTitle}>Services Performed</Text>
       {services.map((s, index) => (
         <Card key={index} style={styles.serviceCard}>
@@ -33,7 +35,6 @@ export default function MaintenanceDetailScreen() {
       ))}
 
       <Divider style={{ marginVertical: 16 }} />
-
       <Text style={styles.sectionTitle}>Summary</Text>
       <View style={styles.summaryRow}>
         <Text style={styles.label}>Labor Cost:</Text>
@@ -49,7 +50,6 @@ export default function MaintenanceDetailScreen() {
           {formatCurrency(params.cost)}
         </Text>
       </View>
-
       <View style={styles.summaryRow}>
         <Text style={styles.label}>Status:</Text>
         <Text
@@ -60,9 +60,7 @@ export default function MaintenanceDetailScreen() {
           {params.statusDone === "true" ? "Completed" : "Pending"}
         </Text>
       </View>
-
       <Divider style={{ marginVertical: 16 }} />
-
       <Text style={styles.sectionTitle}>Additional Info</Text>
       <Text style={styles.label}>Notes: {params.notes || "None"}</Text>
       <Text style={styles.label}>
@@ -71,6 +69,23 @@ export default function MaintenanceDetailScreen() {
       <Text style={styles.label}>
         Maintenance Date: {params.nextServiceDate}
       </Text>
+
+      {/* Add Edit and Mark as Done Button */}
+      <Pressable
+        style={styles.editButton}
+        onPress={() =>
+          router.push({
+            pathname: "/maintenanceManage/maintenanceUpdateForm",
+            params: {
+              ...params,
+              services: JSON.stringify(services), // Pass services as a string
+            },
+          })
+        }
+      >
+        <Ionicons name="create-outline" size={20} color="#fff" />
+        <Text style={styles.editButtonText}>Edit and Mark as Done</Text>
+      </Pressable>
     </ScrollView>
   );
 }
@@ -124,5 +139,19 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     color: "#555",
+  },
+  editButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#007bff",
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginTop: 20,
+  },
+  editButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+    marginLeft: 8,
   },
 });

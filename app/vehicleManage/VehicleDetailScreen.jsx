@@ -251,7 +251,11 @@ export default function VehicleDetailScreen() {
             </View>
 
             {/* Maintenance Records Section Title */}
-            <Text style={styles.sectionTitle}>Maintenance Records</Text>
+            <Text style={styles.sectionTitle}>Upcoming Maintenance</Text>
+          </>
+        }
+        ListFooterComponent={
+          <View>
             <Pressable
               style={styles.addButton}
               onPress={() => router.push("/maintenance/add-new-record")}
@@ -260,12 +264,9 @@ export default function VehicleDetailScreen() {
                 Add New Maintenance Record
               </Text>
             </Pressable>
-          </>
-        }
-        ListFooterComponent={
-          <View>
-            <Text style={styles.sectionTitle}>Maintenance Tips</Text>
+
             <View style={styles.tipsCard}>
+              <Text style={styles.sectionTitle}>Maintenance Tips</Text>
               <Text style={styles.tip}>• Check your oil level regularly.</Text>
               <Text style={styles.tip}>
                 • Rotate your tires every 10,000 km.
@@ -493,7 +494,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#28a745",
     paddingVertical: 12,
     borderRadius: 8,
-    marginTop: 12,
+    marginBottom: 12,
     alignItems: "center",
   },
   addButtonText: {

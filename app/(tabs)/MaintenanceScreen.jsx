@@ -111,7 +111,7 @@ const MaintenanceScreen = () => {
               pathname: "/maintenanceManage/MaintenanceDetailScreen",
               params: {
                 ...item,
-                services: JSON.stringify(item.services),
+                services: JSON.stringify(item.services || []),
               },
             })
           }

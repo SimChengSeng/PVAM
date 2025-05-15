@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  Pressable,
-  ScrollView,
-  Alert,
-} from "react-native";
+import { View, StyleSheet, ScrollView, Alert } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import { Card, Divider, Checkbox, Button } from "react-native-paper";
+import {
+  Card,
+  Checkbox,
+  Button,
+  TextInput,
+  Text,
+  Provider,
+} from "react-native-paper";
 import { db } from "../../config/FirebaseConfig";
 import {
   doc,
@@ -45,7 +43,6 @@ export default function MaintenanceUpdateForm() {
     params.serviceTax?.toString() || "0"
   );
   const [notes, setNotes] = useState(params.notes || "");
-  const [statusDone, setStatusDone] = useState(params.statusDone === "true");
   const [currentMileage, setCurrentMileage] = useState(
     params.currentServiceMileage?.toString() || ""
   );
@@ -62,10 +59,58 @@ export default function MaintenanceUpdateForm() {
     setTotalCost(total.toFixed(2));
   }, [services, laborCost, serviceTax]);
 
-  const handleUpdate = async () => {
+  const handleSaveUpdates = async () => {
+    console.log("Save Updates pressed");
+    if (!params.id) {
+      Alert.alert("Error", "Maintenance record ID is missing.");
+      return;
+    }
+
     try {
       const recordRef = doc(db, "maintenanceRecords", params.id);
+      const test = await getDoc(recordRef);
+      if (!test.exists()) {
+        Alert.alert("Error", "Maintenance record not found.");
+        return;
+      }
 
+      await updateDoc(recordRef, {
+        services,
+        laborCost: parseFloat(laborCost),
+        serviceTax: parseFloat(serviceTax),
+        notes,
+        currentServiceMileage: parseInt(currentMileage),
+        nextServiceDate: maintenanceDate,
+        updatedAt: serverTimestamp(),
+      });
+
+      Alert.alert("Success", "Your updates have been saved.");
+    } catch (error) {
+      console.error("Error saving updates:", error);
+      Alert.alert(
+        "Error",
+        error.message || "Something went wrong while saving."
+      );
+    }
+  };
+
+  const handleUpdate = async () => {
+    console.log("Mark as Done pressed");
+
+    if (!params.id) {
+      Alert.alert("Error", "Maintenance record ID is missing.");
+      return;
+    }
+
+    try {
+      const recordRef = doc(db, "maintenanceRecords", params.id);
+      const test = await getDoc(recordRef);
+      if (!test.exists()) {
+        Alert.alert("Error", "Maintenance record not found.");
+        return;
+      }
+
+      // Update the current record
       await updateDoc(recordRef, {
         services,
         laborCost: parseFloat(laborCost),
@@ -77,7 +122,7 @@ export default function MaintenanceUpdateForm() {
         updatedAt: serverTimestamp(),
       });
 
-      // Create next maintenance record
+      // Fetch maintenance interval template
       const vehicleRef = doc(
         db,
         "maintenanceDetails",
@@ -87,16 +132,24 @@ export default function MaintenanceUpdateForm() {
       );
       const vehicleSnap = await getDoc(vehicleRef);
 
-      if (!vehicleSnap.exists())
+      if (!vehicleSnap.exists()) {
         throw new Error("Maintenance details not found.");
+      }
 
       const details = vehicleSnap.data();
       const mileage = parseInt(currentMileage);
+
       const next = details.serviceIntervals.find(
         (i) => i.interval.km > mileage
       );
 
-      if (!next) throw new Error("No next service found for this mileage.");
+      // Guard for missing or invalid next service
+      if (!next || !Array.isArray(next.services)) {
+        throw new Error("Next service interval or services list is invalid.");
+      }
+
+      console.log("Next interval found:", next);
+      console.log("Next services:", next.services);
 
       await addDoc(collection(db, "maintenanceRecords"), {
         userEmail: params.userEmail,
@@ -107,7 +160,7 @@ export default function MaintenanceUpdateForm() {
         laborCost: next.laborCost,
         serviceTax: next.serviceTax,
         cost: next.totalCost,
-        notes: next.specialNote,
+        notes: next.specialNote || "",
         nextServiceDate: "N/A",
         estimateNextServiceDate: next.interval.month,
         nextServiceMileage: next.interval.km,
@@ -119,13 +172,19 @@ export default function MaintenanceUpdateForm() {
 
       Alert.alert(
         "Success",
-        "Record marked as done and next maintenance created."
+        "Record marked as done and next maintenance created.",
+        [{ text: "OK", onPress: () => router.back() }]
       );
-      router.back();
     } catch (error) {
       console.error("Error updating record:", error);
       Alert.alert("Error", error.message || "Something went wrong");
     }
+  };
+
+  const updateService = (id, key, value) => {
+    setServices((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, [key]: value } : s))
+    );
   };
 
   const addService = () => {
@@ -135,93 +194,127 @@ export default function MaintenanceUpdateForm() {
     ]);
   };
 
-  const updateService = (id, key, value) => {
-    setServices((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, [key]: value } : s))
-    );
-  };
-
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Confirm Maintenance Record</Text>
-      <Text style={styles.subtitle}>
-        Estimated — please review and finalize
-      </Text>
+    <Provider>
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text variant="headlineMedium" style={styles.title}>
+          Confirm Maintenance Record
+        </Text>
+        <Text variant="bodyMedium" style={styles.subtitle}>
+          Estimated — please review and finalize
+        </Text>
 
-      <Text style={styles.sectionTitle}>Services</Text>
-      {services.map((service, index) => (
-        <Card key={index} style={styles.serviceCard}>
-          <View style={styles.serviceRow}>
-            <Checkbox
-              status={service.checked ? "checked" : "unchecked"}
-              onPress={() =>
-                updateService(service.id, "checked", !service.checked)
-              }
-            />
-            <TextInput
-              placeholder="Service name"
-              style={styles.serviceNameInput}
-              value={service.name}
-              onChangeText={(text) => updateService(service.id, "name", text)}
-            />
-            <TextInput
-              placeholder="Cost (RM)"
-              keyboardType="numeric"
-              style={styles.costInput}
-              value={service.cost.toString()}
-              onChangeText={(text) => updateService(service.id, "cost", text)}
-            />
-          </View>
-        </Card>
-      ))}
+        <Text variant="titleMedium" style={styles.sectionTitle}>
+          Services
+        </Text>
+        {services.map((service, index) => (
+          <Card key={index} style={styles.serviceCard}>
+            <Card.Content>
+              <View style={styles.serviceRow}>
+                <Checkbox
+                  status={service.checked ? "checked" : "unchecked"}
+                  onPress={() =>
+                    updateService(service.id, "checked", !service.checked)
+                  }
+                />
+                <TextInput
+                  label="Service Name"
+                  mode="outlined"
+                  style={styles.serviceNameInput}
+                  value={service.name}
+                  onChangeText={(text) =>
+                    updateService(service.id, "name", text)
+                  }
+                />
+                <TextInput
+                  label="Cost (RM)"
+                  mode="outlined"
+                  keyboardType="numeric"
+                  style={styles.costInput}
+                  value={service.cost.toString()}
+                  onChangeText={(text) =>
+                    updateService(service.id, "cost", text)
+                  }
+                />
+              </View>
+            </Card.Content>
+          </Card>
+        ))}
 
-      <Pressable style={styles.addBtn} onPress={addService}>
-        <Ionicons name="add" size={20} color="#fff" />
-        <Text style={styles.addBtnText}>Add Service</Text>
-      </Pressable>
+        <Button
+          mode="contained"
+          style={styles.addBtn}
+          onPress={addService}
+          icon="plus"
+        >
+          Add Service
+        </Button>
 
-      <Text style={styles.sectionTitle}>Summary</Text>
-      <TextInput
-        placeholder="Labor Cost"
-        keyboardType="numeric"
-        style={styles.input}
-        value={laborCost}
-        onChangeText={setLaborCost}
-      />
-      <TextInput
-        placeholder="Service Tax"
-        keyboardType="numeric"
-        style={styles.input}
-        value={serviceTax}
-        onChangeText={setServiceTax}
-      />
-      <TextInput
-        placeholder="Additional Notes"
-        style={styles.input}
-        value={notes}
-        multiline
-        onChangeText={setNotes}
-      />
-      <TextInput
-        placeholder="Current Mileage (km)"
-        keyboardType="numeric"
-        style={styles.input}
-        value={currentMileage}
-        onChangeText={setCurrentMileage}
-      />
-      <TextInput
-        placeholder="Maintenance Date (YYYY-MM-DD)"
-        style={styles.input}
-        value={maintenanceDate}
-        onChangeText={setMaintenanceDate}
-      />
+        <Text variant="titleMedium" style={styles.sectionTitle}>
+          Summary
+        </Text>
+        <TextInput
+          label="Labor Cost"
+          mode="outlined"
+          keyboardType="numeric"
+          style={styles.input}
+          value={laborCost}
+          onChangeText={setLaborCost}
+        />
+        <TextInput
+          label="Service Tax"
+          mode="outlined"
+          keyboardType="numeric"
+          style={styles.input}
+          value={serviceTax}
+          onChangeText={setServiceTax}
+        />
+        <TextInput
+          label="Additional Notes"
+          mode="outlined"
+          style={styles.input}
+          value={notes}
+          multiline
+          onChangeText={setNotes}
+        />
+        <TextInput
+          label="Current Mileage (km)"
+          mode="outlined"
+          keyboardType="numeric"
+          style={styles.input}
+          value={currentMileage}
+          onChangeText={setCurrentMileage}
+        />
+        <TextInput
+          label="Maintenance Date (YYYY-MM-DD)"
+          mode="outlined"
+          style={styles.input}
+          value={maintenanceDate}
+          onChangeText={setMaintenanceDate}
+        />
 
-      <Text style={styles.sectionTitle}>Total Cost: RM {totalCost}</Text>
+        <Text variant="titleMedium" style={styles.sectionTitle}>
+          Total Cost: RM {totalCost}
+        </Text>
 
-      <Button mode="contained" style={styles.doneBtn} onPress={handleUpdate}>
-        Mark as Done
-      </Button>
-    </ScrollView>
+        <View style={styles.buttonRow}>
+          <Button
+            mode="contained"
+            style={styles.saveBtn}
+            onPress={handleSaveUpdates}
+          >
+            Save Updates
+          </Button>
+          <Button
+            mode="contained"
+            style={styles.doneBtn}
+            onPress={handleUpdate}
+          >
+            Mark as Done
+          </Button>
+        </View>
+      </ScrollView>
+    </Provider>
   );
 }
 
@@ -231,71 +324,46 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8f9fa",
   },
   title: {
-    fontSize: 22,
-    fontWeight: "bold",
-    marginBottom: 4,
+    marginBottom: 8,
   },
   subtitle: {
-    fontSize: 14,
+    marginBottom: 16,
     color: "#666",
-    marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
     marginVertical: 12,
   },
   serviceCard: {
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    padding: 12,
     marginBottom: 12,
-    elevation: 2,
   },
   serviceRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     gap: 8,
   },
   serviceNameInput: {
     flex: 1,
-    borderBottomWidth: 1,
-    padding: 4,
-    marginRight: 8,
   },
   costInput: {
-    width: 80,
-    borderBottomWidth: 1,
-    padding: 4,
+    width: 100,
   },
   input: {
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    padding: 12,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#ccc",
   },
   addBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#007bff",
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    alignSelf: "flex-start",
-    marginBottom: 20,
+    marginBottom: 16,
   },
-  addBtnText: {
-    color: "#fff",
-    fontWeight: "bold",
-    marginLeft: 8,
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 20,
+  },
+  saveBtn: {
+    flex: 1,
+    marginRight: 8,
   },
   doneBtn: {
-    backgroundColor: "#28a745",
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginTop: 20,
+    flex: 1,
+    marginLeft: 8,
   },
 });
