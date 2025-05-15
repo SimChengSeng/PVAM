@@ -49,6 +49,51 @@ const vehicleSchema = z.object({
   cargoCapacity: z.string().optional(),
 });
 
+const fixedPartList = [
+  {
+    partId: "battery",
+    name: "Battery",
+    defaultLifespanKm: 40000,
+    defaultLifespanMonth: 24,
+  },
+  {
+    partId: "tire_front_left",
+    name: "Front Tires Left",
+    defaultLifespanKm: 40000,
+    defaultLifespanMonth: 24,
+  },
+  {
+    partId: "tire_front_right",
+    name: "Front Tires Right",
+    defaultLifespanKm: 40000,
+    defaultLifespanMonth: 24,
+  },
+  {
+    partId: "tire_rear_left",
+    name: "Rear Tires Left",
+    defaultLifespanKm: 40000,
+    defaultLifespanMonth: 24,
+  },
+  {
+    partId: "tire_rear_right",
+    name: "Rear Tires Right",
+    defaultLifespanKm: 40000,
+    defaultLifespanMonth: 24,
+  },
+  {
+    partId: "wiper",
+    name: "Wiper Blades",
+    defaultLifespanKm: 10000,
+    defaultLifespanMonth: 12,
+  },
+  {
+    partId: "car_bulb",
+    name: "Car Bulbs",
+    defaultLifespanKm: 100000,
+    defaultLifespanMonth: 36,
+  },
+];
+
 export default function AddNewVehicleForm({
   vehicleType,
   vehicleColor,
@@ -125,14 +170,6 @@ export default function AddNewVehicleForm({
     setLoading(true);
 
     try {
-      // Add the new vehicle to the "vehicles" collection
-      const vehicleRef = collection(db, "vehicles");
-      const vehicleDoc = await addDoc(vehicleRef, {
-        ...data,
-        userEmail: user?.email,
-        createdAt: serverTimestamp(),
-      });
-
       // Fetch maintenance details from Firestore
       const maintenanceDetailsRef = doc(
         db,
@@ -148,6 +185,38 @@ export default function AddNewVehicleForm({
       }
 
       const maintenanceDetails = maintenanceDetailsSnap.data();
+
+      // Create partCondition from maintenance parts
+      const partCondition = (maintenanceDetails.parts || []).map((part) => ({
+        partId: part.partId,
+        name: part.name,
+        lastServiceMileage: "",
+        lastServiceDate: "",
+        defaultLifespanKm: part.defaultLifespanKm,
+        defaultLifespanMonth: part.defaultLifespanMonth,
+      }));
+
+      // Add fixedPartList to partCondition
+      const combinedPartCondition = [
+        ...partCondition,
+        ...fixedPartList.map((part) => ({
+          partId: part.partId,
+          name: part.name,
+          lastServiceMileage: "",
+          lastServiceDate: "",
+          defaultLifespanKm: part.defaultLifespanKm,
+          defaultLifespanMonth: part.defaultLifespanMonth,
+        })),
+      ];
+
+      // Add the new vehicle to the "vehicles" collection
+      const vehicleRef = collection(db, "vehicles");
+      const vehicleDoc = await addDoc(vehicleRef, {
+        ...data,
+        userEmail: user?.email,
+        createdAt: serverTimestamp(),
+        partCondition: combinedPartCondition,
+      });
 
       // Compare current mileage to estimate next service
       const currentMileage = parseInt(data.Mileage, 10);
@@ -171,7 +240,8 @@ export default function AddNewVehicleForm({
         serviceTax: nextService.serviceTax,
         cost: nextService.totalCost,
         notes: nextService.specialNote,
-        nextServiceDate: nextService.interval.month || "N/A", // Use the provided next service date
+        nextServiceDate: "N/A", // Use the provided next service date
+        estimateNextServiceDate: nextService.interval.month,
         nextServiceMileage: nextService.interval.km,
         currentServiceMileage: currentMileage,
         statusDone: false,

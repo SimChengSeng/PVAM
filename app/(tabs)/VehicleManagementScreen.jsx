@@ -11,12 +11,15 @@ import { Ionicons } from "@expo/vector-icons";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../../config/FirebaseConfig"; // Ensure Firebase is configured
 import { getLocalStorage } from "../../service/Storage"; // Local storage utility
+import { useRouter } from "expo-router";
+import { globalStyles } from "../../styles/globalStyles";
 
 const VehicleManagementScreen = () => {
   const [vehicles, setVehicles] = useState([]);
   const [activeTab, setActiveTab] = useState("all"); // all, maintenance, good
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const router = useRouter();
 
   // Fetch vehicle data from Firestore
   const GetVehicleList = async () => {
@@ -73,11 +76,11 @@ const VehicleManagementScreen = () => {
   const renderVehicle = ({ item }) => (
     <View style={styles.vehicleCard}>
       <View style={styles.vehicleInfo}>
+        <Text style={styles.vehicleLicense}>{item.plate}</Text>
         <Text style={styles.vehicleName}>
           {item.brand} {item.model}
         </Text>
         <Text style={styles.vehicleYear}>{item.year}</Text>
-        <Text style={styles.vehicleLicense}>Plate: {item.plate}</Text>
       </View>
       <View style={styles.vehicleStatus}>
         {item.status === "good" ? (
@@ -86,7 +89,15 @@ const VehicleManagementScreen = () => {
           <Ionicons name="time" size={24} color="#ff9800" />
         )}
       </View>
-      <TouchableOpacity style={styles.detailsButton}>
+      <TouchableOpacity
+        style={styles.detailsButton}
+        onPress={() =>
+          router.push({
+            pathname: "vehicleManage/VehicleDetailScreen",
+            params: item,
+          })
+        }
+      >
         <Text style={styles.detailsButtonText}>View Details</Text>
       </TouchableOpacity>
     </View>
@@ -164,12 +175,6 @@ const VehicleManagementScreen = () => {
           </TouchableOpacity>
         </View>
       )}
-
-      {/* Add Vehicle Button */}
-      <TouchableOpacity style={styles.addButton}>
-        <Ionicons name="add-circle" size={28} color="#fff" />
-        <Text style={styles.addButtonText}>Add Vehicle</Text>
-      </TouchableOpacity>
     </View>
   );
 };
@@ -230,7 +235,7 @@ const styles = StyleSheet.create({
   vehicleInfo: {
     marginBottom: 8,
   },
-  vehicleName: {
+  vehicleLicense: {
     fontSize: 18,
     fontWeight: "bold",
     color: "#333",
@@ -239,7 +244,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#666",
   },
-  vehicleLicense: {
+  vehicleName: {
     fontSize: 14,
     color: "#999",
   },

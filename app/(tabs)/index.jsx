@@ -194,6 +194,50 @@ export default function Index() {
               You have {vehicles.length} vehicle(s)
             </Text>
 
+            {vehicles.find((v) => v.isDefault) && (
+              <Pressable
+                onPress={() =>
+                  router.push({
+                    pathname: "vehicleManage/VehicleDetailScreen",
+                    params: vehicles.find((v) => v.isDefault),
+                  })
+                }
+              >
+                <Card style={styles.defaultCard}>
+                  <Card.Title
+                    title="Default Vehicle"
+                    subtitle="Your primary vehicle"
+                    titleStyle={{ color: "#333", fontWeight: "bold" }}
+                    subtitleStyle={{ color: "#333" }}
+                    left={() => (
+                      <Avatar.Icon
+                        icon="car"
+                        size={48}
+                        style={{ backgroundColor: "#3b82f6" }}
+                      />
+                    )}
+                  />
+                  <Card.Content>
+                    <Text style={globalStyles.vehicleName}>
+                      {vehicles.find((v) => v.isDefault).plate} -{" "}
+                      {vehicles.find((v) => v.isDefault).brand}{" "}
+                      {vehicles.find((v) => v.isDefault).model}
+                    </Text>
+                    <Text style={globalStyles.textDetail}>
+                      Color: {vehicles.find((v) => v.isDefault).color ?? "N/A"}
+                    </Text>
+                    <Text style={globalStyles.textDetail}>
+                      Year: {vehicles.find((v) => v.isDefault).year ?? "N/A"}
+                    </Text>
+                    <Text style={globalStyles.textDetail}>
+                      Mileage:{" "}
+                      {vehicles.find((v) => v.isDefault).Mileage ?? "N/A"} km
+                    </Text>
+                  </Card.Content>
+                </Card>
+              </Pressable>
+            )}
+
             <Card style={styles.maintenanceCard}>
               <Card.Title
                 title="Upcoming Maintenance"
@@ -210,24 +254,30 @@ export default function Index() {
               />
               <Card.Content>
                 {vehicles.length > 0 ? (
-                  vehicles.map((vehicle) => (
-                    <View key={vehicle.id} style={styles.maintenanceItem}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={globalStyles.vehicleName}>
-                          {vehicle.brand} {vehicle.model}
-                        </Text>
-                        <Text style={globalStyles.textDetail}>
-                          Service on {formatDate(vehicle.NextServiceDate)} (
-                          {getRemainingTime(vehicle.NextServiceDate)})
-                        </Text>
-
-                        <Text style={globalStyles.textDetail}>
-                          Mileage: {vehicle.NextServiceMileage ?? "N/A"} km
-                        </Text>
+                  [...vehicles] // clone array
+                    .filter((v) => v.NextServiceDate) // ensure valid date
+                    .sort(
+                      (a, b) =>
+                        new Date(a.NextServiceDate) -
+                        new Date(b.NextServiceDate)
+                    )
+                    .map((vehicle) => (
+                      <View key={vehicle.id} style={styles.maintenanceItem}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={globalStyles.vehicleName}>
+                            {vehicle.brand} {vehicle.model}
+                          </Text>
+                          <Text style={globalStyles.textDetail}>
+                            Service on {formatDate(vehicle.NextServiceDate)} (
+                            {getRemainingTime(vehicle.NextServiceDate)})
+                          </Text>
+                          <Text style={globalStyles.textDetail}>
+                            Mileage: {vehicle.NextServiceMileage ?? "N/A"} km
+                          </Text>
+                        </View>
+                        <Ionicons name="calendar" size={24} color="#fff" />
                       </View>
-                      <Ionicons name="calendar" size={24} color="#fff" />
-                    </View>
-                  ))
+                    ))
                 ) : (
                   <Text style={[globalStyles.textDetail, { marginTop: 8 }]}>
                     No maintenance scheduled.

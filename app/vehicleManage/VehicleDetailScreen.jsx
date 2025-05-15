@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
 import {
   View,
-  Text,
   StyleSheet,
   TextInput,
   Pressable,
   Alert,
   FlatList,
 } from "react-native";
+import { Text, Card, Divider } from "react-native-paper";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import {
   doc,
@@ -76,19 +76,78 @@ export default function VehicleDetailScreen() {
     }
   };
 
+  const formatDate = (days) => {
+    if (!days) return "N/A";
+    const targetDate = new Date();
+    targetDate.setDate(targetDate.getDate() + days);
+    return targetDate.toLocaleDateString("en-MY", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+  const formatCurrency = (value) =>
+    `RM ${Number(value).toFixed(2).toLocaleString()}`;
+
   const renderMaintenanceRecord = ({ item }) => (
-    <View style={styles.recordCard}>
-      <Text style={styles.recordType}>{item.type}</Text>
-      <Text style={styles.recordDate}>
-        Next Service: {item.nextServiceDate}
-      </Text>
-      <Text style={styles.recordMileage}>
-        Next Mileage: {item.nextServiceMileage} km
-      </Text>
-      <Text style={styles.recordStatus}>
-        Status: {item.statusDone ? "Completed" : "Pending"}
-      </Text>
-    </View>
+    <Pressable
+      onPress={() =>
+        router.push({
+          pathname: "/maintenanceManage/MaintenanceDetailScreen",
+          params: {
+            ...item,
+            services: JSON.stringify(item.services),
+          },
+        })
+      }
+    >
+      <Card style={styles.recordCard}>
+        <Card.Title
+          title="Maintenance Summary"
+          subtitle={`Next Service: ${formatDate(item.nextServiceDate)}`}
+          left={(props) => (
+            <Ionicons name="construct" size={28} color="#f57c00" {...props} />
+          )}
+        />
+        <Card.Content>
+          <Text style={styles.sectionLabel}>Services Included:</Text>
+          {item.services?.map((service, idx) => (
+            <View key={idx} style={styles.serviceItem}>
+              <Ionicons name="checkmark" size={16} color="#4caf50" />
+              <Text style={styles.serviceText}>
+                {service.name} — {formatCurrency(service.cost)}
+              </Text>
+            </View>
+          ))}
+          <Divider style={{ marginVertical: 10 }} />
+          <View style={styles.detailRow}>
+            <Text style={styles.label}>Mileage:</Text>
+            <Text>{item.nextServiceMileage} km</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.label}>Labor:</Text>
+            <Text>{formatCurrency(item.laborCost)}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.label}>Tax:</Text>
+            <Text>{formatCurrency(item.serviceTax)}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.label}>Total Cost:</Text>
+            <Text style={{ fontWeight: "bold" }}>
+              {formatCurrency(item.cost)}
+            </Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={styles.label}>Status:</Text>
+            <Text style={{ color: item.statusDone ? "#4caf50" : "#f44336" }}>
+              {item.statusDone ? "Completed" : "Pending"}
+            </Text>
+          </View>
+        </Card.Content>
+      </Card>
+    </Pressable>
   );
 
   const handleDelete = async () => {
@@ -193,6 +252,14 @@ export default function VehicleDetailScreen() {
 
             {/* Maintenance Records Section Title */}
             <Text style={styles.sectionTitle}>Maintenance Records</Text>
+            <Pressable
+              style={styles.addButton}
+              onPress={() => router.push("/maintenance/add-new-record")}
+            >
+              <Text style={styles.addButtonText}>
+                Add New Maintenance Record
+              </Text>
+            </Pressable>
           </>
         }
         ListFooterComponent={
@@ -344,31 +411,36 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   recordCard: {
+    marginVertical: 12,
     backgroundColor: "#fff",
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    borderRadius: 16,
+    elevation: 3,
+    padding: 8,
   },
-  recordType: {
-    fontSize: 16,
-    fontWeight: "bold",
+  sectionLabel: {
+    fontSize: 14,
+    fontWeight: "600",
     color: "#333",
+    marginBottom: 8,
   },
-  recordDate: {
-    fontSize: 14,
-    color: "#666",
+  serviceItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 4,
   },
-  recordMileage: {
+  serviceText: {
+    marginLeft: 8,
     fontSize: 14,
-    color: "#666",
+    color: "#555",
   },
-  recordStatus: {
-    fontSize: 14,
-    color: "#666",
+  detailRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 4,
+  },
+  label: {
+    fontWeight: "500",
+    color: "#444",
   },
   tipsCard: {
     backgroundColor: "#fff",
@@ -416,5 +488,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     elevation: 4,
+  },
+  addButton: {
+    backgroundColor: "#28a745",
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginTop: 12,
+    alignItems: "center",
+  },
+  addButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
   },
 });

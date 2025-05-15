@@ -104,15 +104,34 @@ const MaintenanceScreen = () => {
         </Text>
       </View>
       <View style={styles.recordActions}>
-        <TouchableOpacity style={styles.detailsButton}>
+        <TouchableOpacity
+          style={styles.detailsButton}
+          onPress={() =>
+            router.push({
+              pathname: "/maintenanceManage/MaintenanceDetailScreen",
+              params: {
+                ...item,
+                services: JSON.stringify(item.services),
+              },
+            })
+          }
+        >
           <Text style={styles.detailsButtonText}>View Details</Text>
         </TouchableOpacity>
         {!item.statusDone && (
           <TouchableOpacity
             style={styles.completeButton}
-            onPress={() => markComplete(item.id)}
+            onPress={() =>
+              router.push({
+                pathname: "/maintenanceManage/maintenanceUpdateForm",
+                params: {
+                  ...item,
+                  services: JSON.stringify(item.services),
+                },
+              })
+            }
           >
-            <Text style={styles.completeButtonText}>Mark Complete</Text>
+            <Text style={styles.completeButtonText}>Mark as Done</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -180,13 +199,13 @@ const MaintenanceScreen = () => {
         style={styles.list}
       />
 
-      <Pressable
+      {/* <Pressable
         style={globalStyles.addButton}
         onPress={() => router.push("/add-new-maintenance")}
       >
         <Ionicons name="add-circle" size={28} color="#fff" />
         <Text style={globalStyles.addText}>Add Vehicle</Text>
-      </Pressable>
+      </Pressable> */}
     </View>
   );
 };
