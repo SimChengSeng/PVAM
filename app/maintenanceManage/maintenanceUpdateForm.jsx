@@ -110,6 +110,9 @@ export default function MaintenanceUpdateForm() {
         return;
       }
 
+      console.log("Services:", services); // Debugging log
+      console.log("Params:", params); // Debugging log
+
       // Update the current record
       await updateDoc(recordRef, {
         services,
@@ -123,27 +126,28 @@ export default function MaintenanceUpdateForm() {
       });
 
       // Fetch maintenance interval template
-      const vehicleRef = doc(
+      const maintenanceDetailsRef = doc(
         db,
         "maintenanceDetails",
         params.brand,
         params.vehicleCategory,
         params.model
       );
-      const vehicleSnap = await getDoc(vehicleRef);
+      const maintenanceDetailsSnap = await getDoc(maintenanceDetailsRef);
 
-      if (!vehicleSnap.exists()) {
-        throw new Error("Maintenance details not found.");
+      if (!maintenanceDetailsSnap.exists()) {
+        throw new Error("Maintenance details not found for this vehicle.");
       }
 
-      const details = vehicleSnap.data();
+      const maintenanceDetails = maintenanceDetailsSnap.data();
+      console.log("Maintenance Details:", maintenanceDetails); // Debugging log
+
       const mileage = parseInt(currentMileage);
 
-      const next = details.serviceIntervals.find(
+      const next = maintenanceDetails.serviceIntervals.find(
         (i) => i.interval.km > mileage
       );
 
-      // Guard for missing or invalid next service
       if (!next || !Array.isArray(next.services)) {
         throw new Error("Next service interval or services list is invalid.");
       }

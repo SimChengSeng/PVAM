@@ -18,6 +18,7 @@ import {
   getDocs,
   deleteDoc,
 } from "firebase/firestore";
+import { useFocusEffect } from "@react-navigation/native";
 import { db } from "../../config/FirebaseConfig";
 import { Ionicons } from "@expo/vector-icons";
 import { globalStyles } from "../../styles/globalStyles";
@@ -37,6 +38,12 @@ export default function VehicleDetailScreen() {
   const [Mileage, setMileage] = useState(params.Mileage.toString());
   const [healthScore, setHealthScore] = useState(85); // Example health score
   const [maintenanceRecords, setMaintenanceRecords] = useState([]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchMaintenanceRecords();
+    }, [])
+  );
 
   // Fetch maintenance records for the vehicle
   const fetchMaintenanceRecords = async () => {
@@ -258,7 +265,19 @@ export default function VehicleDetailScreen() {
           <View>
             <Pressable
               style={styles.addButton}
-              onPress={() => router.push("/maintenance/add-new-record")}
+              onPress={() =>
+                router.push({
+                  pathname: "/maintenanceManage/AddMaintenanceForm",
+                  params: {
+                    vehicleId: params.id,
+                    plateNumber: params.plate,
+                    brand: params.brand,
+                    model: params.model,
+                    category: params.vehicleCategory,
+                    userEmail: params.userEmail,
+                  },
+                })
+              }
             >
               <Text style={styles.addButtonText}>
                 Add New Maintenance Record

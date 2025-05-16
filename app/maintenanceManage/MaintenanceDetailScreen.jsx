@@ -1,8 +1,17 @@
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  Alert,
+} from "react-native";
+import { doc, deleteDoc } from "firebase/firestore";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Card, Divider } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
+import { db } from "../../config/FirebaseConfig"; // Ensure this path is correct
 
 export default function MaintenanceDetailScreen() {
   const params = useLocalSearchParams();
@@ -18,6 +27,11 @@ export default function MaintenanceDetailScreen() {
   })();
 
   const formatCurrency = (val) => `RM ${Number(val).toFixed(2)}`;
+
+  if (!params.id) {
+    Alert.alert("Error", "Maintenance record ID is missing.");
+    return;
+  }
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -86,6 +100,46 @@ export default function MaintenanceDetailScreen() {
         <Ionicons name="create-outline" size={20} color="#fff" />
         <Text style={styles.editButtonText}>Edit and Mark as Done</Text>
       </Pressable>
+
+      <Pressable
+        style={styles.deleteButton}
+        onPress={() =>
+          Alert.alert(
+            "Confirm Delete",
+            "Are you sure you want to delete this maintenance record?",
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Delete",
+                style: "destructive",
+                onPress: async () => {
+                  try {
+                    console.log("Deleting record with ID:", params.id); // Debugging log
+                    const recordRef = doc(db, "maintenanceRecords", params.id);
+                    console.log("Document Reference:", recordRef); // Debugging log
+
+                    await deleteDoc(recordRef);
+                    if (router.canGoBack()) {
+                      router.back();
+                    } else {
+                      router.push("/maintenanceManage"); // Fallback to maintenance list
+                    }
+                  } catch (error) {
+                    console.error("Error deleting maintenance record:", error);
+                    Alert.alert(
+                      "Error",
+                      "Failed to delete the maintenance record."
+                    );
+                  }
+                },
+              },
+            ]
+          )
+        }
+      >
+        <Ionicons name="trash-outline" size={20} color="#fff" />
+        <Text style={styles.deleteButtonText}>Delete</Text>
+      </Pressable>
     </ScrollView>
   );
 }
@@ -153,5 +207,16 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "bold",
     marginLeft: 8,
+  },
+  deleteButton: {
+    backgroundColor: "#dc3545",
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginTop: 12,
+    alignItems: "center",
+  },
+  deleteButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
   },
 });
