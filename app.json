@@ -16,7 +16,8 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.josephsim501.PVAM"
+      "package": "com.josephsim501.PVAM",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "bundler": "metro",
