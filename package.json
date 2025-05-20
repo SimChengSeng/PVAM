@@ -56,7 +56,8 @@
     "zod": "^3.24.2",
     "expo-notifications": "~0.29.14",
     "expo-device": "~7.0.3",
-    "expo-dev-client": "~5.0.20"
+    "expo-dev-client": "~5.0.20",
+    "react-native-svg": "15.8.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

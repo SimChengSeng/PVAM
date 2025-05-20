@@ -126,6 +126,9 @@ export default function AddNewVehicleForm({
   const [loading, setLoading] = useState(false);
   const [modelList, setModelList] = useState([]);
   const [modelLoading, setModelLoading] = useState(false);
+  const [inspectionReminderEnabled, setInspectionReminderEnabled] =
+    useState(false);
+  const [weeklyInspectionDay, setWeeklyInspectionDay] = useState("");
   const router = useRouter();
 
   useEffect(() => {
@@ -216,6 +219,11 @@ export default function AddNewVehicleForm({
         userEmail: user?.email,
         createdAt: serverTimestamp(),
         partCondition: combinedPartCondition,
+        inspectionReminderEnabled,
+        weeklyInspectionDay: inspectionReminderEnabled
+          ? weeklyInspectionDay
+          : null,
+        lastWeeklyReminderSent: null, // Initialize as null
       });
 
       // Compare current mileage to estimate next service
@@ -460,6 +468,33 @@ export default function AddNewVehicleForm({
           </View>
         )}
       />
+      <View style={styles.switchContainer}>
+        <Text>Enable Weekly Inspection Reminder</Text>
+        <Switch
+          value={inspectionReminderEnabled}
+          onValueChange={(value) => setInspectionReminderEnabled(value)}
+        />
+      </View>
+
+      {inspectionReminderEnabled && (
+        <Dropdown
+          label="Select Weekly Inspection Day"
+          placeholder="Choose a day"
+          mode="outlined"
+          options={[
+            { label: "Monday", value: "Monday" },
+            { label: "Tuesday", value: "Tuesday" },
+            { label: "Wednesday", value: "Wednesday" },
+            { label: "Thursday", value: "Thursday" },
+            { label: "Friday", value: "Friday" },
+            { label: "Saturday", value: "Saturday" },
+            { label: "Sunday", value: "Sunday" },
+          ]}
+          value={weeklyInspectionDay}
+          onSelect={setWeeklyInspectionDay}
+          style={styles.input}
+        />
+      )}
 
       {vehicleType === "motorcycle" && (
         <Controller

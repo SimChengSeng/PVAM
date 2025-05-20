@@ -5,6 +5,8 @@ import Constants from "expo-constants";
 import { Alert, Platform } from "react-native";
 import { auth, db } from "../config/FirebaseConfig";
 import { doc, setDoc } from "firebase/firestore";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { scheduleLocalReminder } from "../utils/scheduleReminder";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -120,3 +122,49 @@ async function registerForPushNotificationsAsync() {
     alert("Must use a physical device for push notifications.");
   }
 }
+
+const scheduleAllReminders = async (userId) => {
+  const snapshot = await getDocs(
+    query(collection(db, "vehicles"), where("userId", "==", userId))
+  );
+
+  snapshot.forEach((doc) => {
+    const vehicle = doc.data();
+    const { brand, model } = vehicle;
+
+    // Schedule part reminders
+    vehicle.parts?.forEach((part) => {
+      if (
+        part.reminderEnabled &&
+        part.reminderSent === false &&
+        part.nextServiceDate
+      ) {
+        const targetDate = new Date(part.nextServiceDate);
+        const today = new Date();
+
+        if (targetDate > today) {
+          scheduleLocalReminder(
+            targetDate,
+            `Service Reminder: ${part.name}`,
+            `Your ${brand} ${model} needs a ${part.name} service.`
+          );
+        }
+      }
+    });
+
+    // Schedule weekly inspection reminders
+    const today = new Date();
+    const weekday = today.toLocaleDateString("en-US", { weekday: "long" });
+
+    if (
+      vehicle.inspectionReminderEnabled &&
+      vehicle.weeklyInspectionDay === weekday
+    ) {
+      scheduleLocalReminder(
+        new Date(today.setHours(9, 0, 0)), // e.g., every Monday at 9am
+        `Weekly Inspection Reminder`,
+        `Please check your ${brand} ${model} as part of your weekly inspection.`
+      );
+    }
+  });
+};

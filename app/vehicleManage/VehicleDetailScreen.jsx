@@ -112,7 +112,7 @@ export default function VehicleDetailScreen() {
       <Card style={styles.recordCard}>
         <Card.Title
           title="Maintenance Summary"
-          subtitle={`Next Service: ${formatDate(item.nextServiceDate)}`}
+          subtitle={`Next Service: ${item.nextServiceDate}`}
           left={(props) => (
             <Ionicons name="construct" size={28} color="#f57c00" {...props} />
           )}
