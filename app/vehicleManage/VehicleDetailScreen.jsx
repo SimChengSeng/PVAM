@@ -283,6 +283,24 @@ export default function VehicleDetailScreen() {
                 Add New Maintenance Record
               </Text>
             </Pressable>
+            <Pressable
+              style={{ ...styles.addButton, backgroundColor: "#ffcc00" }}
+              onPress={() =>
+                router.push({
+                  pathname: "/maintenanceManage/ScheduleReminderForm",
+                  params: {
+                    vehicleId: params.id,
+                    plateNumber: params.plate,
+                    brand: params.brand,
+                    model: params.model,
+                    category: params.vehicleCategory,
+                    userEmail: params.userEmail,
+                  },
+                })
+              }
+            >
+              <Text style={styles.addButtonText}>Schedule New Maintenance</Text>
+            </Pressable>
 
             <View style={styles.tipsCard}>
               <Text style={styles.sectionTitle}>Maintenance Tips</Text>

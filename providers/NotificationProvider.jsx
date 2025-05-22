@@ -11,7 +11,7 @@ import { scheduleLocalReminder } from "../utils/scheduleReminder";
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
-    shouldPlaySound: false,
+    shouldPlaySound: true,
     shouldSetBadge: false,
   }),
 });

@@ -98,7 +98,7 @@ export default function MaintenanceDetailScreen() {
         }
       >
         <Ionicons name="create-outline" size={20} color="#fff" />
-        <Text style={styles.editButtonText}>Edit and Mark as Done</Text>
+        <Text style={styles.editButtonText}>Edit or Mark as Done</Text>
       </Pressable>
 
       <Pressable
@@ -138,7 +138,7 @@ export default function MaintenanceDetailScreen() {
         }
       >
         <Ionicons name="trash-outline" size={20} color="#fff" />
-        <Text style={styles.deleteButtonText}>Delete</Text>
+        {/* <Text style={styles.deleteButtonText}>Delete</Text> */}
       </Pressable>
     </ScrollView>
   );
