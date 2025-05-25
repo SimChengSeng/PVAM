@@ -267,7 +267,7 @@ export default function VehicleDetailScreen() {
               style={styles.addButton}
               onPress={() =>
                 router.push({
-                  pathname: "/maintenanceManage/AddMaintenanceForm",
+                  pathname: "/maintenanceManage/UnifiedMaintenanceForm",
                   params: {
                     vehicleId: params.id,
                     plateNumber: params.plate,

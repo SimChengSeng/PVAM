@@ -15,12 +15,17 @@ import {
   Button,
   Menu,
   Divider,
+  SegmentedButtons,
+  Checkbox,
   List,
 } from "react-native-paper";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { addDoc, collection, getDoc, doc } from "firebase/firestore";
+import { addDoc, collection, getDoc, doc, updateDoc } from "firebase/firestore";
 import { db } from "../../config/FirebaseConfig";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { Wrench, CalendarDays } from "lucide-react-native";
+import { scheduleReminder } from "../../utils/scheduleReminder";
+import { addMonths } from "date-fns";
 
 if (
   Platform.OS === "android" &&
@@ -29,50 +34,46 @@ if (
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-export default function AddMaintenanceRecord() {
+export default function UnifiedMaintenanceForm() {
   const params = useLocalSearchParams();
-  const { vehicleId, plateNumber, brand, model, category, userEmail } = params;
+  const { vehicleId, plateNumber, brand, model, userEmail } = params;
 
+  const [mode, setMode] = useState("future"); // "future" | "past"
   const [services, setServices] = useState([
     { selectedService: null, cost: "", menuVisible: false },
   ]);
   const [mileage, setMileage] = useState("");
-  const [notes, setNotes] = useState("");
   const [availableParts, setAvailableParts] = useState([]);
-  const [serviceDate, setServiceDate] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [notes, setNotes] = useState("");
   const [mechanic, setMechanic] = useState("");
   const [laborCost, setLaborCost] = useState("0");
   const [serviceTax, setServiceTax] = useState("0");
+  const [nextServiceDate, setNextServiceDate] = useState(new Date());
+  const [nextServiceMileage, setNextServiceMileage] = useState("");
+  const [serviceDate, setServiceDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [reminderOptions, setReminderOptions] = useState({
+    "1d": false,
+    "3d": true,
+    "7d": false,
+  });
   const [showConfirm, setShowConfirm] = useState(false);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     const fetchData = async () => {
-      try {
-        const vehicleDoc = await getDoc(doc(db, "vehicles", vehicleId));
-        if (vehicleDoc.exists()) {
-          const parts = vehicleDoc.data().partCondition || [];
-          setAvailableParts(parts);
-        } else {
-          console.warn("Vehicle document does not exist.");
-          setAvailableParts([]);
-        }
-      } catch (error) {
-        console.error("Error fetching vehicle data:", error);
-        setAvailableParts([]);
-      }
+      const vehicleDoc = await getDoc(doc(db, "vehicles", vehicleId));
+      if (vehicleDoc.exists())
+        setAvailableParts(vehicleDoc.data().partCondition || []);
     };
-
     fetchData();
   }, []);
 
   const updateService = (index, key, value) => {
-    setServices((prev) => {
-      const updated = [...prev];
-      updated[index][key] = value;
-      return updated;
-    });
+    const updated = [...services];
+    updated[index][key] = value;
+    setServices(updated);
   };
 
   const addServiceField = () => {
@@ -85,6 +86,13 @@ export default function AddMaintenanceRecord() {
   const removeServiceField = (index) => {
     setServices((prev) => prev.filter((_, i) => i !== index));
   };
+
+  const totalServiceCost = services.reduce(
+    (sum, s) => sum + parseFloat(s.cost || 0),
+    0
+  );
+  const totalCost =
+    totalServiceCost + parseFloat(laborCost) + parseFloat(serviceTax);
 
   const handleConfirm = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -101,8 +109,8 @@ export default function AddMaintenanceRecord() {
       })
       .filter(Boolean);
 
-    if (!mileage || serviceDetails.length === 0 || !serviceDate) {
-      Alert.alert("Error", "Please complete all required fields");
+    if (!mileage || serviceDetails.length === 0) {
+      Alert.alert("Error", "Please complete all required fields.");
       return;
     }
 
@@ -110,110 +118,160 @@ export default function AddMaintenanceRecord() {
   };
 
   const handleSubmit = async () => {
-    const serviceDetails = services
-      .map(({ selectedService, cost }) => {
-        const part = availableParts.find((p) => p.partId === selectedService);
-        return part && cost
-          ? {
-              name: part.name,
-              partId: part.partId,
-              cost: parseFloat(cost),
+    setLoading(true);
+    try {
+      const serviceDetails = services
+        .map(({ selectedService, cost }) => {
+          const part = availableParts.find((p) => p.partId === selectedService);
+          return part && cost
+            ? {
+                name: part.name,
+                partId: part.partId,
+                cost: parseFloat(cost),
+              }
+            : null;
+        })
+        .filter(Boolean);
+
+      if (!mileage || serviceDetails.length === 0) {
+        setLoading(false);
+        Alert.alert("Error", "Please complete all required fields.");
+        return;
+      }
+
+      const data = {
+        userEmail,
+        vehicleId,
+        type: serviceDetails.map((s) => s.name).join(", ") || "N/A",
+        services: serviceDetails,
+        currentServiceMileage: parseInt(mileage),
+        nextServiceDate:
+          mode === "future"
+            ? nextServiceDate.toISOString().split("T")[0]
+            : "N/A",
+        nextServiceMileage:
+          mode === "future" ? parseInt(nextServiceMileage) || "N/A" : "N/A",
+        serviceDate:
+          mode === "past" ? serviceDate.toISOString().split("T")[0] : "N/A",
+        mechanic: mechanic.trim() || null,
+        notes: notes.trim() || null,
+        laborCost: parseFloat(laborCost) || 0,
+        serviceTax: parseFloat(serviceTax) || 0,
+        cost: totalCost,
+        statusDone: mode === "past",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const docRef = await addDoc(collection(db, "maintenanceRecords"), data);
+
+      //update parts condition
+      if (mode === "past") {
+        const vehicleDocRef = doc(db, "vehicles", vehicleId);
+        const vehicleSnap = await getDoc(vehicleDocRef);
+        if (vehicleSnap.exists()) {
+          const vehicleData = vehicleSnap.data();
+          const updatedParts = vehicleData.partCondition.map((part) => {
+            const serviced = serviceDetails.find(
+              (s) => s.partId === part.partId
+            );
+            if (serviced) {
+              const lastDate = serviceDate.toISOString().split("T")[0];
+              const lastMileage = parseInt(mileage);
+              const nextMileage = lastMileage + (part.defaultLifespanKm || 0);
+              const nextDate = addMonths(
+                serviceDate,
+                part.defaultLifespanMonth || 0
+              )
+                .toISOString()
+                .split("T")[0];
+
+              return {
+                ...part,
+                lastServiceDate: lastDate,
+                lastServiceMileage: lastMileage,
+                nextServiceDate: nextDate,
+                nextServiceMileage: nextMileage,
+              };
             }
-          : null;
-      })
-      .filter(Boolean);
+            return part;
+          });
 
-    const totalCost =
-      serviceDetails.reduce((sum, s) => sum + s.cost, 0) +
-      parseFloat(laborCost) +
-      parseFloat(serviceTax);
+          await updateDoc(vehicleDocRef, {
+            partCondition: updatedParts,
+            updatedAt: new Date(),
+          });
+        }
+      }
 
-    await addDoc(collection(db, "maintenanceRecords"), {
-      userEmail,
-      vehicleId,
-      type: serviceDetails.map((s) => s.name).join(", "),
-      services: serviceDetails,
-      currentServiceMileage: parseInt(mileage),
-      nextServiceDate: "N/A",
-      nextServiceMileage: "N/A",
-      serviceDate: serviceDate.toISOString().split("T")[0],
-      notes,
-      mechanic,
-      laborCost: parseFloat(laborCost),
-      serviceTax: parseFloat(serviceTax),
-      cost: totalCost,
-      statusDone: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+      // Schedule reminders for future
+      if (mode === "future") {
+        const selectedOptions = Object.keys(reminderOptions).filter(
+          (key) => reminderOptions[key]
+        );
+        const reminders = [];
+        for (const option of selectedOptions) {
+          const reminder = await scheduleReminder(nextServiceDate, option);
+          if (reminder) reminders.push({ ...reminder, option, sent: false });
+        }
+        if (reminders.length > 0) {
+          await updateDoc(doc(db, "maintenanceRecords", docRef.id), {
+            reminders,
+          });
+        }
+      }
 
-    Alert.alert("Success", "Maintenance record added successfully", [
-      {
-        text: "OK",
-        onPress: () => {
-          router.back();
-        },
-      },
-    ]);
-    setShowConfirm(false);
+      setLoading(false);
+      Alert.alert(
+        "Success",
+        `${mode === "past" ? "History" : "Reminder"} saved successfully.`,
+        [
+          {
+            text: "OK",
+            onPress: () => router.back(),
+          },
+        ]
+      );
+    } catch (error) {
+      setLoading(false);
+      Alert.alert("Error", "Failed to save maintenance record.");
+    }
   };
 
-  const totalServiceCost = services.reduce(
-    (sum, s) => sum + parseFloat(s.cost || 0),
-    0
-  );
-  const totalCost =
-    totalServiceCost + parseFloat(laborCost) + parseFloat(serviceTax);
-
+  // --- UI ---
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      {/* Main Title */}
-      <Text style={styles.mainTitle}>Add Maintenance History</Text>
+      <Text style={styles.title}>Maintenance Form</Text>
       {!showConfirm ? (
         <>
-          {/* Vehicle Info */}
+          <SegmentedButtons
+            value={mode}
+            onValueChange={setMode}
+            buttons={[
+              { value: "past", label: "Past Maintenance" },
+              { value: "future", label: "Future Reminder" },
+            ]}
+            style={{ marginBottom: 16 }}
+          />
           <Card style={styles.card}>
             <Card.Title
               title={`Plate: ${plateNumber}`}
               subtitle={`Model: ${brand} ${model}`}
             />
-          </Card>
-
-          {/* Services Section */}
-          <Card style={styles.card}>
-            <Card.Title title="Service Parts" />
             <Card.Content>
               {services.map((service, index) => (
-                <View
-                  key={index}
-                  style={{
-                    marginBottom: 16,
-                    padding: 12,
-                    borderRadius: 12,
-                    backgroundColor: "#f5f3ff",
-                    borderWidth: 1,
-                    borderColor: "#d1c4e9",
-                  }}
-                >
-                  <Text
-                    style={{
-                      fontWeight: "bold",
-                      marginBottom: 4,
-                      color: "#6b21a8",
-                    }}
-                  >
-                    Service #{index + 1}
-                  </Text>
+                <View key={index} style={styles.serviceBox}>
+                  <Text style={styles.serviceTitle}>Service #{index + 1}</Text>
                   <Menu
                     visible={service.menuVisible}
                     onDismiss={() => updateService(index, "menuVisible", false)}
                     anchor={
                       <Button
+                        icon={() => <Wrench size={18} color="#0284c7" />}
                         mode="outlined"
                         onPress={() =>
                           updateService(index, "menuVisible", true)
                         }
-                        style={{ marginBottom: 8 }}
                       >
                         {service.selectedService
                           ? availableParts.find(
@@ -274,42 +332,111 @@ export default function AddMaintenanceRecord() {
               </Button>
             </Card.Content>
           </Card>
-
-          {/* Service Date & Mileage */}
-          <Card style={styles.card}>
-            <Card.Title title="Service Information" />
-            <Card.Content>
-              <Button
-                mode="outlined"
-                onPress={() => setShowDatePicker(true)}
-                style={styles.input}
-              >
-                {serviceDate
-                  ? `Service Date: ${serviceDate.toISOString().split("T")[0]}`
-                  : "Select Service Date"}
-              </Button>
-              {showDatePicker && (
-                <DateTimePicker
-                  value={serviceDate}
-                  mode="date"
-                  display="default"
-                  onChange={(event, selectedDate) => {
-                    setShowDatePicker(false);
-                    if (selectedDate) setServiceDate(selectedDate);
-                  }}
+          {mode === "future" && (
+            <Card style={styles.card}>
+              <Card.Title title="Next Service" />
+              <Card.Content>
+                <TextInput
+                  label="Current Mileage (km)"
+                  mode="outlined"
+                  keyboardType="numeric"
+                  value={mileage}
+                  onChangeText={setMileage}
+                  style={styles.input}
                 />
-              )}
-              <TextInput
-                label="Mileage (km)"
-                mode="outlined"
-                keyboardType="numeric"
-                value={mileage}
-                onChangeText={setMileage}
-                style={styles.input}
-              />
-            </Card.Content>
-          </Card>
+                <TextInput
+                  label="Next Service Mileage (km)"
+                  mode="outlined"
+                  keyboardType="numeric"
+                  value={nextServiceMileage}
+                  onChangeText={setNextServiceMileage}
+                  style={styles.input}
+                />
+                <Button
+                  icon={() => <CalendarDays size={18} color="#0284c7" />}
+                  mode="outlined"
+                  onPress={() => setShowDatePicker(true)}
+                  style={styles.input}
+                >
+                  {`Next Service Date: ${
+                    nextServiceDate.toISOString().split("T")[0]
+                  }`}
+                </Button>
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={nextServiceDate}
+                    mode="date"
+                    display="default"
+                    onChange={(e, date) => {
+                      setShowDatePicker(false);
+                      if (date) setNextServiceDate(date);
+                    }}
+                  />
+                )}
 
+                <Text style={{ marginTop: 12, marginBottom: 4 }}>
+                  Reminders:
+                </Text>
+                {Object.keys(reminderOptions).map((key) => (
+                  <View
+                    key={key}
+                    style={{ flexDirection: "row", alignItems: "center" }}
+                  >
+                    <Checkbox
+                      status={reminderOptions[key] ? "checked" : "unchecked"}
+                      onPress={() =>
+                        setReminderOptions((prev) => ({
+                          ...prev,
+                          [key]: !prev[key],
+                        }))
+                      }
+                    />
+                    <Text>
+                      {key === "1d"
+                        ? "1 day before"
+                        : key === "3d"
+                        ? "3 days before"
+                        : "1 week before"}
+                    </Text>
+                  </View>
+                ))}
+              </Card.Content>
+            </Card>
+          )}
+          {mode === "past" && (
+            <Card style={styles.card}>
+              <Card.Title title="Service History Info" />
+              <Card.Content>
+                <TextInput
+                  label="Mileage (km)"
+                  mode="outlined"
+                  keyboardType="numeric"
+                  value={mileage}
+                  onChangeText={setMileage}
+                  style={styles.input}
+                />
+                <Button
+                  icon={() => <CalendarDays size={18} color="#0284c7" />}
+                  mode="outlined"
+                  onPress={() => setShowDatePicker(true)}
+                  style={styles.input}
+                >
+                  {`Service Date: ${serviceDate.toISOString().split("T")[0]}`}
+                </Button>
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={serviceDate}
+                    mode="date"
+                    display="default"
+                    onChange={(e, date) => {
+                      setShowDatePicker(false);
+                      if (date) setServiceDate(date);
+                    }}
+                  />
+                )}
+              </Card.Content>
+            </Card>
+          )}
           {/* Advanced Options */}
           <Card style={styles.card}>
             <Card.Title title="Advanced Options" />
@@ -375,7 +502,6 @@ export default function AddMaintenanceRecord() {
               </Text>
             </Card.Content>
           </Card>
-
           <Button
             icon="check-circle"
             mode="contained-tonal"
@@ -388,10 +514,13 @@ export default function AddMaintenanceRecord() {
         </>
       ) : (
         <>
-          {/* Confirmation Preview */}
           <Card style={styles.previewCard}>
             <Card.Title
-              title="🧾 Confirm Maintenance Record"
+              title={
+                mode === "future"
+                  ? "🧾 Confirm Upcoming Maintenance"
+                  : "🧾 Confirm Maintenance Record"
+              }
               titleStyle={styles.cardTitle}
             />
             <Card.Content>
@@ -406,16 +535,39 @@ export default function AddMaintenanceRecord() {
                 </Text>
               </View>
               <Divider style={styles.divider} />
-              <View style={styles.row}>
-                <Text style={styles.label}>🗓 Service Date:</Text>
-                <Text style={styles.value}>
-                  {serviceDate.toISOString().split("T")[0]}
-                </Text>
-              </View>
-              <View style={styles.row}>
-                <Text style={styles.label}>📏 Mileage:</Text>
-                <Text style={styles.value}>{mileage} km</Text>
-              </View>
+              {mode === "future" ? (
+                <>
+                  <View style={styles.row}>
+                    <Text style={styles.label}>📅 Next Service Date:</Text>
+                    <Text style={styles.value}>
+                      {nextServiceDate.toISOString().split("T")[0]}
+                    </Text>
+                  </View>
+                  <View style={styles.row}>
+                    <Text style={styles.label}>📏 Current Mileage:</Text>
+                    <Text style={styles.value}>{mileage} km</Text>
+                  </View>
+                  <View style={styles.row}>
+                    <Text style={styles.label}>🔜 Next Service Mileage:</Text>
+                    <Text style={styles.value}>
+                      {nextServiceMileage || "-"}
+                    </Text>
+                  </View>
+                </>
+              ) : (
+                <>
+                  <View style={styles.row}>
+                    <Text style={styles.label}>🗓 Service Date:</Text>
+                    <Text style={styles.value}>
+                      {serviceDate.toISOString().split("T")[0]}
+                    </Text>
+                  </View>
+                  <View style={styles.row}>
+                    <Text style={styles.label}>📏 Mileage:</Text>
+                    <Text style={styles.value}>{mileage} km</Text>
+                  </View>
+                </>
+              )}
               <View style={styles.row}>
                 <Text style={styles.label}>🔧 Mechanic:</Text>
                 <Text style={styles.value}>{mechanic || "-"}</Text>
@@ -474,6 +626,8 @@ export default function AddMaintenanceRecord() {
               compact
               onPress={handleSubmit}
               style={{ flex: 1, marginLeft: 8 }}
+              loading={loading}
+              disabled={loading}
             >
               Confirm & Save
             </Button>
@@ -487,10 +641,32 @@ export default function AddMaintenanceRecord() {
 const styles = StyleSheet.create({
   container: {
     padding: 16,
-    backgroundColor: "#f0f2f5",
+    backgroundColor: "#f4f4f5",
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 16,
+    color: "#4c1d95",
   },
   card: {
     marginBottom: 16,
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  serviceBox: {
+    marginBottom: 16,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: "#f5f3ff",
+    borderWidth: 1,
+    borderColor: "#d1c4e9",
+  },
+  serviceTitle: {
+    fontWeight: "bold",
+    marginBottom: 4,
+    color: "#6b21a8",
   },
   input: {
     marginBottom: 16,
@@ -556,12 +732,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#1f2937",
     textAlign: "right",
-  },
-  mainTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#4c1d95",
-    marginBottom: 16,
-    textAlign: "center",
   },
 });

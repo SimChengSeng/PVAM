@@ -44,6 +44,7 @@ export default function ScheduleReminderForm() {
   const [notes, setNotes] = useState("");
   const [availableParts, setAvailableParts] = useState([]);
   const [nextServiceDate, setNextServiceDate] = useState(new Date());
+  const [nextServiceMileage, setNextServiceMileage] = useState("");
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [mechanic, setMechanic] = useState("");
   const [laborCost, setLaborCost] = useState("0");
@@ -144,6 +145,8 @@ export default function ScheduleReminderForm() {
       const notesValue = notes?.trim() === "" ? null : notes;
       const mechanicValue = mechanic?.trim() === "" ? null : mechanic;
       const mileageValue = mileage?.trim() === "" ? null : parseInt(mileage);
+      const nextServiceMileageValue =
+        nextServiceMileage?.trim() === "" ? null : parseInt(nextServiceMileage);
 
       const totalCost =
         (serviceDetails.reduce((sum, s) => sum + (s.cost || 0), 0) || 0) +
@@ -157,7 +160,7 @@ export default function ScheduleReminderForm() {
         services: serviceDetails,
         currentServiceMileage: mileageValue || null,
         nextServiceDate: nextServiceDate.toISOString().split("T")[0],
-        serviceDate: "N/A",
+        nextServiceMileage: nextServiceMileageValue,
         notes: notesValue,
         mechanic: mechanicValue,
         laborCost: labor,
@@ -218,6 +221,8 @@ export default function ScheduleReminderForm() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
+      {/* Main Title */}
+      <Text style={styles.mainTitle}>New Maintenance</Text>
       {!showConfirm ? (
         <>
           {/* Vehicle Info */}
@@ -230,66 +235,87 @@ export default function ScheduleReminderForm() {
 
           {/* Services Section */}
           <Card style={styles.card}>
-            <Card.Title title="Services" />
+            <Card.Title title="Service Parts" />
             <Card.Content>
               {services.map((service, index) => (
-                <View key={index}>
+                <View
+                  key={index}
+                  style={{
+                    marginBottom: 16,
+                    padding: 12,
+                    borderRadius: 12,
+                    backgroundColor: "#f5f3ff", // light purple background
+                    borderWidth: 1,
+                    borderColor: "#d1c4e9", // light border
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontWeight: "bold",
+                      marginBottom: 4,
+                      color: "#6b21a8",
+                    }}
+                  >
+                    Service #{index + 1}
+                  </Text>
+
                   {!service.selectedService && (
                     <HelperText type="error" visible={true}>
                       Service is required
                     </HelperText>
                   )}
-                  <View style={styles.input}>
-                    <Menu
-                      visible={service.menuVisible}
-                      onDismiss={() =>
-                        updateService(index, "menuVisible", false)
-                      }
-                      anchor={
-                        <Button
-                          icon={() => <Wrench size={18} color="#0284c7" />}
-                          mode="outlined"
-                          onPress={() =>
-                            updateService(index, "menuVisible", true)
-                          }
-                        >
-                          {service.selectedService
-                            ? availableParts.find(
-                                (p) => p.partId === service.selectedService
-                              )?.name
-                            : "Select Service"}
-                        </Button>
-                      }
-                    >
-                      {availableParts.map((part) => (
-                        <Menu.Item
-                          key={part.partId}
-                          onPress={() => {
-                            updateService(
-                              index,
-                              "selectedService",
-                              part.partId
-                            );
-                            updateService(index, "menuVisible", false);
-                          }}
-                          title={part.name}
-                        />
-                      ))}
-                    </Menu>
-                  </View>
+
+                  <Menu
+                    visible={service.menuVisible}
+                    onDismiss={() => updateService(index, "menuVisible", false)}
+                    anchor={
+                      <Button
+                        icon={() => <Wrench size={18} color="#0284c7" />}
+                        mode="outlined"
+                        onPress={() =>
+                          updateService(index, "menuVisible", true)
+                        }
+                        style={{ marginBottom: 8 }}
+                      >
+                        {service.selectedService
+                          ? availableParts.find(
+                              (p) => p.partId === service.selectedService
+                            )?.name
+                          : "Select Service"}
+                      </Button>
+                    }
+                  >
+                    {availableParts.map((part) => (
+                      <Menu.Item
+                        key={part.partId}
+                        onPress={() => {
+                          updateService(index, "selectedService", part.partId);
+                          updateService(index, "menuVisible", false);
+                        }}
+                        title={part.name}
+                      />
+                    ))}
+                  </Menu>
+
                   <TextInput
                     label="Cost (RM)"
                     mode="outlined"
                     keyboardType="numeric"
                     value={service.cost}
                     onChangeText={(text) => updateService(index, "cost", text)}
-                    style={styles.input}
+                    style={{ marginBottom: 8 }}
                   />
+
                   <Button
                     icon="trash-can-outline"
                     mode="outlined"
                     onPress={() => removeServiceField(index)}
-                    style={{ marginBottom: 8 }}
+                    textColor="#b91c1c"
+                    style={{
+                      borderColor: "#fca5a5",
+                      borderRadius: 99,
+                      alignSelf: "flex-end",
+                    }}
                   >
                     Remove Service
                   </Button>
@@ -297,45 +323,23 @@ export default function ScheduleReminderForm() {
               ))}
               <Button
                 icon="plus"
-                mode="contained-tonal"
-                compact
+                mode="contained"
                 onPress={addServiceField}
-                style={{ marginBottom: 8, alignSelf: "flex-start" }}
+                style={{
+                  marginTop: 4,
+                  alignSelf: "center",
+                  backgroundColor: "#7c3aed",
+                  borderRadius: 99,
+                }}
               >
                 Add Another Service
               </Button>
             </Card.Content>
           </Card>
 
-          {/* Cost Details Section */}
+          {/*Next Service Section */}
           <Card style={styles.card}>
-            <Card.Title title="Cost Details" />
-            <Card.Content>
-              <TextInput
-                label="Labor Cost"
-                mode="outlined"
-                keyboardType="numeric"
-                value={laborCost}
-                onChangeText={setLaborCost}
-                style={styles.input}
-              />
-              <TextInput
-                label="Service Tax"
-                mode="outlined"
-                keyboardType="numeric"
-                value={serviceTax}
-                onChangeText={setServiceTax}
-                style={styles.input}
-              />
-              <Text style={{ marginBottom: 16, fontWeight: "bold" }}>
-                Total Cost: RM {totalCost.toFixed(2)}
-              </Text>
-            </Card.Content>
-          </Card>
-
-          {/* Notes & Mechanic Section */}
-          <Card style={styles.card}>
-            <Card.Title title="Notes & Mechanic" />
+            <Card.Title title="Next Service Information" />
             <Card.Content>
               {!mileage && (
                 <HelperText type="error" visible={!mileage}>
@@ -350,29 +354,15 @@ export default function ScheduleReminderForm() {
                 onChangeText={setMileage}
                 style={styles.input}
               />
-
               <TextInput
-                label="Mechanic"
+                label="Next Service Mileage (km)"
                 mode="outlined"
-                value={mechanic}
-                onChangeText={setMechanic}
+                keyboardType="numeric"
+                value={nextServiceMileage}
+                onChangeText={setNextServiceMileage}
                 style={styles.input}
               />
-              <TextInput
-                label="Notes"
-                mode="outlined"
-                multiline
-                value={notes}
-                onChangeText={setNotes}
-                style={styles.input}
-              />
-            </Card.Content>
-          </Card>
 
-          {/* Reminder Settings Section */}
-          <Card style={styles.card}>
-            <Card.Title title="Reminder Settings" />
-            <Card.Content>
               <Button
                 icon={() => <CalendarDays size={18} color="#0284c7" />}
                 mode="outlined"
@@ -395,7 +385,13 @@ export default function ScheduleReminderForm() {
                   }}
                 />
               )}
+            </Card.Content>
+          </Card>
 
+          {/* Reminder Settings Section */}
+          <Card style={styles.card}>
+            <Card.Title title="Reminder Settings" />
+            <Card.Content>
               <View style={{ marginBottom: 16 }}>
                 <Text style={{ marginVertical: 8 }}>
                   Select Reminder Schedule:
@@ -427,6 +423,71 @@ export default function ScheduleReminderForm() {
             </Card.Content>
           </Card>
 
+          {/* Advanced Options Section */}
+          <Card style={styles.card}>
+            <Card.Title title="Advanced Options" />
+            <Card.Content>
+              <List.Accordion
+                title="Cost Details"
+                left={(props) => (
+                  <List.Icon {...props} icon="cash-multiple" color="#0284c7" />
+                )}
+                style={styles.accordion}
+                theme={{ colors: { background: "transparent" } }}
+              >
+                <View style={styles.accordionContent}>
+                  <TextInput
+                    label="Labor Cost"
+                    mode="outlined"
+                    keyboardType="numeric"
+                    value={laborCost}
+                    onChangeText={setLaborCost}
+                    style={styles.inputRounded}
+                  />
+                  <TextInput
+                    label="Service Tax"
+                    mode="outlined"
+                    keyboardType="numeric"
+                    value={serviceTax}
+                    onChangeText={setServiceTax}
+                    style={styles.inputRounded}
+                  />
+                  <Text style={styles.totalCostText}>
+                    Total Cost: RM {totalCost.toFixed(2)}
+                  </Text>
+                </View>
+              </List.Accordion>
+              <List.Accordion
+                title="Mechanic & Notes"
+                left={(props) => (
+                  <List.Icon {...props} icon="account-wrench" color="#0284c7" />
+                )}
+                style={styles.accordion}
+                theme={{ colors: { background: "transparent" } }}
+              >
+                <View style={styles.accordionContent}>
+                  <TextInput
+                    label="Mechanic"
+                    mode="outlined"
+                    value={mechanic}
+                    onChangeText={setMechanic}
+                    style={styles.inputRounded}
+                  />
+                  <TextInput
+                    label="Notes"
+                    mode="outlined"
+                    multiline
+                    value={notes}
+                    onChangeText={setNotes}
+                    style={styles.inputRounded}
+                  />
+                </View>
+              </List.Accordion>
+              <Text style={styles.totalCostText}>
+                Total Cost: RM {totalCost.toFixed(2)}
+              </Text>
+            </Card.Content>
+          </Card>
           <Button
             icon="check-circle"
             mode="contained-tonal"
@@ -438,39 +499,75 @@ export default function ScheduleReminderForm() {
           </Button>
         </>
       ) : (
-        // ...existing confirmation card...
         <>
-          <Card style={styles.card}>
-            <Card.Title title="Confirm Upcoming Maintenance" />
+          <Card style={styles.previewCard}>
+            <Card.Title
+              title="Confirm Upcoming Maintenance"
+              titleStyle={styles.cardTitle}
+            />
             <Card.Content>
-              <Text>Plate: {plateNumber}</Text>
-              <Text>
-                Model: {brand} {model}
+              <View style={styles.row}>
+                <Text style={styles.label}>🚘 Plate:</Text>
+                <Text style={styles.value}>{plateNumber}</Text>
+              </View>
+              <View style={styles.row}>
+                <Text style={styles.label}>📍 Model:</Text>
+                <Text style={styles.value}>
+                  {brand} {model}
+                </Text>
+              </View>
+              <Divider style={styles.divider} />
+
+              <View style={styles.row}>
+                <Text style={styles.label}>📅 Next Service Date:</Text>
+                <Text style={styles.value}>
+                  {nextServiceDate.toISOString().split("T")[0]}
+                </Text>
+              </View>
+              <View style={styles.row}>
+                <Text style={styles.label}>📏 Current Mileage:</Text>
+                <Text style={styles.value}>{mileage} km</Text>
+              </View>
+              <View style={styles.row}>
+                <Text style={styles.label}>🔜 Next Service Mileage:</Text>
+                <Text style={styles.value}>{nextServiceMileage || "-"}</Text>
+              </View>
+              <View style={styles.row}>
+                <Text style={styles.label}>🔧 Mechanic:</Text>
+                <Text style={styles.value}>{mechanic || "-"}</Text>
+              </View>
+              <View style={styles.row}>
+                <Text style={styles.label}>🧮 Labor Cost:</Text>
+                <Text style={styles.value}>RM {laborCost || 0}</Text>
+              </View>
+              <View style={styles.row}>
+                <Text style={styles.label}>💸 Service Tax:</Text>
+                <Text style={styles.value}>RM {serviceTax || 0}</Text>
+              </View>
+              <View style={styles.row}>
+                <Text style={styles.label}>📝 Notes:</Text>
+                <Text style={styles.value}>{notes || "-"}</Text>
+              </View>
+
+              <Divider style={styles.divider} />
+
+              <Text style={[styles.label, { marginBottom: 8 }]}>
+                🧰 Services:
               </Text>
-              <Divider style={{ marginVertical: 8 }} />
-              <Text>
-                Next Service Date: {nextServiceDate.toISOString().split("T")[0]}
-              </Text>
-              <Text>Mileage: {mileage} km</Text>
-              <Text>Mechanic: {mechanic}</Text>
-              <Text>Labor Cost: RM {laborCost}</Text>
-              <Text>Service Tax: RM {serviceTax}</Text>
-              <Text>Notes: {notes}</Text>
-              <Divider style={{ marginVertical: 8 }} />
-              <Text style={{ fontWeight: "bold" }}>Services:</Text>
               {services.map((service, index) => {
                 const part = availableParts.find(
                   (p) => p.partId === service.selectedService
                 );
                 return part ? (
-                  <Text key={index}>
+                  <Text key={index} style={styles.serviceItem}>
                     • {part.name} - RM {service.cost}
                   </Text>
                 ) : null;
               })}
-              <Divider style={{ marginVertical: 8 }} />
-              <Text style={{ fontWeight: "bold" }}>
-                Total Cost: RM {totalCost.toFixed(2)}
+
+              <Divider style={styles.divider} />
+              <Text style={styles.total}>
+                💰 Total Cost: RM {totalCost.toFixed(2)}
               </Text>
             </Card.Content>
           </Card>
@@ -517,5 +614,74 @@ const styles = StyleSheet.create({
   },
   input: {
     marginBottom: 16,
+  },
+  accordion: {
+    backgroundColor: "transparent",
+    borderRadius: 8,
+    marginBottom: 8,
+    overflow: "hidden",
+  },
+  accordionContent: {
+    backgroundColor: "#f8fafc",
+    padding: 12,
+  },
+  inputRounded: {
+    marginBottom: 12,
+    backgroundColor: "#fff",
+  },
+  totalCostText: {
+    marginVertical: 8,
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+  previewCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    overflow: "hidden",
+    elevation: 4,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#333333",
+  },
+  row: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#555555",
+  },
+  value: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#333333",
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "#e0e0e0",
+    marginVertical: 8,
+  },
+  serviceItem: {
+    fontSize: 14,
+    color: "#333333",
+    marginBottom: 4,
+  },
+  total: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#6b21a8",
+    marginTop: 8,
+  },
+  mainTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 16,
+    textAlign: "center",
   },
 });
