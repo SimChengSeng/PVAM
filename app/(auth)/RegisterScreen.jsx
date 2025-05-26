@@ -11,8 +11,14 @@ import {
 } from "react-native";
 import React, { useState } from "react";
 import { useRouter } from "expo-router";
-import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { auth } from "./../../config/FirebaseConfig";
+import {
+  createUserWithEmailAndPassword,
+  updateProfile,
+  sendEmailVerification,
+} from "firebase/auth";
+import { auth } from "../../config/FirebaseConfig";
+import { db } from "../../config/FirebaseConfig"; // Firestore instance
+import { doc, setDoc, serverTimestamp } from "firebase/firestore"; // Firestore functions
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -20,11 +26,12 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const customUserId = Date.now().toString(); // Generate a unique customUserId
 
   const handleRegister = () => {
     if (!name || !email || !password || !confirmPassword) {
       ToastAndroid.show("Please fill all fields", ToastAndroid.SHORT);
-      Alert.alert("Please Enter Email and Password");
+      Alert.alert("Please enter all the required fields");
       return;
     }
 
@@ -37,15 +44,37 @@ export default function RegisterScreen() {
       .then(async (userCredential) => {
         const user = userCredential.user;
 
-        await updateProfile(user, {
-          displayName: name,
-        });
+        try {
+          // Update the user's profile with the name
+          await updateProfile(user, {
+            displayName: name,
+          });
 
-        await setLocalStorage("userDetail", user);
+          // Add the user to Firestore
+          await setDoc(doc(db, "users", user.uid), {
+            customUserId: customUserId,
+            name: name,
+            email: email,
+            phone: "",
+            profileImage: "", // Placeholder for profile image URL
+            role: "owner", // Default role
 
-        console.log("User registered:", user);
-        ToastAndroid.show("Registration successful", ToastAndroid.SHORT);
-        router.replace("(tabs)");
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          });
+
+          // Send email verification
+          await sendEmailVerification(user);
+
+          console.log("User registered:", user);
+          ToastAndroid.show("Registration successful", ToastAndroid.SHORT);
+
+          // Navigate to another screen
+          router.replace("/(auth)/LoginScreen"); // Navigate to LoginScreen
+        } catch (err) {
+          console.log("Post-registration error:", err);
+          ToastAndroid.show("Something went wrong", ToastAndroid.SHORT);
+        }
       })
       .catch((error) => {
         const errorCode = error.code;
@@ -80,7 +109,7 @@ export default function RegisterScreen() {
 
         <TextInput
           style={styles.input}
-          placeholder="Full Name"
+          placeholder="User Name"
           value={name}
           onChangeText={setName}
         />

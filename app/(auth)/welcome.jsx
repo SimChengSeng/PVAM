@@ -9,7 +9,7 @@ export default function Welcome() {
 
   const handleContinue = async () => {
     await setLocalStorage("firstTime", true);
-    router.push("/(auth)/login");
+    router.push("/(auth)/LoginScreen");
   };
 
   return (

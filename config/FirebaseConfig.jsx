@@ -7,24 +7,25 @@ import {
 } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import ReactNativeAsyncStorage from "@react-native-async-storage/async-storage";
+import Constants from "expo-constants";
 
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+// Safe fallback to support both dev and EAS builds
+const { extra } = Constants.expoConfig || Constants.manifest;
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+// Firebase config using .env values from app.config.js
 const firebaseConfig = {
-  apiKey: "AIzaSyDxrMTxCF2A22hYfpWpbYkkIhiq3wKxoAM",
-  authDomain: "fyp-project-26d3b.firebaseapp.com",
-  projectId: "fyp-project-26d3b",
-  storageBucket: "fyp-project-26d3b.firebasestorage.app",
-  messagingSenderId: "813972928973",
-  appId: "1:813972928973:web:9e6e7bae8c9e854ad52c84",
-  measurementId: "G-W68XEB8Y4S",
+  apiKey: extra.FIREBASE_API_KEY,
+  authDomain: extra.FIREBASE_AUTH_DOMAIN,
+  projectId: extra.FIREBASE_PROJECT_ID,
+  storageBucket: extra.FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: extra.FIREBASE_MESSAGING_SENDER_ID,
+  appId: extra.FIREBASE_APP_ID,
+  measurementId: extra.FIREBASE_MEASUREMENT_ID,
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
+
 export const auth = initializeAuth(app, {
   persistence: getReactNativePersistence(ReactNativeAsyncStorage),
 });
