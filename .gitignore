@@ -22,7 +22,7 @@ GoogleService-Info.plist
 firebase-adminsdk.json
 serviceAccountKey.json
 fcm-service-account.json
-*.json
+
 
 # Environment Variables / Local Config
 .env
