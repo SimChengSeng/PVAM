@@ -1,18 +1,52 @@
-import React from "react";
-import { View, StyleSheet, ScrollView } from "react-native";
-import { Text, Card } from "react-native-paper";
+import React, { useState } from "react";
+import { View, StyleSheet, ScrollView, Modal, Pressable } from "react-native";
+import { Text, Card, Button, ActivityIndicator } from "react-native-paper";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { db } from "../../config/FirebaseConfig";
+import { collection, query, where, orderBy, getDocs } from "firebase/firestore";
 
 const getColor = (score) => {
-  if (score >= 85) return "#28a745"; // Green
-  if (score >= 60) return "#ffc107"; // Yellow
-  return "#dc3545"; // Red
+  if (score >= 85) return "#28a745";
+  if (score >= 60) return "#ffc107";
+  return "#dc3545";
 };
 
 export default function HealthScoreDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const partScores = JSON.parse(params.partScores || "[]");
+  const vehicleId = params.vehicleId;
+
+  // State for modal and history
+  const [modalVisible, setModalVisible] = useState(false);
+  const [historyLogs, setHistoryLogs] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [selectedPart, setSelectedPart] = useState(null);
+
+  // Fetch part history
+  const fetchPartHistory = async (partId, partName) => {
+    setLoadingHistory(true);
+    setSelectedPart(partName);
+    setModalVisible(true);
+
+    try {
+      console.log("🚗 Fetching history for", partId, "on vehicle", vehicleId);
+      const q = query(
+        collection(db, "vehicles", vehicleId, "partHistory"),
+        where("partId", "==", partId),
+        orderBy("serviceDate", "desc")
+      );
+      const querySnapshot = await getDocs(q);
+      const logs = querySnapshot.docs.map((doc) => doc.data());
+      console.log("📦 Found logs:", logs);
+      setHistoryLogs(logs);
+    } catch (e) {
+      console.error("❌ Error fetching part history:", e);
+      setHistoryLogs([]);
+    }
+
+    setLoadingHistory(false);
+  };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -42,6 +76,13 @@ export default function HealthScoreDetailScreen() {
                 Score: {(part.timeScore * 100).toFixed(0)}% | Penalty:{" "}
                 {part.penalty * 100}%
               </Text>
+              <Button
+                mode="outlined"
+                style={{ marginTop: 8 }}
+                onPress={() => fetchPartHistory(part.partId, part.name)}
+              >
+                View Service History
+              </Button>
             </Card.Content>
           </Card>
         ))
@@ -50,6 +91,44 @@ export default function HealthScoreDetailScreen() {
           No part condition data available.
         </Text>
       )}
+
+      {/* Modal for part history */}
+      <Modal
+        visible={modalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>
+              {selectedPart ? `${selectedPart} History` : "Part History"}
+            </Text>
+            {loadingHistory ? (
+              <ActivityIndicator />
+            ) : historyLogs.length > 0 ? (
+              historyLogs.map((log, idx) => (
+                <View key={idx} style={styles.historyRow}>
+                  <Text style={styles.historyText}>
+                    {log.serviceDate} • {log.mileage} km
+                  </Text>
+                  <Text style={styles.historyText}>
+                    {log.note ? `Note: ${log.note}` : ""}
+                  </Text>
+                </View>
+              ))
+            ) : (
+              <Text style={{ color: "#888" }}>No history found.</Text>
+            )}
+            <Pressable
+              style={styles.closeBtn}
+              onPress={() => setModalVisible(false)}
+            >
+              <Text style={{ color: "#fff", textAlign: "center" }}>Close</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -95,5 +174,41 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#444",
     marginTop: 4,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 20,
+    width: "85%",
+    maxHeight: "70%",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 12,
+    color: "#333",
+  },
+  historyRow: {
+    marginBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+    paddingBottom: 6,
+  },
+  historyText: {
+    fontSize: 13,
+    color: "#444",
+  },
+  closeBtn: {
+    marginTop: 16,
+    backgroundColor: "#007bff",
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
   },
 });

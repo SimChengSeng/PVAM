@@ -166,6 +166,10 @@ export default function VehicleDetailScreen() {
           params: {
             ...item,
             services: JSON.stringify(item.services),
+            plateNumber: params.plate,
+            brand: params.brand,
+            model: params.model,
+            category: params.vehicleCategory,
           },
         })
       }
@@ -309,6 +313,7 @@ export default function VehicleDetailScreen() {
                       brand,
                       model,
                       year,
+                      vehicleId: params.id,
                     },
                   })
                 }
