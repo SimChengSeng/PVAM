@@ -35,6 +35,7 @@ import { globalStyles } from "../../styles/globalStyles";
 export default function VehicleDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  console.log("Vehicle Detail Params:", params);
 
   const [plate, setPlate] = useState(params.plate);
   const [brand, setBrand] = useState(params.brand);

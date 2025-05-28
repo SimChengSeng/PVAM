@@ -23,6 +23,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { getLocalStorage } from "../../../../service/Storage";
 import { useRouter } from "expo-router";
+import * as Notifications from "expo-notifications";
 
 const vehicleSchema = z.object({
   plate: z.string().min(4, "License plate is required"),
@@ -247,7 +248,7 @@ export default function AddNewVehicleForm({
         laborCost: nextService.laborCost,
         serviceTax: nextService.serviceTax,
         cost: nextService.totalCost,
-        notes: nextService.specialNote,
+        notes: "Estimated Maintenance",
         nextServiceDate: "N/A", // Use the provided next service date
         estimateNextServiceDate: nextService.interval.month,
         nextServiceMileage: nextService.interval.km,
@@ -257,18 +258,46 @@ export default function AddNewVehicleForm({
         updatedAt: serverTimestamp(),
       });
 
-      setLoading(false);
-      Alert.alert(
-        "Great!",
-        "Vehicle and next maintenance record added successfully!",
-        [
-          {
-            text: "ok",
-            onPress: () => router.push("../(tabs)"),
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: "🚗 New Vehicle Added",
+          body: `${data.plate} - ${data.brand} ${data.model} has been added successfully.`,
+          subtitle: "Vehicle and next maintenance record added successfully!",
+          data: {
+            type: "vehicle",
+            screen: "VehicleDetailScreen",
+            vehicle: {
+              id: vehicleDoc.id,
+              plate: data.plate,
+              brand: data.brand,
+              model: data.model,
+              year: data.year,
+              color: data.color,
+              Mileage: data.Mileage,
+              vehicleCategory: data.vehicleCategory,
+              vehicleType: data.vehicleType,
+            },
           },
-        ]
-      );
+        },
+        trigger: null, // immediate
+      });
+
+      setLoading(false);
       reset();
+      router.push({
+        pathname: "/vehicleManage/VehicleDetailScreen",
+        params: {
+          id: vehicleDoc.id,
+          plate: data.plate,
+          brand: data.brand,
+          model: data.model,
+          year: data.year,
+          color: data.color,
+          Mileage: data.Mileage,
+          vehicleCategory: data.vehicleCategory,
+          vehicleType: data.vehicleType,
+        },
+      });
     } catch (error) {
       console.error("Error adding vehicle or maintenance record:", error);
       alert("Something went wrong. Try again.");
