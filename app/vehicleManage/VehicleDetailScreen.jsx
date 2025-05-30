@@ -6,6 +6,7 @@ import {
   Pressable,
   Alert,
   FlatList,
+  BackHandler,
 } from "react-native";
 import {
   Text,
@@ -238,7 +239,7 @@ export default function VehicleDetailScreen() {
               if (router.canGoBack()) {
                 router.back();
               } else {
-                router.push("/vehicleManage"); // Fallback to vehicle list
+                router.push("/"); // Fallback to vehicle list
               }
             } catch (error) {
               console.error("Error deleting vehicle:", error);
@@ -263,6 +264,20 @@ export default function VehicleDetailScreen() {
     { label: "purple", colorCode: "#800080" },
     { label: "gold", colorCode: "#FFD700" },
   ];
+
+  useEffect(() => {
+    const onBackPress = () => {
+      // Always go to main screen
+      router.replace("/");
+      return true; // Prevent default behavior
+    };
+
+    BackHandler.addEventListener("hardwareBackPress", onBackPress);
+
+    return () => {
+      BackHandler.removeEventListener("hardwareBackPress", onBackPress);
+    };
+  }, [router]);
 
   return (
     <View style={{ flex: 1 }}>
