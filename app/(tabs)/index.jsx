@@ -84,6 +84,15 @@ export default function Index() {
     }, [userEmail]) // Add userEmail as a dependency
   );
 
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    if (userEmail) {
+      GetVehicleList();
+    } else {
+      setRefreshing(false);
+    }
+  }, [userEmail]);
+
   useEffect(() => {
     const unsubscribe = navigation.addListener("focus", () => {
       if (userEmail) {
@@ -99,11 +108,6 @@ export default function Index() {
       GetVehicleList();
     }
   }, [userEmail]);
-
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    GetVehicleList();
-  }, []);
 
   const formatDate = (dateStr) => {
     if (!dateStr) return "N/A";

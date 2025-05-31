@@ -6,7 +6,7 @@ import { Alert, Platform } from "react-native";
 import { auth, db } from "../config/FirebaseConfig";
 import { doc, setDoc } from "firebase/firestore";
 import { collection, getDocs, query, where } from "firebase/firestore";
-import { scheduleLocalReminder } from "../utils/scheduleReminder";
+import { scheduleLocalReminder } from "../utils/notifications/scheduleReminder";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
