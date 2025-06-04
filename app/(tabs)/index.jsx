@@ -26,6 +26,7 @@ import {
 import { useFocusEffect } from "@react-navigation/native";
 import { globalStyles } from "../../styles/globalStyles";
 import { useNavigation } from "@react-navigation/native";
+import PlateSearch from "../directlyNotify/components/plateSearch";
 
 export default function Index() {
   const router = useRouter();
@@ -384,7 +385,7 @@ export default function Index() {
                 label="Profile"
                 color="#16a34a"
                 bgColor="#dcfce7"
-                onPress={() => router.push("/profile")}
+                onPress={() => router.push("/(tabs)/ProfileScreen")}
               />
               <QuickActionCard
                 icon="notifications-outline"
@@ -397,7 +398,20 @@ export default function Index() {
               />
             </View>
 
-            {/* 4. Other Vehicles */}
+            {/* 4. Plate Search */}
+            <Text style={styles.sectionTitle}>Direct Notifications</Text>
+            <PlateSearch />
+            <Pressable
+              onPress={() =>
+                router.push("/directlyNotify/DirectlyNotifyInboxScreen")
+              }
+            >
+              <Text style={{ color: "#3b82f6", fontWeight: "bold" }}>
+                View my Notifications →
+              </Text>
+            </Pressable>
+
+            {/* 5. Other Vehicles */}
             <Text style={styles.sectionTitle}>My Vehicles</Text>
             {vehicles
               .filter((v) => !v.isDefault)
@@ -446,7 +460,6 @@ export default function Index() {
           </View>
         }
       />
-
       <Pressable
         style={globalStyles.addButton}
         onPress={() => router.push("/vehicleManage/add-new-vehicle")}

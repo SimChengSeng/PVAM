@@ -173,6 +173,7 @@ export default function AddNewVehicleForm({
 
   const onSubmit = async (data) => {
     const user = await getLocalStorage("userDetail");
+    const pushToken = await getLocalStorage("expoPushToken");
     setLoading(true);
 
     try {
@@ -220,6 +221,7 @@ export default function AddNewVehicleForm({
       const vehicleDoc = await addDoc(vehicleRef, {
         ...data,
         userEmail: user?.email,
+        userId: user?.uid,
         createdAt: serverTimestamp(),
         partCondition: combinedPartCondition,
         inspectionReminderEnabled,
@@ -227,6 +229,9 @@ export default function AddNewVehicleForm({
           ? weeklyInspectionDay
           : null,
         lastWeeklyReminderSent: null, // Initialize as null
+        pushToken: pushToken || null, // fallback if null
+        isContactable: true,
+        createdAt: serverTimestamp(),
       });
 
       // Compare current mileage to estimate next service
