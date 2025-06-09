@@ -7,6 +7,7 @@ import { auth, db } from "../config/FirebaseConfig";
 import { doc, setDoc } from "firebase/firestore";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { scheduleLocalReminder } from "../utils/notifications/scheduleReminder";
+import { Snackbar } from "react-native-paper";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -18,6 +19,8 @@ Notifications.setNotificationHandler({
 
 export default function NotificationProvider({ children }) {
   const [expoPushToken, setExpoPushToken] = useState("");
+  const [snackVisible, setSnackVisible] = useState(false);
+  const [snackMessage, setSnackMessage] = useState("");
   const notificationListener = useRef();
 
   useEffect(() => {
@@ -27,10 +30,9 @@ export default function NotificationProvider({ children }) {
 
     notificationListener.current =
       Notifications.addNotificationReceivedListener((notification) => {
-        Alert.alert(
-          notification.request.content.title || "Notification",
-          notification.request.content.subtitle || "Subtitle"
-        );
+        const { title, body } = notification.request.content;
+        setSnackMessage(`${title || "Notification"}: ${body || ""}`);
+        setSnackVisible(true);
       });
 
     return () => {
@@ -67,7 +69,22 @@ export default function NotificationProvider({ children }) {
     }
   };
 
-  return children;
+  return (
+    <>
+      {children}
+      <Snackbar
+        visible={snackVisible}
+        onDismiss={() => setSnackVisible(false)}
+        duration={4000}
+        action={{
+          label: "Close",
+          onPress: () => setSnackVisible(false),
+        }}
+      >
+        {snackMessage}
+      </Snackbar>
+    </>
+  );
 }
 
 function handleRegistrationError(errorMessage) {

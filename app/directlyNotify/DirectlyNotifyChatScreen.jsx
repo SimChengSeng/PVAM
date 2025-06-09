@@ -24,6 +24,7 @@ import {
   orderBy,
   Timestamp,
   onSnapshot,
+  setDoc,
 } from "firebase/firestore";
 import { useLocalSearchParams } from "expo-router";
 import { db, auth } from "../../config/FirebaseConfig";
@@ -63,6 +64,30 @@ export default function DirectlyNotifyChatScreen() {
     });
 
     return () => unsubscribe();
+  }, [messageId]);
+
+  useEffect(() => {
+    const markAsRead = async () => {
+      const currentUserId = auth.currentUser?.uid;
+      if (!messageId || !currentUserId) return;
+
+      try {
+        const messageRef = doc(db, "vehicleMessages", messageId);
+        await setDoc(
+          messageRef,
+          {
+            readStatus: {
+              [currentUserId]: Timestamp.now(),
+            },
+          },
+          { merge: true }
+        );
+      } catch (error) {
+        console.error("Failed to mark as read:", error);
+      }
+    };
+
+    markAsRead();
   }, [messageId]);
 
   const handleSend = async () => {

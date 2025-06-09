@@ -15,6 +15,7 @@ import {
   Dialog,
   Portal,
   Paragraph,
+  Snackbar, // <-- Add this import
 } from "react-native-paper";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
@@ -45,6 +46,8 @@ export default function NotifyForm() {
   const [customMessage, setCustomMessage] = useState("");
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [sending, setSending] = useState(false);
+  const [snackVisible, setSnackVisible] = useState(false);
+  const [snackMessage, setSnackMessage] = useState("");
 
   const getMessageText = () => {
     const plate = parsedVehicle.plateNumber ?? parsedVehicle.plate;
@@ -71,7 +74,9 @@ export default function NotifyForm() {
       const pushToken = tokenDoc.data()?.token;
 
       if (!pushToken) {
-        alert("Owner cannot be contacted.");
+        setSnackMessage("Owner cannot be contacted.");
+        setSnackVisible(true);
+        setSending(false);
         return;
       }
 
@@ -101,11 +106,13 @@ export default function NotifyForm() {
       });
 
       setCustomMessage("");
-      alert("Notification sent.");
-      router.replace("/"); // Go back to main screen
+      setSnackMessage("Notification sent.");
+      setSnackVisible(true);
+      setTimeout(() => router.replace("/"), 1200); // Go back to main screen after short delay
     } catch (err) {
       console.error("Push error:", err);
-      alert("Failed to send notification.");
+      setSnackMessage("Failed to send notification.");
+      setSnackVisible(true);
     } finally {
       setSending(false);
     }
@@ -181,6 +188,17 @@ export default function NotifyForm() {
           </Dialog>
         </Portal>
       </ScrollView>
+      <Snackbar
+        visible={snackVisible}
+        onDismiss={() => setSnackVisible(false)}
+        duration={3000}
+        action={{
+          label: "Close",
+          onPress: () => setSnackVisible(false),
+        }}
+      >
+        {snackMessage}
+      </Snackbar>
     </KeyboardAvoidingView>
   );
 }
