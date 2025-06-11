@@ -1,5 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { View, StyleSheet, TextInput, TouchableOpacity } from "react-native";
+import {
+  View,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  Pressable,
+} from "react-native";
 import { Avatar, Text, Card, Button } from "react-native-paper";
 import { getLocalStorage, removeLocalStorage } from "../../service/Storage";
 import { signOut, updateProfile } from "firebase/auth";
@@ -133,6 +139,42 @@ export default function ProfileScreen() {
             Logout
           </Button>
         </Card.Actions>
+
+        <Card.Content>
+          <Pressable
+            style={{ marginTop: 16 }}
+            onPress={() =>
+              router.push({
+                pathname: "/vehicleManage/DrivingBehaviorForm",
+                params: {
+                  userEmail: user.email,
+                },
+              })
+            }
+          >
+            <Text style={{ color: "#007bff", textAlign: "center" }}>
+              Fill Driving Behavior Form
+            </Text>
+          </Pressable>
+        </Card.Content>
+        <Card.Content>
+          <Pressable
+            style={{ marginTop: 16 }}
+            onPress={() =>
+              router.push({
+                pathname:
+                  "/profileManage/DrivingBehaviorForm/DrivingLevelEstimationForm",
+                params: {
+                  userEmail: user.email,
+                },
+              })
+            }
+          >
+            <Text style={{ color: "#007bff", textAlign: "center" }}>
+              Fill Driving Level Estimation Form
+            </Text>
+          </Pressable>
+        </Card.Content>
       </Card>
     </View>
   );
