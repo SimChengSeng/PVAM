@@ -23,7 +23,7 @@ import { addDoc, collection, getDoc, doc, updateDoc } from "firebase/firestore";
 import { db } from "../../config/FirebaseConfig";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Checkbox } from "react-native-paper";
-import { scheduleReminder } from "../../utils/scheduleReminder";
+import { scheduleReminder } from "../../utils/notifications/scheduleReminder";
 import { Wrench, Fuel, CalendarDays } from "lucide-react-native";
 
 if (

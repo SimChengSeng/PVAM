@@ -33,6 +33,8 @@ export default function MaintenanceDetailScreen() {
     return;
   }
 
+  console.log("MaintenanceUpdateForm params:", params);
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Maintenance Record</Text>
@@ -92,7 +94,23 @@ export default function MaintenanceDetailScreen() {
             pathname: "/maintenanceManage/maintenanceUpdateForm",
             params: {
               ...params,
-              services: JSON.stringify(services), // Pass services as a string
+              services: JSON.stringify(services),
+            },
+          })
+        }
+      >
+        <Ionicons name="create-outline" size={20} color="#fff" />
+        <Text style={styles.editButtonText}>Edit or Mark as Done</Text>
+      </Pressable>
+
+      <Pressable
+        style={styles.editButton}
+        onPress={() =>
+          router.push({
+            pathname: "/maintenanceManage/Refactored_MaintenanceUpdateForm",
+            params: {
+              ...params,
+              services: JSON.stringify(services),
             },
           })
         }

@@ -8,6 +8,7 @@ import ProfileScreen from "./ProfileScreen"; // Profile screen
 import { useRouter } from "expo-router";
 import { getLocalStorage } from "../../service/Storage"; // Local storage utility
 import NotificationProvider from "../../providers/NotificationProvider"; // Notification provider
+import * as Notifications from "expo-notifications";
 
 const Tab = createBottomTabNavigator();
 
@@ -23,6 +24,27 @@ const TabLayout = () => {
     };
 
     GetUserDetail();
+
+    // 📦 Handle notification tap
+    const subscription = Notifications.addNotificationResponseReceivedListener(
+      (response) => {
+        const data = response.notification.request.content.data;
+        if (
+          data?.type === "vehicle" &&
+          data?.screen === "VehicleDetailScreen"
+        ) {
+          router.push({
+            pathname: "/vehicleManage/VehicleDetailScreen",
+            params: data.vehicle, // expects full vehicle info here
+          });
+        }
+      }
+    );
+
+    // 🔁 Cleanup on unmount
+    return () => {
+      subscription.remove();
+    };
   }, []);
 
   return (

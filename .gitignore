@@ -17,12 +17,11 @@ web-build/
 expo-env.d.ts
 
 # Firebase (Sensitive files)
-google-services.json
 GoogleService-Info.plist
 firebase-adminsdk.json
 serviceAccountKey.json
 fcm-service-account.json
-*.json
+
 
 # Environment Variables / Local Config
 .env

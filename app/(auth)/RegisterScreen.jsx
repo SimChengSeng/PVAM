@@ -1,97 +1,79 @@
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  ToastAndroid,
-  Alert,
-} from "react-native";
 import React, { useState } from "react";
+import { View, StyleSheet, KeyboardAvoidingView, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import {
   createUserWithEmailAndPassword,
   updateProfile,
   sendEmailVerification,
 } from "firebase/auth";
-import { auth } from "../../config/FirebaseConfig";
-import { db } from "../../config/FirebaseConfig"; // Firestore instance
-import { doc, setDoc, serverTimestamp } from "firebase/firestore"; // Firestore functions
+import { auth, db } from "../../config/FirebaseConfig";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import {
+  TextInput,
+  Button,
+  Text,
+  HelperText,
+  useTheme,
+} from "react-native-paper";
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const theme = useTheme();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const customUserId = Date.now().toString(); // Generate a unique customUserId
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const customUserId = Date.now().toString();
 
   const handleRegister = () => {
+    setError("");
     if (!name || !email || !password || !confirmPassword) {
-      ToastAndroid.show("Please fill all fields", ToastAndroid.SHORT);
-      Alert.alert("Please enter all the required fields");
+      setError("Please fill all fields");
       return;
     }
-
     if (password !== confirmPassword) {
-      ToastAndroid.show("Passwords do not match", ToastAndroid.SHORT);
+      setError("Passwords do not match");
       return;
     }
-
+    setLoading(true);
     createUserWithEmailAndPassword(auth, email, password)
       .then(async (userCredential) => {
         const user = userCredential.user;
-
         try {
-          // Update the user's profile with the name
-          await updateProfile(user, {
-            displayName: name,
-          });
-
-          // Add the user to Firestore
+          await updateProfile(user, { displayName: name });
           await setDoc(doc(db, "users", user.uid), {
-            customUserId: customUserId,
-            name: name,
-            email: email,
+            customUserId,
+            name,
+            email,
             phone: "",
-            profileImage: "", // Placeholder for profile image URL
-            role: "owner", // Default role
-
+            profileImage: "",
+            role: "owner",
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
           });
-
-          // Send email verification
           await sendEmailVerification(user);
-
-          console.log("User registered:", user);
-          ToastAndroid.show("Registration successful", ToastAndroid.SHORT);
-
-          // Navigate to another screen
-          router.replace("/(auth)/LoginScreen"); // Navigate to LoginScreen
+          router.replace("/(auth)/LoginScreen");
         } catch (err) {
-          console.log("Post-registration error:", err);
-          ToastAndroid.show("Something went wrong", ToastAndroid.SHORT);
+          setError("Something went wrong");
+        } finally {
+          setLoading(false);
         }
       })
       .catch((error) => {
         const errorCode = error.code;
-        console.log("Register error:", errorCode);
-
         if (errorCode === "auth/email-already-in-use") {
-          ToastAndroid.show("Email already exists", ToastAndroid.SHORT);
+          setError("Email already exists");
         } else if (errorCode === "auth/invalid-email") {
-          ToastAndroid.show("Invalid email format", ToastAndroid.SHORT);
+          setError("Invalid email format");
         } else if (errorCode === "auth/weak-password") {
-          ToastAndroid.show(
-            "Password should be at least 6 characters",
-            ToastAndroid.SHORT
-          );
+          setError("Password should be at least 6 characters");
         } else {
-          ToastAndroid.show("Registration failed", ToastAndroid.SHORT);
+          setError("Registration failed");
         }
+        setLoading(false);
       });
   };
 
@@ -104,48 +86,79 @@ export default function RegisterScreen() {
         <View style={styles.iconCircle}>
           <Text style={styles.carIcon}>🚗</Text>
         </View>
-        <Text style={styles.title}>Create an Account</Text>
-        <Text style={styles.subtitle}>Join Vehicle Assistant today</Text>
+        <Text variant="titleLarge" style={styles.title}>
+          Create an Account
+        </Text>
+        <Text variant="bodyMedium" style={styles.subtitle}>
+          Join Vehicle Assistant today
+        </Text>
 
         <TextInput
-          style={styles.input}
-          placeholder="User Name"
+          label="User Name"
           value={name}
           onChangeText={setName}
+          style={styles.input}
+          mode="outlined"
         />
         <TextInput
-          style={styles.input}
-          placeholder="name@example.com"
+          label="Email"
           value={email}
           onChangeText={setEmail}
           keyboardType="email-address"
           autoCapitalize="none"
+          style={styles.input}
+          mode="outlined"
         />
         <TextInput
-          style={styles.input}
-          placeholder="Password"
-          secureTextEntry
+          label="Password"
           value={password}
           onChangeText={setPassword}
+          secureTextEntry={!showPassword}
+          style={styles.input}
+          mode="outlined"
+          right={
+            <TextInput.Icon
+              icon={showPassword ? "eye-off" : "eye"}
+              onPress={() => setShowPassword((prev) => !prev)}
+            />
+          }
         />
         <TextInput
-          style={styles.input}
-          placeholder="Confirm Password"
-          secureTextEntry
+          label="Confirm Password"
           value={confirmPassword}
           onChangeText={setConfirmPassword}
+          secureTextEntry={!showPassword}
+          style={styles.input}
+          mode="outlined"
+          right={
+            <TextInput.Icon
+              icon={showPassword ? "eye-off" : "eye"}
+              onPress={() => setShowPassword((prev) => !prev)}
+            />
+          }
         />
 
-        <TouchableOpacity onPress={handleRegister} style={styles.submitButton}>
-          <Text style={styles.buttonText}>Register</Text>
-        </TouchableOpacity>
+        <HelperText type="error" visible={!!error}>
+          {error}
+        </HelperText>
 
-        <TouchableOpacity
+        <Button
+          mode="contained"
+          onPress={handleRegister}
+          loading={loading}
+          disabled={loading}
+          style={styles.submitButton}
+        >
+          Register
+        </Button>
+
+        <Button
+          mode="text"
           onPress={() => router.back()}
           style={{ marginTop: 10 }}
         >
-          <Text style={styles.link}>Already have an account? Sign In</Text>
-        </TouchableOpacity>
+          Already have an account? Sign In
+        </Button>
       </View>
     </KeyboardAvoidingView>
   );
@@ -185,24 +198,9 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   input: {
-    backgroundColor: "#F8FAFC",
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
     marginBottom: 12,
   },
   submitButton: {
-    backgroundColor: "#000",
-    padding: 14,
-    borderRadius: 8,
-    alignItems: "center",
     marginTop: 10,
-  },
-  buttonText: { color: "#fff", fontWeight: "bold" },
-  link: {
-    textDecorationLine: "underline",
-    color: "#0F172A",
-    textAlign: "center",
   },
 });

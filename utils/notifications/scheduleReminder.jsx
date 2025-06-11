@@ -4,9 +4,10 @@ import * as Notifications from "expo-notifications";
  * Schedule a local reminder before the next service date.
  * @param {Date|string} nextServiceDate - full service date
  * @param {"1d"|"3d"|"7d"} option - offset
+ * @param {{id: string, plate: string, brand?: string, model?: string}} data - navigation info
  * @returns {Promise<{ reminderId: string, scheduledFor: string } | null>}
  */
-export const scheduleReminder = async (nextServiceDate, option) => {
+export const scheduleReminder = async (nextServiceDate, option, data = {}) => {
   const offset = {
     "1d": 1,
     "3d": 3,
@@ -25,19 +26,23 @@ export const scheduleReminder = async (nextServiceDate, option) => {
 
   const reminderId = await Notifications.scheduleNotificationAsync({
     content: {
-      title: "⏰ Upcoming Maintenance",
-      body: `Service is due on ${serviceDate.toISOString().split("T")[0]}`,
-      sound: true,
+      title: `🔧 Maintenance Reminder`,
+      body: `${data.plate || "Your vehicle"} is due for service on ${
+        serviceDate.toISOString().split("T")[0]
+      }`,
+      data: {
+        type: "maintenance",
+        screen: "MaintenanceDetailScreen",
+        maintenanceId: data.id,
+        plate: data.plate,
+        brand: data.brand,
+        model: data.model,
+      },
     },
     trigger: {
       type: "date",
-      timestamp: reminderDate.getTime(), // in milliseconds
+      timestamp: reminderDate.getTime(),
     },
-  });
-
-  console.log("📭 Scheduled reminder:", {
-    reminderId,
-    scheduledFor: reminderDate.toISOString(),
   });
 
   return {

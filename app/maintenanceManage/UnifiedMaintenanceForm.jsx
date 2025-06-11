@@ -24,7 +24,8 @@ import { addDoc, collection, getDoc, doc, updateDoc } from "firebase/firestore";
 import { db } from "../../config/FirebaseConfig";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Wrench, CalendarDays } from "lucide-react-native";
-import { scheduleReminder } from "../../utils/scheduleReminder";
+import { scheduleReminder } from "../../utils/notifications/scheduleReminder";
+import { autoScheduleAllReminders } from "../../utils/notifications/autoScheduleAllReminders";
 import { addMonths } from "date-fns";
 
 if (
@@ -204,21 +205,31 @@ export default function UnifiedMaintenanceForm() {
         }
       }
 
-      // Schedule reminders for future
+      // Schedule reminders automatically for future maintenance
+      // if (mode === "future") {
+      //   const selectedOptions = ["1d", "3d", "7d"]; // Always schedule all
+
+      //   const reminders = [];
+      //   for (const option of selectedOptions) {
+      //     const reminder = await scheduleReminder(nextServiceDate, option);
+      //     if (reminder) reminders.push({ ...reminder, option, sent: false });
+      //   }
+
+      //   if (reminders.length > 0) {
+      //     await updateDoc(doc(db, "maintenanceRecords", docRef.id), {
+      //       reminders,
+      //     });
+      //   }
+      // }
+
       if (mode === "future") {
-        const selectedOptions = Object.keys(reminderOptions).filter(
-          (key) => reminderOptions[key]
+        await autoScheduleAllReminders(
+          nextServiceDate,
+          docRef.id,
+          plateNumber,
+          brand,
+          model
         );
-        const reminders = [];
-        for (const option of selectedOptions) {
-          const reminder = await scheduleReminder(nextServiceDate, option);
-          if (reminder) reminders.push({ ...reminder, option, sent: false });
-        }
-        if (reminders.length > 0) {
-          await updateDoc(doc(db, "maintenanceRecords", docRef.id), {
-            reminders,
-          });
-        }
       }
 
       setLoading(false);
@@ -374,7 +385,7 @@ export default function UnifiedMaintenanceForm() {
                   />
                 )}
 
-                <Text style={{ marginTop: 12, marginBottom: 4 }}>
+                {/* <Text style={{ marginTop: 12, marginBottom: 4 }}>
                   Reminders:
                 </Text>
                 {Object.keys(reminderOptions).map((key) => (
@@ -399,7 +410,7 @@ export default function UnifiedMaintenanceForm() {
                         : "1 week before"}
                     </Text>
                   </View>
-                ))}
+                ))} */}
               </Card.Content>
             </Card>
           )}

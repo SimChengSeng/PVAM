@@ -25,9 +25,12 @@ import {
 } from "firebase/firestore";
 import { useFocusEffect } from "@react-navigation/native";
 import { globalStyles } from "../../styles/globalStyles";
+import { useNavigation } from "@react-navigation/native";
+import PlateSearch from "../directlyNotify/components/plateSearch";
 
 export default function Index() {
   const router = useRouter();
+  const navigation = useNavigation(); // <-- Add this line
   const [vehicles, setVehicles] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -59,13 +62,6 @@ export default function Index() {
 
   useFocusEffect(
     useCallback(() => {
-      if (!userEmail) {
-        console.warn("User email is not set yet. Skipping vehicle fetch.");
-        return;
-      }
-
-      GetVehicleList();
-
       const onBackPress = () => {
         // Show a confirmation dialog before exiting
         Alert.alert(
@@ -91,8 +87,28 @@ export default function Index() {
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    GetVehicleList();
-  }, []);
+    if (userEmail) {
+      GetVehicleList();
+    } else {
+      setRefreshing(false);
+    }
+  }, [userEmail]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("focus", () => {
+      if (userEmail) {
+        GetVehicleList();
+      }
+    });
+
+    return unsubscribe; // cleanup on unmount
+  }, [navigation, userEmail]);
+
+  useEffect(() => {
+    if (userEmail) {
+      GetVehicleList();
+    }
+  }, [userEmail]);
 
   const formatDate = (dateStr) => {
     if (!dateStr) return "N/A";
@@ -155,6 +171,18 @@ export default function Index() {
     return (
       <View style={[globalStyles.container, { justifyContent: "center" }]}>
         <ActivityIndicator size="large" color="#3b82f6" />
+      </View>
+    );
+  }
+
+  // Add this block after the loading check
+  if (!userEmail) {
+    return (
+      <View style={[globalStyles.container, { justifyContent: "center" }]}>
+        <ActivityIndicator size="large" color="#3b82f6" />
+        <Text style={{ textAlign: "center", marginTop: 12 }}>
+          Loading user details...
+        </Text>
       </View>
     );
   }
@@ -357,7 +385,7 @@ export default function Index() {
                 label="Profile"
                 color="#16a34a"
                 bgColor="#dcfce7"
-                onPress={() => router.push("/profile")}
+                onPress={() => router.push("/(tabs)/ProfileScreen")}
               />
               <QuickActionCard
                 icon="notifications-outline"
@@ -370,7 +398,20 @@ export default function Index() {
               />
             </View>
 
-            {/* 4. Other Vehicles */}
+            {/* 4. Plate Search */}
+            <Text style={styles.sectionTitle}>Direct Notifications</Text>
+            <PlateSearch />
+            <Pressable
+              onPress={() =>
+                router.push("/directlyNotify/DirectlyNotifyInboxScreen")
+              }
+            >
+              <Text style={{ color: "#3b82f6", fontWeight: "bold" }}>
+                View my Notifications →
+              </Text>
+            </Pressable>
+
+            {/* 5. Other Vehicles */}
             <Text style={styles.sectionTitle}>My Vehicles</Text>
             {vehicles
               .filter((v) => !v.isDefault)
@@ -419,7 +460,6 @@ export default function Index() {
           </View>
         }
       />
-
       <Pressable
         style={globalStyles.addButton}
         onPress={() => router.push("/vehicleManage/add-new-vehicle")}

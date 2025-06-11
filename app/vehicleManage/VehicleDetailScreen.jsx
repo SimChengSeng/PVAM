@@ -6,8 +6,16 @@ import {
   Pressable,
   Alert,
   FlatList,
+  BackHandler,
 } from "react-native";
-import { Text, Card, Divider } from "react-native-paper";
+import {
+  Text,
+  Card,
+  Divider,
+  Portal,
+  Dialog,
+  Button,
+} from "react-native-paper";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import {
   doc,
@@ -16,16 +24,19 @@ import {
   query,
   where,
   getDocs,
+  getDoc,
   deleteDoc,
 } from "firebase/firestore";
 import { useFocusEffect } from "@react-navigation/native";
 import { db } from "../../config/FirebaseConfig";
+import { calculateVehicleConditionExtended } from "../../utils/calculateVehicleCondition";
 import { Ionicons } from "@expo/vector-icons";
 import { globalStyles } from "../../styles/globalStyles";
 
 export default function VehicleDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  console.log("Vehicle Detail Params:", params);
 
   const [plate, setPlate] = useState(params.plate);
   const [brand, setBrand] = useState(params.brand);
@@ -36,8 +47,10 @@ export default function VehicleDetailScreen() {
     params.vehicleCategory
   );
   const [Mileage, setMileage] = useState(params.Mileage.toString());
-  const [healthScore, setHealthScore] = useState(85); // Example health score
+  const [healthScore, setHealthScore] = useState(undefined);
+  const [partScores, setPartScores] = useState([]);
   const [maintenanceRecords, setMaintenanceRecords] = useState([]);
+  const [showHealthDetails, setShowHealthDetails] = useState(false);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -63,9 +76,50 @@ export default function VehicleDetailScreen() {
     }
   };
 
+  const fetchVehicleWithParts = async (vehicleId) => {
+    const vehicleRef = doc(db, "vehicles", vehicleId);
+    const vehicleSnap = await getDoc(vehicleRef);
+    const vehicleData = vehicleSnap.data();
+
+    vehicleData.partCondition = vehicleSnap.data().partCondition || [];
+
+    return vehicleData;
+  };
+
+  const getColor = (score) => {
+    if (score >= 85) return "#28a745"; // Green
+    if (score >= 60) return "#ffc107"; // Yellow
+    return "#dc3545"; // Red
+  };
+
   useEffect(() => {
     fetchMaintenanceRecords();
   }, []);
+
+  useEffect(() => {
+    const loadHealthScore = async () => {
+      try {
+        const vehicleData = await fetchVehicleWithParts(params.id);
+        console.log("📦 vehicleData:", vehicleData);
+
+        // Set updated mileage if needed
+        setMileage(vehicleData.Mileage.toString());
+
+        const { totalScore, partScores } =
+          calculateVehicleConditionExtended(vehicleData);
+
+        console.log("🧠 Health Score:", totalScore);
+        console.log("📊 Part Scores:", partScores);
+
+        setHealthScore(totalScore);
+        setPartScores(partScores);
+      } catch (error) {
+        console.error("Failed to calculate health score:", error);
+      }
+    };
+
+    loadHealthScore();
+  }, [params.id]);
 
   const handleUpdate = async () => {
     try {
@@ -76,10 +130,19 @@ export default function VehicleDetailScreen() {
         model,
         Mileage: parseInt(Mileage),
       });
-      Alert.alert("Success", "Mileage updated successfully");
+
+      const vehicleData = await fetchVehicleWithParts(params.id);
+      console.log("📦 vehicleData:", vehicleData);
+      const { totalScore } = calculateVehicleConditionExtended(vehicleData);
+      setHealthScore(totalScore);
+
+      Alert.alert("Success", "Mileage updated and health score recalculated");
     } catch (error) {
       console.error("Update error:", error);
-      Alert.alert("Error", "Failed to update mileage.");
+      Alert.alert(
+        "Error",
+        "Mileage updated and health score recalculated. Please try again."
+      );
     }
   };
 
@@ -105,6 +168,10 @@ export default function VehicleDetailScreen() {
           params: {
             ...item,
             services: JSON.stringify(item.services),
+            plateNumber: params.plate,
+            brand: params.brand,
+            model: params.model,
+            category: params.vehicleCategory,
           },
         })
       }
@@ -172,7 +239,7 @@ export default function VehicleDetailScreen() {
               if (router.canGoBack()) {
                 router.back();
               } else {
-                router.push("/vehicleManage"); // Fallback to vehicle list
+                router.push("/"); // Fallback to vehicle list
               }
             } catch (error) {
               console.error("Error deleting vehicle:", error);
@@ -198,6 +265,20 @@ export default function VehicleDetailScreen() {
     { label: "gold", colorCode: "#FFD700" },
   ];
 
+  useEffect(() => {
+    const onBackPress = () => {
+      // Always go to main screen
+      router.replace("/");
+      return true; // Prevent default behavior
+    };
+
+    BackHandler.addEventListener("hardwareBackPress", onBackPress);
+
+    return () => {
+      BackHandler.removeEventListener("hardwareBackPress", onBackPress);
+    };
+  }, [router]);
+
   return (
     <View style={{ flex: 1 }}>
       <FlatList
@@ -208,38 +289,76 @@ export default function VehicleDetailScreen() {
           <>
             {/* Vehicle Overview */}
             <View style={styles.vehicleCard}>
+              {/* Header */}
               <Text style={styles.vehicleTitle}>{plate}</Text>
               <Text style={styles.vehicleSubtitle}>
                 {brand} {model} • {year}
               </Text>
-              <Text style={styles.vehicleOverviewTitle}>Vehicle Overview</Text>
-              <Text style={styles.vehicleOverviewSubtitle}>
+
+              {/* Overview */}
+              <Text style={styles.sectionTitle}>Vehicle Overview</Text>
+              <Text style={styles.sectionSubtitle}>
                 View and manage your vehicle details and maintenance
               </Text>
 
+              {/* Detail Grid */}
               <View style={styles.vehicleDetails}>
-                <Text style={styles.detailLabel}>Vehicle Category</Text>
-                <Text style={styles.detailValue}>{vehicleCategory}</Text>
-
-                <Text style={styles.detailLabel}>Color</Text>
-                <Text style={styles.detailValue}>{color}</Text>
-                <Text style={styles.detailLabel}>Mileage</Text>
-                <Text style={styles.detailValue}>{Mileage}</Text>
-              </View>
-
-              {/* Health Score */}
-              <View style={styles.healthScoreCard}>
-                <Text style={styles.healthScoreLabel}>Health Score</Text>
-                <View style={styles.healthScoreBar}>
-                  <View
-                    style={[
-                      styles.healthScoreFill,
-                      { width: `${healthScore}%` },
-                    ]}
-                  />
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Vehicle Category</Text>
+                  <Text style={styles.detailValue}>{vehicleCategory}</Text>
                 </View>
-                <Text style={styles.healthScoreValue}>{healthScore}%</Text>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Color</Text>
+                  <Text style={styles.detailValue}>{color}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Mileage</Text>
+                  <Text style={styles.detailValue}>{Mileage} km</Text>
+                </View>
               </View>
+
+              {/* Health Score Card */}
+              <Pressable
+                onPress={() =>
+                  router.push({
+                    pathname: "/vehicleManage/HealthScoreDetailScreen",
+                    params: {
+                      healthScore: healthScore?.toString(),
+                      partScores: JSON.stringify(partScores),
+                      plate,
+                      brand,
+                      model,
+                      year,
+                      vehicleId: params.id,
+                    },
+                  })
+                }
+              >
+                <Card style={styles.healthScoreCard}>
+                  <Card.Content>
+                    <Text style={styles.healthScoreLabel}>Health Score</Text>
+                    <Text style={styles.healthScoreSubtitle}>
+                      Tap to view part details
+                    </Text>
+                    <View style={styles.healthScoreBar}>
+                      <View
+                        style={[
+                          styles.healthScoreFill,
+                          {
+                            width: `${healthScore ?? 0}%`,
+                            backgroundColor: getColor(healthScore ?? 0),
+                          },
+                        ]}
+                      />
+                    </View>
+                    <Text style={styles.healthScoreValue}>
+                      {healthScore !== undefined
+                        ? `${healthScore}%`
+                        : "Calculating..."}
+                    </Text>
+                  </Card.Content>
+                </Card>
+              </Pressable>
             </View>
 
             {/* Mileage Update */}
@@ -360,19 +479,24 @@ const styles = StyleSheet.create({
     color: "#666",
     marginBottom: 16,
   },
-  vehicleOverviewTitle: {
+  sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
+    marginBottom: 8,
     color: "#333",
-    marginBottom: 4,
   },
-  vehicleOverviewSubtitle: {
+  sectionSubtitle: {
     fontSize: 14,
     color: "#666",
     marginBottom: 16,
   },
   vehicleDetails: {
     marginTop: 8,
+  },
+  detailRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 4,
   },
   detailLabel: {
     fontSize: 14,
@@ -389,12 +513,19 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginTop: 16,
-    alignItems: "center",
+    width: "100%", // ⬅️ ensure it's full width
+    alignSelf: "center", // optional
+    elevation: 3,
   },
   healthScoreLabel: {
     fontSize: 16,
     fontWeight: "bold",
     color: "#333",
+    marginBottom: 8,
+  },
+  healthScoreSubtitle: {
+    fontSize: 14,
+    color: "#666",
     marginBottom: 8,
   },
   healthScoreBar: {
@@ -407,11 +538,13 @@ const styles = StyleSheet.create({
   },
   healthScoreFill: {
     height: "100%",
-    backgroundColor: "#28a745",
+    borderRadius: 5,
   },
   healthScoreValue: {
     fontSize: 14,
+    fontWeight: "600",
     color: "#333",
+    textAlign: "right",
   },
   mileageCard: {
     backgroundColor: "#fff",
@@ -423,12 +556,6 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 8,
-    color: "#333",
-  },
   input: {
     backgroundColor: "#f1f3f5",
     borderRadius: 8,
@@ -436,6 +563,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     borderWidth: 1,
     borderColor: "#ddd",
+    fontSize: 16,
   },
   updateButton: {
     backgroundColor: "#007bff",
@@ -470,15 +598,6 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 14,
     color: "#555",
-  },
-  detailRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 4,
-  },
-  label: {
-    fontWeight: "500",
-    color: "#444",
   },
   tipsCard: {
     backgroundColor: "#fff",
