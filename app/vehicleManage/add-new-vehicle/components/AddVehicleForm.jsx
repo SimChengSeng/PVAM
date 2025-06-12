@@ -97,11 +97,19 @@ const fixedPartList = [
   },
 ];
 
+const typeToCollection = {
+  car: "maintenanceDetailsCar",
+  truck: "maintenanceDetailsTruck",
+  motorcycle: "maintenanceDetailsMotorcycle",
+  others: "maintenanceDetailsOther",
+};
+
 export default function AddNewVehicleForm({
   vehicleType,
   vehicleColor,
   vehicleCategory,
   vehicleBrand,
+  vehicleModel,
 }) {
   const {
     control,
@@ -115,7 +123,7 @@ export default function AddNewVehicleForm({
       vehicleCategory: vehicleCategory || "",
       plate: "",
       brand: vehicleBrand || "",
-      model: "",
+      model: vehicleModel || "",
       color: vehicleColor || "",
       year: "",
       Mileage: "",
@@ -123,27 +131,36 @@ export default function AddNewVehicleForm({
       NextServiceDate: "",
       NextServiceMileage: "",
       isDefault: false,
+      engineSize: "",
+      cargoCapacity: "",
     },
   });
 
   const [loading, setLoading] = useState(false);
-  const [modelList, setModelList] = useState([]);
-  const [modelLoading, setModelLoading] = useState(false);
   const [inspectionReminderEnabled, setInspectionReminderEnabled] =
     useState(false);
   const [weeklyInspectionDay, setWeeklyInspectionDay] = useState("");
+  const [modelLoading, setModelLoading] = useState(false);
+  const [modelList, setModelList] = useState([]);
   const router = useRouter();
 
   useEffect(() => {
     const fetchModels = async () => {
-      if (!vehicleBrand || !vehicleCategory) return;
+      if (!vehicleBrand || !vehicleCategory || !vehicleType) return;
 
       setModelLoading(true);
       try {
+        // Use the mapping to get the correct collection name
+        const selectedCollection = typeToCollection[vehicleType.toLowerCase()];
+        if (!selectedCollection) {
+          setModelList([]);
+          return;
+        }
+
         // Reference to the category collection
         const categoryRef = collection(
           db,
-          "maintenanceDetails",
+          selectedCollection,
           vehicleBrand,
           vehicleCategory
         );
@@ -169,7 +186,7 @@ export default function AddNewVehicleForm({
     };
 
     fetchModels();
-  }, [vehicleBrand, vehicleCategory]);
+  }, [vehicleBrand, vehicleCategory, vehicleType]);
 
   const onSubmit = async (data) => {
     const user = await getLocalStorage("userDetail");
@@ -177,10 +194,14 @@ export default function AddNewVehicleForm({
     setLoading(true);
 
     try {
+      // Use the mapping to get the correct collection name
+      const selectedCollection = typeToCollection[vehicleType.toLowerCase()];
+      if (!selectedCollection) throw new Error("Invalid vehicle type.");
+
       // Fetch maintenance details from Firestore
       const maintenanceDetailsRef = doc(
         db,
-        "maintenanceDetails",
+        selectedCollection,
         data.brand,
         data.vehicleCategory,
         data.model
@@ -231,7 +252,6 @@ export default function AddNewVehicleForm({
         lastWeeklyReminderSent: null, // Initialize as null
         pushToken: pushToken || null, // fallback if null
         isContactable: true,
-        createdAt: serverTimestamp(),
       });
 
       // Compare current mileage to estimate next service
@@ -373,17 +393,12 @@ export default function AddNewVehicleForm({
             name="model"
             render={({ field: { onChange, value } }) => (
               <>
-                <Dropdown
+                <TextInput
                   label="Model"
-                  placeholder="Select Model"
-                  mode="outlined"
-                  loading={modelLoading}
-                  options={modelList.map((model) => ({
-                    label: model,
-                    value: model,
-                  }))}
                   value={value}
-                  onSelect={onChange}
+                  onChangeText={onChange}
+                  mode="outlined"
+                  editable={false}
                 />
                 <HelperText type="error" visible={!!errors.model}>
                   {errors.model?.message}
@@ -401,13 +416,10 @@ export default function AddNewVehicleForm({
                   label="Year of Manufacture"
                   placeholder="Select Year"
                   mode="outlined"
-                  options={Array.from(
-                    { length: new Date().getFullYear() - 1989 },
-                    (_, i) => {
-                      const year = 1990 + i;
-                      return { label: year.toString(), value: year.toString() };
-                    }
-                  )}
+                  options={Array.from({ length: 2025 - 1989 + 1 }, (_, i) => {
+                    const year = 2025 - i; // 👈 reverse order
+                    return { label: year.toString(), value: year.toString() };
+                  })}
                   value={value}
                   onSelect={onChange}
                 />

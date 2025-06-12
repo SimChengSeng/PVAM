@@ -6,125 +6,70 @@ import {
   Image,
   ScrollView,
 } from "react-native";
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../../../../config/FirebaseConfig";
 
 export default function VehicleCategorySelection({
   vehicleType,
+  vehicleBrand,
   onSelectType,
 }) {
-  const carCategories = [
-    {
-      label: "Sedan",
-      image: require("../../../../assets/images/vehicleType/Sedan.jpg"),
-    },
-    {
-      label: "Hatchback",
-      image: require("../../../../assets/images/vehicleType/Hatchback.jpg"),
-    },
-    {
-      label: "SUV",
-      image: require("../../../../assets/images/vehicleType/SUV.jpg"),
-    },
-    {
-      label: "CUV",
-      image: require("../../../../assets/images/vehicleType/CUV.jpg"),
-    },
-    {
-      label: "Pickup",
-      image: require("../../../../assets/images/vehicleType/Pickup.jpg"),
-    },
-    {
-      label: "Coupe",
-      image: require("../../../../assets/images/vehicleType/Coupe.jpg"),
-    },
-    {
-      label: "Cabriolet",
-      image: require("../../../../assets/images/vehicleType/Cabriolet.jpg"),
-    },
-    {
-      label: "Micro",
-      image: require("../../../../assets/images/vehicleType/Micro.jpg"),
-    },
-    {
-      label: "Supercar",
-      image: require("../../../../assets/images/vehicleType/Supercar.jpg"),
-    },
-    {
-      label: "Roadster",
-      image: require("../../../../assets/images/vehicleType/Roadster.jpg"),
-    },
-  ];
+  const [availableCategories, setAvailableCategories] = useState([]);
 
-  const motorcycleCategories = [
-    {
-      label: "Sportbike",
-      image: require("../../../../assets/images/vehicleType/motorcycle/SportBike.jpg"),
-    },
-    // {
-    //   label: "Sportbike",
-    //   image: require("../../assets/images/motorcycleType/Sportbike.jpg"),
-    // },
-    // {
-    //   label: "Touring",
-    //   image: require("../../assets/images/motorcycleType/Touring.jpg"),
-    // },
-    // {
-    //   label: "Scooter",
-    //   image: require("../../assets/images/motorcycleType/Scooter.jpg"),
-    // },
-    // {
-    //   label: "Off-Road",
-    //   image: require("../../assets/images/motorcycleType/OffRoad.jpg"),
-    // },
-  ];
+  const categoryImageMap = {
+    Sedan: require("../../../../assets/images/vehicleType/Sedan.jpg"),
+    Hatchback: require("../../../../assets/images/vehicleType/Hatchback.jpg"),
+    SUV: require("../../../../assets/images/vehicleType/SUV.jpg"),
+    CUV: require("../../../../assets/images/vehicleType/CUV.jpg"),
+    Pickup: require("../../../../assets/images/vehicleType/Pickup.jpg"),
+    Coupe: require("../../../../assets/images/vehicleType/Coupe.jpg"),
+    Cabriolet: require("../../../../assets/images/vehicleType/Cabriolet.jpg"),
+    Micro: require("../../../../assets/images/vehicleType/Micro.jpg"),
+    Supercar: require("../../../../assets/images/vehicleType/Supercar.jpg"),
+    Roadster: require("../../../../assets/images/vehicleType/Roadster.jpg"),
+    Sportbike: require("../../../../assets/images/vehicleType/motorcycle/SportBike.jpg"),
+  };
 
-  const truckCategories = [
-    // {
-    //   label: "Box Truck",
-    //   image: require("../../assets/images/truckType/BoxTruck.jpg"),
-    // },
-    // {
-    //   label: "Tow Truck",
-    //   image: require("../../assets/images/truckType/TowTruck.jpg"),
-    // },
-    // {
-    //   label: "Dump Truck",
-    //   image: require("../../assets/images/truckType/DumpTruck.jpg"),
-    // },
-    // {
-    //   label: "Flatbed",
-    //   image: require("../../assets/images/truckType/Flatbed.jpg"),
-    // },
-  ];
+  useEffect(() => {
+    if (!vehicleType || !vehicleBrand) return;
 
-  const otherCategories = [
-    // { label: "Bus", image: require("../../assets/images/otherType/Bus.jpg") },
-    // { label: "Van", image: require("../../assets/images/otherType/Van.jpg") },
-    // {
-    //   label: "Tractor",
-    //   image: require("../../assets/images/otherType/Tractor.jpg"),
-    // },
-    // { label: "ATV", image: require("../../assets/images/otherType/ATV.jpg") },
-  ];
+    const fetchCategories = async () => {
+      try {
+        const typeToCollection = {
+          car: "maintenanceDetailsCar",
+          truck: "maintenanceDetailsTruck",
+          motorcycle: "maintenanceDetailsMotorcycle",
+          others: "maintenanceDetailsOther",
+        };
 
-  let categoriesToShow = [];
+        const selectedCollection = typeToCollection[vehicleType.toLowerCase()];
+        if (!selectedCollection) return;
 
-  switch (vehicleType) {
-    case "car":
-      categoriesToShow = carCategories;
-      break;
-    case "motorcycle":
-      categoriesToShow = motorcycleCategories;
-      break;
-    case "truck":
-      categoriesToShow = truckCategories;
-      break;
-    case "others":
-      categoriesToShow = otherCategories;
-      break;
-    default:
-      categoriesToShow = [];
-  }
+        const possibleCategories = Object.keys(categoryImageMap);
+        const validCategories = [];
+
+        for (const category of possibleCategories) {
+          const categoryRef = collection(
+            db,
+            selectedCollection,
+            vehicleBrand,
+            category
+          );
+          const snapshot = await getDocs(categoryRef);
+          if (!snapshot.empty) {
+            validCategories.push(category);
+          }
+        }
+
+        setAvailableCategories(validCategories);
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+      }
+    };
+
+    fetchCategories();
+  }, [vehicleType, vehicleBrand]);
 
   return (
     <ScrollView
@@ -136,14 +81,20 @@ export default function VehicleCategorySelection({
         Select the Category of {vehicleType} you want to add
       </Text>
       <View style={styles.grid}>
-        {categoriesToShow.map((Category) => (
+        {availableCategories.map((category) => (
           <Pressable
-            key={Category.label}
+            key={category}
             style={styles.card}
-            onPress={() => onSelectType(Category.label)}
+            onPress={() => onSelectType(category)}
           >
-            <Image source={Category.image} style={styles.image} />
-            <Text style={styles.label}>{Category.label}</Text>
+            <Image
+              source={
+                categoryImageMap[category] ||
+                require("../../../../assets/images/vehicleType/Sedan.jpg")
+              }
+              style={styles.image}
+            />
+            <Text style={styles.label}>{category}</Text>
           </Pressable>
         ))}
       </View>
@@ -153,7 +104,7 @@ export default function VehicleCategorySelection({
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingBottom: 200, // extra space at the bottom
+    paddingBottom: 200,
   },
   container: {
     paddingHorizontal: 16,
@@ -196,5 +147,12 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     resizeMode: "contain",
+  },
+  label: {
+    marginTop: 12,
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#333",
+    textAlign: "center",
   },
 });

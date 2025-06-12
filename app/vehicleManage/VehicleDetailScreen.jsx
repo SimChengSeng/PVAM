@@ -32,6 +32,7 @@ import { db } from "../../config/FirebaseConfig";
 import { calculateVehicleConditionExtended } from "../../utils/calculateVehicleCondition";
 import { Ionicons } from "@expo/vector-icons";
 import { globalStyles } from "../../styles/globalStyles";
+import SedanSVG from "../../../assets/svg/Sedan.svg"; // adjust path as needed
 
 export default function VehicleDetailScreen() {
   const router = useRouter();
@@ -279,6 +280,12 @@ export default function VehicleDetailScreen() {
     };
   }, [router]);
 
+  // Find the color code for the current color string
+  const colorObj = vehicleColour.find(
+    (c) => c.label.toLowerCase() === color?.toLowerCase()
+  );
+  const svgColor = colorObj ? colorObj.colorCode : "#000"; // fallback to black
+
   return (
     <View style={{ flex: 1 }}>
       <FlatList
@@ -300,6 +307,11 @@ export default function VehicleDetailScreen() {
               <Text style={styles.sectionSubtitle}>
                 View and manage your vehicle details and maintenance
               </Text>
+
+              <View style={{ alignItems: "center" }}>
+                <SedanSVG width={200} height={100} fill={svgColor} />
+                <Text style={{ fontWeight: "600", marginTop: 8 }}>Sedan</Text>
+              </View>
 
               {/* Detail Grid */}
               <View style={styles.vehicleDetails}>

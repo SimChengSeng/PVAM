@@ -9,38 +9,45 @@ import {
 import { db } from "../../../../config/FirebaseConfig";
 import { collection, getDocs } from "firebase/firestore";
 
-const BrandSelectionScreen = ({ onSelectBrand }) => {
+const BrandSelectionScreen = ({ onSelectBrand, vehicleType }) => {
   const [brands, setBrands] = useState([]);
 
   useEffect(() => {
-    const fetchBrands = async () => {
+    if (!vehicleType) return;
+
+    const fetchMeta = async () => {
       try {
-        const brandCollection = collection(db, "maintenanceDetails");
-        const snapshot = await getDocs(brandCollection);
-        const brandList = snapshot.docs.map((doc) => doc.id);
+        const brandRef = collection(
+          db,
+          `maintenanceMeta/${vehicleType}/brands`
+        );
+        const snapshot = await getDocs(brandRef);
+        const brandList = snapshot.docs.map((doc) => ({
+          brand: doc.id,
+          models: doc.data().models,
+        }));
         setBrands(brandList);
       } catch (error) {
-        console.error("Error fetching brands:", error);
+        console.error("Error fetching brand metadata:", error);
       }
     };
 
-    fetchBrands();
-  }, []);
+    fetchMeta();
+  }, [vehicleType]);
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Choose Car Brand</Text>
+      <Text style={styles.title}>Choose Brand</Text>
       <Text style={styles.subtitle}>
-        Select the Brand of car you want to add
+        Select the brand of {vehicleType} you want to add
       </Text>
       <View style={styles.grid}>
-        {brands.map((brand, index) => (
+        {brands.map(({ brand, models }) => (
           <TouchableOpacity
-            key={index}
+            key={brand}
             style={styles.card}
-            onPress={() => onSelectBrand(brand)}
+            onPress={() => onSelectBrand(brand, models)}
           >
-            {/* Optional: Add brand logos here */}
             <Text style={styles.label}>{brand}</Text>
           </TouchableOpacity>
         ))}

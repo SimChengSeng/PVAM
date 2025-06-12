@@ -1,5 +1,12 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, Pressable, BackHandler } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  BackHandler,
+  ScrollView,
+} from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { Provider as PaperProvider } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -15,6 +22,8 @@ export default function AddNewVehicle() {
   const [selectedColor, setSelectedColor] = useState(null);
   const [selectedBrand, setSelectedBrand] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedModel, setSelectedModel] = useState(null);
+  const [brandModels, setBrandModels] = useState([]); // loaded from BrandSelection
 
   const currentStep = !selectedType
     ? 1
@@ -22,7 +31,7 @@ export default function AddNewVehicle() {
     ? 2
     : !selectedBrand
     ? 3
-    : !selectedCategory
+    : !selectedModel
     ? 4
     : 5;
 
@@ -40,7 +49,7 @@ export default function AddNewVehicle() {
   );
 
   const goBack = () => {
-    if (currentStep === 5) setSelectedCategory(null);
+    if (currentStep === 5) setSelectedModel(null);
     else if (currentStep === 4) setSelectedBrand(null);
     else if (currentStep === 3) setSelectedColor(null);
     else if (currentStep === 2) setSelectedType(null);
@@ -59,21 +68,43 @@ export default function AddNewVehicle() {
             <VehicleColourSelection onSelectType={setSelectedColor} />
           )}
           {currentStep === 3 && (
-            <VehicleBrandSelection onSelectBrand={setSelectedBrand} />
-          )}
-          {currentStep === 4 && (
-            <VehicleCategorySelection
-              onSelectType={setSelectedCategory}
+            <VehicleBrandSelection
+              onSelectBrand={(brand, models) => {
+                setSelectedBrand(brand);
+                setBrandModels(models);
+              }}
               vehicleType={selectedType}
-              vehicleBrand={selectedBrand}
             />
           )}
+          {currentStep === 4 && (
+            <ScrollView contentContainerStyle={{ padding: 16 }}>
+              <Text
+                style={{ fontSize: 20, fontWeight: "600", marginBottom: 16 }}
+              >
+                Select Model
+              </Text>
+              {brandModels.map((model) => (
+                <Pressable
+                  key={model.name}
+                  style={styles.card}
+                  onPress={() => {
+                    setSelectedModel(model.name);
+                    setSelectedCategory(model.category); // auto-set category
+                  }}
+                >
+                  <Text style={{ fontSize: 16 }}>{model.name}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          )}
+
           {currentStep === 5 && (
             <AddVehicleForm
               vehicleType={selectedType}
               vehicleColor={selectedColor}
               vehicleCategory={selectedCategory}
               vehicleBrand={selectedBrand}
+              vehicleModel={selectedModel}
             />
           )}
         </View>
@@ -83,7 +114,7 @@ export default function AddNewVehicle() {
 }
 
 function StepIndicator({ currentStep }) {
-  const steps = ["Type", "Colour", "Category", "Brand", "Details"];
+  const steps = ["Type", "Colour", "Brand", "Category", "Details"];
 
   return (
     <View style={styles.stepContainer}>
@@ -166,5 +197,17 @@ const styles = StyleSheet.create({
   activeLabel: {
     color: "#4a90e2",
     fontWeight: "600",
+  },
+  card: {
+    width: "100%",
+    padding: 16,
+    marginVertical: 8,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    elevation: 4,
   },
 });
