@@ -1,6 +1,6 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
 import * as Notifications from "expo-notifications";
 import NotificationProvider from "../../providers/NotificationProvider";
@@ -8,11 +8,16 @@ import { getLocalStorage } from "../../service/Storage";
 
 export default function TabLayout() {
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const checkUser = async () => {
       const user = await getLocalStorage("userDetail");
-      if (!user) router.replace("/auth/LoginScreen");
+      if (!user) {
+        router.replace("/(auth)/LoginScreen");
+      } else {
+        setLoading(false);
+      }
     };
     checkUser();
 
@@ -29,6 +34,8 @@ export default function TabLayout() {
     );
     return () => sub.remove();
   }, []);
+
+  if (loading) return null;
 
   return (
     <NotificationProvider>

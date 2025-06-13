@@ -54,6 +54,14 @@ const vehicleSchema = z.object({
   isDefault: z.boolean().optional(),
   engineSize: z.string().optional(),
   cargoCapacity: z.string().optional(),
+  averageUsageDays: z
+    .string()
+    .regex(/^\d+$/, "Usage days must be a number")
+    .optional(),
+  averageDailyDistance: z
+    .string()
+    .regex(/^\d+$/, "Distance must be a number")
+    .optional(),
 });
 
 const fixedPartList = [
@@ -137,6 +145,8 @@ export default function AddNewVehicleForm({
       isDefault: false,
       engineSize: "",
       cargoCapacity: "",
+      averageUsageDays: "",
+      averageDailyDistance: "",
     },
   });
 
@@ -654,6 +664,62 @@ export default function AddNewVehicleForm({
                   )}
                 </View>
               </List.Accordion>
+            </Card.Content>
+          </Card>
+
+          <Card style={styles.card}>
+            <Card.Title title="Mileage Auto-Estimation" />
+            <Card.Content>
+              <Text style={{ fontSize: 14, color: "#555", marginBottom: 12 }}>
+                Fill in your average vehicle usage so the app can automatically
+                estimate daily mileage and reduce manual updates.
+              </Text>
+
+              <Controller
+                control={control}
+                name="averageUsageDays"
+                render={({ field: { onChange, value } }) => (
+                  <>
+                    <TextInput
+                      label="Average Days Used per Week"
+                      value={value}
+                      onChangeText={onChange}
+                      mode="outlined"
+                      keyboardType="numeric"
+                      style={styles.inputRounded}
+                    />
+                    <HelperText
+                      type="error"
+                      visible={!!errors.averageUsageDays}
+                    >
+                      {errors.averageUsageDays?.message}
+                    </HelperText>
+                  </>
+                )}
+              />
+
+              <Controller
+                control={control}
+                name="averageDailyDistance"
+                render={({ field: { onChange, value } }) => (
+                  <>
+                    <TextInput
+                      label="Average Distance per Day (km)"
+                      value={value}
+                      onChangeText={onChange}
+                      mode="outlined"
+                      keyboardType="numeric"
+                      style={styles.inputRounded}
+                    />
+                    <HelperText
+                      type="error"
+                      visible={!!errors.averageDailyDistance}
+                    >
+                      {errors.averageDailyDistance?.message}
+                    </HelperText>
+                  </>
+                )}
+              />
             </Card.Content>
           </Card>
 

@@ -34,7 +34,7 @@ export default function LoginScreen() {
         console.log("Login successful:", user);
         ToastAndroid.show("Welcome back!", ToastAndroid.SHORT);
 
-        router.replace("/(tabs)"); // Navigate only after successful login
+        router.replace("/"); // Navigate only after successful login
       })
       .catch((error) => {
         const errorCode = error.code;

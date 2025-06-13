@@ -35,6 +35,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { globalStyles } from "../../styles/globalStyles";
 import { useNavigation } from "@react-navigation/native";
 import PlateSearch from "../directlyNotify/components/plateSearch";
+import VehicleCategoryIcon from "../vehicleManage/components/VehicleCategoryIcon";
 
 export default function Index() {
   const router = useRouter();
@@ -160,6 +161,33 @@ export default function Index() {
       const querySnapshot = await getDocs(q);
       const list = [];
       querySnapshot.forEach((doc) => list.push({ id: doc.id, ...doc.data() }));
+
+      // Attach upcoming maintenance to default vehicle
+      const defaultVehicle = list.find((v) => v.isDefault);
+      if (defaultVehicle) {
+        const q2 = query(
+          collection(db, "maintenanceRecords"),
+          where("vehicleId", "==", defaultVehicle.id),
+          where("statusDone", "==", false)
+        );
+        const nextMaintenanceSnapshot = await getDocs(q2);
+        const upcoming = nextMaintenanceSnapshot.docs
+          .map((doc) => doc.data())
+          .sort((a, b) => (a.nextServiceDate > b.nextServiceDate ? 1 : -1));
+
+        if (upcoming.length > 0) {
+          const next = upcoming[0];
+          defaultVehicle.nextServiceDateFormatted =
+            next.nextServiceDate && next.nextServiceDate !== "N/A"
+              ? next.nextServiceDate
+              : next.estimateNextServiceDate
+              ? `Est. +${next.estimateNextServiceDate} months`
+              : "N/A";
+          defaultVehicle.nextServiceType = next.type || "Maintenance";
+          defaultVehicle.nextServiceMileage = next.nextServiceMileage || null; // <-- Add this line
+        }
+      }
+
       setVehicles(list);
     } catch (e) {
       console.log("Error fetching vehicles:", e);
@@ -279,20 +307,35 @@ export default function Index() {
                       fontWeight: "bold",
                       fontSize: 18,
                     }}
-                    subtitleStyle={{ color: "#64748b", fontSize: 13 }}
-                    left={() => (
-                      <Avatar.Icon
-                        icon="car"
-                        size={48}
-                        style={{ backgroundColor: "#3b82f6" }}
-                      />
+                    subtitleStyle={{
+                      color: "#64748b",
+                      fontSize: 13,
+                    }}
+                    right={() => (
+                      <View
+                        style={{
+                          width: 64,
+                          height: 64,
+                          justifyContent: "center",
+                          alignItems: "center",
+                          right: 50,
+                        }}
+                      >
+                        <VehicleCategoryIcon
+                          category={
+                            vehicles.find((v) => v.isDefault).vehicleCategory
+                          }
+                          color={vehicles.find((v) => v.isDefault).color}
+                        />
+                      </View>
                     )}
                   />
+
                   <Card.Content>
                     <Text
                       style={{
                         fontSize: 16,
-                        fontWeight: "600",
+                        fontWeight: "bold",
                         color: "#1e293b",
                         marginBottom: 6,
                       }}
@@ -309,19 +352,6 @@ export default function Index() {
                         value={vehicles.find((v) => v.isDefault).year}
                       />
                       <InfoRow
-                        icon="color-palette-outline"
-                        label="Color"
-                        value={vehicles.find((v) => v.isDefault).color ?? "N/A"}
-                      />
-                      <InfoRow
-                        icon="apps-outline"
-                        label="Category"
-                        value={
-                          vehicles.find((v) => v.isDefault).vehicleCategory ??
-                          "N/A"
-                        }
-                      />
-                      <InfoRow
                         icon="speedometer-outline"
                         label="Mileage"
                         value={`${
@@ -329,6 +359,58 @@ export default function Index() {
                         } km`}
                       />
                     </View>
+
+                    {/* Upcoming Maintenance Info */}
+                    {vehicles.find((v) => v.isDefault)
+                      ?.nextServiceDateFormatted && (
+                      <View style={{ marginTop: 10 }}>
+                        <Text
+                          style={{
+                            fontSize: 14,
+                            color: "#ff0000",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          Upcoming Maintenance:
+                        </Text>
+                        <Text
+                          style={{
+                            fontSize: 14,
+                            color: "#ca8a04",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          {(() => {
+                            const type =
+                              vehicles.find((v) => v.isDefault)
+                                ?.nextServiceType ?? "Maintenance";
+                            const shortType =
+                              type.length > 40
+                                ? type.slice(0, 40) + "..."
+                                : type;
+                            return shortType;
+                          })()}
+                        </Text>
+                        <Text style={{ fontSize: 14, color: "#ca8a04" }}>
+                          Next Service:{" "}
+                          {
+                            vehicles.find((v) => v.isDefault)
+                              .nextServiceDateFormatted
+                          }
+                        </Text>
+                        {vehicles.find((v) => v.isDefault)
+                          ?.nextServiceMileage && (
+                          <Text style={{ fontSize: 14, color: "#ca8a04" }}>
+                            Next Service Mileage:{" "}
+                            {
+                              vehicles.find((v) => v.isDefault)
+                                .nextServiceMileage
+                            }{" "}
+                            km
+                          </Text>
+                        )}
+                      </View>
+                    )}
                   </Card.Content>
                 </Card>
               </Pressable>
@@ -379,10 +461,12 @@ export default function Index() {
               />
               <QuickActionCard
                 icon="person-outline"
-                label="Profile"
+                label="Inbox"
                 color="#16a34a"
                 bgColor="#dcfce7"
-                onPress={() => router.push("/(tabs)/ProfileScreen")}
+                onPress={() =>
+                  router.push("/directlyNotify/DirectlyNotifyProfileScreen")
+                }
               />
               <QuickActionCard
                 icon="notifications-outline"
