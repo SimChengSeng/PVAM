@@ -141,7 +141,7 @@ const MaintenanceScreen = () => {
   return (
     <View style={styles.container}>
       {/* <CarMaintenanceViewer /> */}
-      {/* Removed the semicolon here */}
+
       <Text style={styles.title}>Maintenance</Text>
       <Text style={styles.subtitle}>Track and manage vehicle maintenance.</Text>
 

@@ -6,55 +6,26 @@ import {
   StyleSheet,
   ScrollView,
 } from "react-native";
-import { db } from "../../../../config/FirebaseConfig";
-import { collection, getDocs } from "firebase/firestore";
 
-const BrandSelectionScreen = ({ onSelectBrand, vehicleType }) => {
-  const [brands, setBrands] = useState([]);
-
-  useEffect(() => {
-    if (!vehicleType) return;
-
-    const fetchMeta = async () => {
-      try {
-        const brandRef = collection(
-          db,
-          `maintenanceMeta/${vehicleType}/brands`
-        );
-        const snapshot = await getDocs(brandRef);
-        const brandList = snapshot.docs.map((doc) => ({
-          brand: doc.id,
-          models: doc.data().models,
-        }));
-        setBrands(brandList);
-      } catch (error) {
-        console.error("Error fetching brand metadata:", error);
-      }
-    };
-
-    fetchMeta();
-  }, [vehicleType]);
-
-  return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Choose Brand</Text>
-      <Text style={styles.subtitle}>
-        Select the brand of {vehicleType} you want to add
-      </Text>
-      <View style={styles.grid}>
-        {brands.map(({ brand, models }) => (
-          <TouchableOpacity
-            key={brand}
-            style={styles.card}
-            onPress={() => onSelectBrand(brand, models)}
-          >
-            <Text style={styles.label}>{brand}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </ScrollView>
-  );
-};
+const BrandSelectionScreen = ({ onSelectBrand, brands = [], vehicleType }) => (
+  <ScrollView contentContainerStyle={styles.container}>
+    <Text style={styles.title}>Choose Brand</Text>
+    <Text style={styles.subtitle}>
+      Select the brand of {vehicleType} you want to add
+    </Text>
+    <View style={styles.grid}>
+      {brands.map(({ brand, models }) => (
+        <TouchableOpacity
+          key={brand}
+          style={styles.card}
+          onPress={() => onSelectBrand(brand, models)}
+        >
+          <Text style={styles.label}>{brand}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  </ScrollView>
+);
 
 const styles = StyleSheet.create({
   container: {

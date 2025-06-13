@@ -32,7 +32,8 @@ import { db } from "../../config/FirebaseConfig";
 import { calculateVehicleConditionExtended } from "../../utils/calculateVehicleCondition";
 import { Ionicons } from "@expo/vector-icons";
 import { globalStyles } from "../../styles/globalStyles";
-import SedanSVG from "../../../assets/svg/Sedan.svg"; // adjust path as needed
+import VehicleCategoryIcon from "./components/VehicleCategoryIcon";
+import Cabriolet from "../../assets/svg/Van-Icon";
 
 export default function VehicleDetailScreen() {
   const router = useRouter();
@@ -240,7 +241,7 @@ export default function VehicleDetailScreen() {
               if (router.canGoBack()) {
                 router.back();
               } else {
-                router.push("/"); // Fallback to vehicle list
+                router.replace("/(tabs)/1_index");
               }
             } catch (error) {
               console.error("Error deleting vehicle:", error);
@@ -252,28 +253,29 @@ export default function VehicleDetailScreen() {
   };
 
   const vehicleColour = [
-    { label: "black", colorCode: "#000000" },
-    { label: "white", colorCode: "#FFFFFF" },
-    { label: "silver", colorCode: "#C0C0C0" },
-    { label: "red", colorCode: "#FF0000" },
-    { label: "blue", colorCode: "#0000FF" },
-    { label: "gray", colorCode: "#808080" },
-    { label: "green", colorCode: "#008000" },
-    { label: "yellow", colorCode: "#FFFF00" },
-    { label: "orange", colorCode: "#FFA500" },
-    { label: "brown", colorCode: "#8B4513" },
-    { label: "purple", colorCode: "#800080" },
-    { label: "gold", colorCode: "#FFD700" },
+    { label: "Black", colorCode: "#000000" },
+    { label: "White", colorCode: "#FFFFFF" },
+    { label: "Silver", colorCode: "#C0C0C0" },
+    { label: "Red", colorCode: "#FF0000" },
+    { label: "Blue", colorCode: "#0000FF" },
+    { label: "Gray", colorCode: "#808080" },
+    { label: "Green", colorCode: "#008000" },
+    { label: "Yellow", colorCode: "#FFFF00" },
+    { label: "Orange", colorCode: "#FFA500" },
+    { label: "Brown", colorCode: "#8B4513" },
+    { label: "Purple", colorCode: "#800080" },
+    { label: "Gold", colorCode: "#FFD700" },
   ];
 
   useEffect(() => {
     const onBackPress = () => {
-      // Always go to main screen
-      router.replace("/");
-      return true; // Prevent default behavior
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace("/(tabs)/1_index");
+      }
+      return true;
     };
-
-    BackHandler.addEventListener("hardwareBackPress", onBackPress);
 
     return () => {
       BackHandler.removeEventListener("hardwareBackPress", onBackPress);
@@ -284,7 +286,7 @@ export default function VehicleDetailScreen() {
   const colorObj = vehicleColour.find(
     (c) => c.label.toLowerCase() === color?.toLowerCase()
   );
-  const svgColor = colorObj ? colorObj.colorCode : "#000"; // fallback to black
+  const svgColor = colorObj ? colorObj.colorCode : "#000";
 
   return (
     <View style={{ flex: 1 }}>
@@ -297,21 +299,26 @@ export default function VehicleDetailScreen() {
             {/* Vehicle Overview */}
             <View style={styles.vehicleCard}>
               {/* Header */}
-              <Text style={styles.vehicleTitle}>{plate}</Text>
-              <Text style={styles.vehicleSubtitle}>
-                {brand} {model} • {year}
-              </Text>
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <View>
+                  <Text style={styles.vehicleTitle}>{plate}</Text>
+                  <Text style={styles.vehicleSubtitle}>
+                    {brand} {model} • {year}
+                  </Text>
+                </View>
+                <VehicleCategoryIcon category={vehicleCategory} color={color} />
+              </View>
 
               {/* Overview */}
               <Text style={styles.sectionTitle}>Vehicle Overview</Text>
-              <Text style={styles.sectionSubtitle}>
-                View and manage your vehicle details and maintenance
-              </Text>
 
-              <View style={{ alignItems: "center" }}>
-                <SedanSVG width={200} height={100} fill={svgColor} />
-                <Text style={{ fontWeight: "600", marginTop: 8 }}>Sedan</Text>
-              </View>
+              {/* <Cabriolet width={120} height={60} fill={"#0000FF"} /> */}
 
               {/* Detail Grid */}
               <View style={styles.vehicleDetails}>
@@ -414,7 +421,7 @@ export default function VehicleDetailScreen() {
                 Add New Maintenance Record
               </Text>
             </Pressable>
-            <Pressable
+            {/* <Pressable
               style={{ ...styles.addButton, backgroundColor: "#ffcc00" }}
               onPress={() =>
                 router.push({
@@ -431,7 +438,7 @@ export default function VehicleDetailScreen() {
               }
             >
               <Text style={styles.addButtonText}>Schedule New Maintenance</Text>
-            </Pressable>
+            </Pressable> */}
 
             <View style={styles.tipsCard}>
               <Text style={styles.sectionTitle}>Maintenance Tips</Text>
@@ -508,7 +515,7 @@ const styles = StyleSheet.create({
   detailRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 4,
+    marginTop: 2,
   },
   detailLabel: {
     fontSize: 14,

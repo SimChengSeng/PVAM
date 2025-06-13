@@ -1,86 +1,91 @@
-import React, { useEffect } from "react";
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { Ionicons } from "@expo/vector-icons"; // Icon library
-import HomeScreen from "./index"; // Home screen
-import VehicleManagementScreen from "./VehicleManagementScreen"; // Vehicles screen
-import MaintenanceScreen from "./MaintenanceScreen"; // Maintenance screen
-import ProfileScreen from "./ProfileScreen"; // Profile screen
+import { Tabs } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { useEffect } from "react";
 import { useRouter } from "expo-router";
-import { getLocalStorage } from "../../service/Storage"; // Local storage utility
-import NotificationProvider from "../../providers/NotificationProvider"; // Notification provider
 import * as Notifications from "expo-notifications";
+import NotificationProvider from "../../providers/NotificationProvider";
+import { getLocalStorage } from "../../service/Storage";
 
-const Tab = createBottomTabNavigator();
-
-const TabLayout = () => {
+export default function TabLayout() {
   const router = useRouter();
 
   useEffect(() => {
-    const GetUserDetail = async () => {
-      const userInfo = await getLocalStorage("userDetail");
-      if (!userInfo) {
-        router.replace("/auth/LoginScreen");
-      }
+    const checkUser = async () => {
+      const user = await getLocalStorage("userDetail");
+      if (!user) router.replace("/auth/LoginScreen");
     };
+    checkUser();
 
-    GetUserDetail();
-
-    // 📦 Handle notification tap
-    const subscription = Notifications.addNotificationResponseReceivedListener(
+    const sub = Notifications.addNotificationResponseReceivedListener(
       (response) => {
         const data = response.notification.request.content.data;
-        if (
-          data?.type === "vehicle" &&
-          data?.screen === "VehicleDetailScreen"
-        ) {
+        if (data?.screen === "VehicleDetailScreen") {
           router.push({
             pathname: "/vehicleManage/VehicleDetailScreen",
-            params: data.vehicle, // expects full vehicle info here
+            params: data.vehicle,
           });
         }
       }
     );
-
-    // 🔁 Cleanup on unmount
-    return () => {
-      subscription.remove();
-    };
+    return () => sub.remove();
   }, []);
 
   return (
     <NotificationProvider>
-      <Tab.Navigator
-        screenOptions={({ route }) => ({
-          tabBarIcon: ({ focused, color, size }) => {
-            let iconName;
-
-            // Assign icons based on route name
-            if (route.name === "Home") {
-              iconName = focused ? "home" : "home-outline";
-            } else if (route.name === "Vehicles") {
-              iconName = focused ? "car" : "car-outline";
-            } else if (route.name === "Maintenance") {
-              iconName = focused ? "construct" : "construct-outline";
-            } else if (route.name === "Profile") {
-              iconName = focused ? "person" : "person-outline";
-            }
-
-            // Return the icon component
-            return <Ionicons name={iconName} size={size} color={color} />;
-          },
-          tabBarActiveTintColor: "#007aff", // Active tab color
-          tabBarInactiveTintColor: "gray", // Inactive tab color
-          headerShown: false, // Disable header for tab screens
-        })}
-      >
-        {/* Define tabs with their associated screens */}
-        <Tab.Screen name="Home" component={HomeScreen} />
-        <Tab.Screen name="Vehicles" component={VehicleManagementScreen} />
-        <Tab.Screen name="Maintenance" component={MaintenanceScreen} />
-        <Tab.Screen name="Profile" component={ProfileScreen} />
-      </Tab.Navigator>
+      <Tabs screenOptions={{ headerShown: false }}>
+        <Tabs.Screen
+          name="1_index"
+          options={{
+            title: "Home",
+            tabBarIcon: ({ color, size, focused }) => (
+              <Ionicons
+                name={focused ? "home" : "home-outline"}
+                size={size}
+                color={color}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="2_VehicleManagementScreen"
+          options={{
+            title: "Vehicles",
+            tabBarIcon: ({ color, size, focused }) => (
+              <Ionicons
+                name={focused ? "car" : "car-outline"}
+                size={size}
+                color={color}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="3_MaintenanceScreen"
+          options={{
+            title: "Maintenance",
+            tabBarIcon: ({ color, size, focused }) => (
+              <Ionicons
+                name={focused ? "construct" : "construct-outline"}
+                size={size}
+                color={color}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="4_ProfileScreen"
+          options={{
+            title: "Profile",
+            tabBarIcon: ({ color, size, focused }) => (
+              <Ionicons
+                name={focused ? "person" : "person-outline"}
+                size={size}
+                color={color}
+              />
+            ),
+          }}
+        />
+      </Tabs>
     </NotificationProvider>
   );
-};
-
-export default TabLayout;
+}

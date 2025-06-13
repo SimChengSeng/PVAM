@@ -9,7 +9,15 @@ import {
   Alert, // Import Alert for confirmation dialog
   Animated,
 } from "react-native";
-import { Avatar, Text, Card, Button } from "react-native-paper";
+import {
+  Avatar,
+  Text,
+  Card,
+  Button,
+  Dialog,
+  Portal,
+  RadioButton,
+} from "react-native-paper";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -36,6 +44,8 @@ export default function Index() {
   const [loading, setLoading] = useState(true);
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
+  const [showDialog, setShowDialog] = useState(false);
+  const [selectedVehicleId, setSelectedVehicleId] = useState(null);
 
   const greeting = useMemo(() => {
     const now = new Date();
@@ -89,6 +99,7 @@ export default function Index() {
     setRefreshing(true);
     if (userEmail) {
       GetVehicleList();
+      setRefreshing(true);
     } else {
       setRefreshing(false);
     }
@@ -110,13 +121,13 @@ export default function Index() {
     }
   }, [userEmail]);
 
-  const formatDate = (dateStr) => {
-    if (!dateStr) return "N/A";
-    const date = new Date(dateStr);
-    return new Intl.DateTimeFormat("en-MY", { dateStyle: "medium" }).format(
-      date
-    );
-  };
+  // const formatDate = (dateStr) => {
+  //   if (!dateStr) return "N/A";
+  //   const date = new Date(dateStr);
+  //   return new Intl.DateTimeFormat("en-MY", { dateStyle: "medium" }).format(
+  //     date
+  //   );
+  // };
 
   // const renderVehicle = ({ item }) => (
   //   <Pressable
@@ -139,33 +150,24 @@ export default function Index() {
   //   </Pressable>
   // );
 
-  const GetVehicleList = async () => {
-    if (!userEmail) {
-      console.error("User email is undefined. Cannot fetch vehicles.");
-      return;
-    }
-
+  const GetVehicleList = useCallback(async () => {
+    if (!userEmail) return;
     try {
       const q = query(
         collection(db, "vehicles"),
         where("userEmail", "==", userEmail)
       );
-
       const querySnapshot = await getDocs(q);
-      const vehicleList = [];
-
-      querySnapshot.forEach((doc) => {
-        vehicleList.push({ id: doc.id, ...doc.data() });
-      });
-
-      setVehicles(vehicleList);
+      const list = [];
+      querySnapshot.forEach((doc) => list.push({ id: doc.id, ...doc.data() }));
+      setVehicles(list);
     } catch (e) {
       console.log("Error fetching vehicles:", e);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [userEmail]);
 
   if (loading) {
     return (
@@ -175,7 +177,6 @@ export default function Index() {
     );
   }
 
-  // Add this block after the loading check
   if (!userEmail) {
     return (
       <View style={[globalStyles.container, { justifyContent: "center" }]}>
@@ -187,88 +188,44 @@ export default function Index() {
     );
   }
 
-  const getRemainingTime = (dateStr) => {
-    if (!dateStr) return "Date not set";
+  // const getRemainingTime = (dateStr) => {
+  //   if (!dateStr) return "Date not set";
 
-    const today = new Date();
-    const nextDate = new Date(dateStr);
-    const diffTime = nextDate - today;
+  //   const today = new Date();
+  //   const nextDate = new Date(dateStr);
+  //   const diffTime = nextDate - today;
 
-    if (diffTime <= 0) return "Past due";
+  //   if (diffTime <= 0) return "Past due";
 
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    const diffMonths = Math.floor(diffDays / 30);
+  //   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  //   const diffMonths = Math.floor(diffDays / 30);
 
-    if (diffMonths >= 1) {
-      const remainingDays = diffDays % 30;
-      return `${diffMonths} month${diffMonths > 1 ? "s" : ""}${
-        remainingDays
-          ? ` ${remainingDays} day${remainingDays > 1 ? "s" : ""}`
-          : ""
-      } left`;
-    }
+  //   if (diffMonths >= 1) {
+  //     const remainingDays = diffDays % 30;
+  //     return `${diffMonths} month${diffMonths > 1 ? "s" : ""}${
+  //       remainingDays
+  //         ? ` ${remainingDays} day${remainingDays > 1 ? "s" : ""}`
+  //         : ""
+  //     } left`;
+  //   }
 
-    return `${diffDays} day${diffDays > 1 ? "s" : ""} left`;
-  };
+  //   return `${diffDays} day${diffDays > 1 ? "s" : ""} left`;
+  // };
 
-  const selectDefaultVehicle = async (userEmail, setVehicles, setLoading) => {
+  // Add this function to handle setting the default vehicle
+  const handleSetDefaultVehicle = async () => {
     try {
-      setLoading(true);
-
-      // Fetch all vehicles for the user
-      const q = query(
-        collection(db, "vehicles"),
-        where("userEmail", "==", userEmail)
-      );
-      const querySnapshot = await getDocs(q);
-
-      const vehicleList = [];
-      querySnapshot.forEach((doc) => {
-        vehicleList.push({ id: doc.id, ...doc.data() });
+      const updated = vehicles.map(async (v) => {
+        await updateDoc(doc(db, "vehicles", v.id), {
+          isDefault: v.id === selectedVehicleId,
+        });
       });
-
-      // Show a selection dialog
-      Alert.alert(
-        "Select Default Vehicle",
-        "Choose a vehicle to set as your default:",
-        vehicleList.map((vehicle) => ({
-          text: `${vehicle.plate} - ${vehicle.brand} ${vehicle.model}`,
-          onPress: async () => {
-            // Update the selected vehicle as default
-            await updateDoc(doc(db, "vehicles", vehicle.id), {
-              isDefault: true,
-            });
-
-            // Remove `isDefault` from other vehicles
-            const otherVehicles = vehicleList.filter(
-              (v) => v.id !== vehicle.id
-            );
-            for (const otherVehicle of otherVehicles) {
-              await updateDoc(doc(db, "vehicles", otherVehicle.id), {
-                isDefault: false,
-              });
-            }
-
-            // Refresh the vehicle list
-            setVehicles(
-              vehicleList.map((v) => ({ ...v, isDefault: v.id === vehicle.id }))
-            );
-            Alert.alert(
-              "Success",
-              `${vehicle.plate} is now your default vehicle.`
-            );
-          },
-        })),
-        { cancelable: true }
-      );
+      await Promise.all(updated);
+      Alert.alert("Success", "Default vehicle updated.");
+      GetVehicleList();
+      setShowDialog(false);
     } catch (error) {
-      console.error("Error selecting default vehicle:", error);
-      Alert.alert(
-        "Error",
-        "Failed to set the default vehicle. Please try again."
-      );
-    } finally {
-      setLoading(false);
+      Alert.alert("Error", "Failed to update default vehicle.");
     }
   };
 
@@ -308,12 +265,21 @@ export default function Index() {
                   })
                 }
               >
-                <Card style={globalStyles.card}>
+                <Card
+                  style={[
+                    globalStyles.card,
+                    { marginBottom: 16, borderRadius: 16 },
+                  ]}
+                >
                   <Card.Title
                     title="Default Vehicle"
-                    subtitle="My primary vehicle"
-                    titleStyle={{ color: "#333", fontWeight: "bold" }}
-                    subtitleStyle={{ color: "#333" }}
+                    subtitle="Primary vehicle details"
+                    titleStyle={{
+                      color: "#1e293b",
+                      fontWeight: "bold",
+                      fontSize: 18,
+                    }}
+                    subtitleStyle={{ color: "#64748b", fontSize: 13 }}
                     left={() => (
                       <Avatar.Icon
                         icon="car"
@@ -323,20 +289,51 @@ export default function Index() {
                     )}
                   />
                   <Card.Content>
-                    <Text style={globalStyles.vehicleName}>
-                      {vehicles.find((v) => v.isDefault).plate} -{" "}
+                    <Text
+                      style={{
+                        fontSize: 16,
+                        fontWeight: "600",
+                        color: "#1e293b",
+                        marginBottom: 6,
+                      }}
+                    >
+                      {vehicles.find((v) => v.isDefault).plate} •{" "}
                       {vehicles.find((v) => v.isDefault).brand}{" "}
                       {vehicles.find((v) => v.isDefault).model}
                     </Text>
+
+                    <View style={{ marginTop: 6, gap: 6 }}>
+                      <InfoRow
+                        icon="calendar-outline"
+                        label="Year"
+                        value={vehicles.find((v) => v.isDefault).year}
+                      />
+                      <InfoRow
+                        icon="color-palette-outline"
+                        label="Color"
+                        value={vehicles.find((v) => v.isDefault).color ?? "N/A"}
+                      />
+                      <InfoRow
+                        icon="apps-outline"
+                        label="Category"
+                        value={
+                          vehicles.find((v) => v.isDefault).vehicleCategory ??
+                          "N/A"
+                        }
+                      />
+                      <InfoRow
+                        icon="speedometer-outline"
+                        label="Mileage"
+                        value={`${
+                          vehicles.find((v) => v.isDefault).Mileage ?? 0
+                        } km`}
+                      />
+                    </View>
                   </Card.Content>
                 </Card>
               </Pressable>
             ) : (
-              <Pressable
-                onPress={() =>
-                  selectDefaultVehicle(userEmail, setVehicles, setLoading)
-                }
-              >
+              <Pressable onPress={() => setShowDialog(true)}>
                 <Card style={globalStyles.card}>
                   <Card.Title
                     title="No Default Vehicle"
@@ -434,12 +431,18 @@ export default function Index() {
                       Vehicle Color: {v.color ?? "N/A"}
                     </Text>
                     <Text style={globalStyles.textDetail}>Year: {v.year}</Text>
+                    <Text style={globalStyles.textDetail}>
+                      Vehicle Type: {v.vehicleType}
+                    </Text>
                   </Card>
                 </Pressable>
               ))}
             {vehicles.filter((v) => !v.isDefault).length > 5 && (
               <Pressable
-                onPress={() => router.push("/vehicleManage/vehicleList")}
+                onPress={() => {
+                  console.log("Pressed View All Vehicles");
+                  router.push("2_VehicleManagementScreen");
+                }}
               >
                 <Text
                   style={{ color: "#3b82f6", marginTop: 8, fontWeight: "bold" }}
@@ -467,6 +470,36 @@ export default function Index() {
         <Ionicons name="add-circle" size={28} color="#fff" />
         <Text style={globalStyles.addText}>Add Vehicle</Text>
       </Pressable>
+
+      {/* Dialog for selecting default vehicle */}
+      <Portal>
+        <Dialog visible={showDialog} onDismiss={() => setShowDialog(false)}>
+          <Dialog.Title>Select Default Vehicle</Dialog.Title>
+          <Dialog.Content>
+            <RadioButton.Group
+              onValueChange={setSelectedVehicleId}
+              value={selectedVehicleId}
+            >
+              {vehicles.map((v) => (
+                <RadioButton.Item
+                  key={v.id}
+                  label={`${v.plate} - ${v.brand} ${v.model}`}
+                  value={v.id}
+                />
+              ))}
+            </RadioButton.Group>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setShowDialog(false)}>Cancel</Button>
+            <Button
+              onPress={handleSetDefaultVehicle}
+              disabled={!selectedVehicleId}
+            >
+              Set Default
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
     </>
   );
 }
@@ -510,6 +543,35 @@ const QuickActionCard = ({ icon, label, color, bgColor, onPress }) => {
     </Pressable>
   );
 };
+
+const InfoRow = ({ icon, label, value }) => (
+  <View
+    style={{
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "flex-start",
+      marginBottom: 4,
+    }}
+  >
+    <Ionicons
+      name={icon}
+      size={18}
+      color="#64748b"
+      style={{ width: 24, marginRight: 8 }}
+    />
+    <Text style={{ fontSize: 14, color: "#64748b", width: 90 }}>{label}:</Text>
+    <Text
+      style={{
+        fontSize: 14,
+        fontWeight: "500",
+        color: "#1e293b",
+        flexShrink: 1,
+      }}
+    >
+      {value}
+    </Text>
+  </View>
+);
 
 const styles = StyleSheet.create({
   greeting: {

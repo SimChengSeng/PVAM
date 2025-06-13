@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,7 +10,8 @@ import {
 import { useFocusEffect } from "@react-navigation/native";
 import { Provider as PaperProvider } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
-
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../../../config/FirebaseConfig";
 import VehicleTypeSelection from "./components/VehicleTypeSelection";
 import VehicleColourSelection from "./components/VehicleColourSelection";
 import AddVehicleForm from "./components/AddVehicleForm";
@@ -24,6 +25,8 @@ export default function AddNewVehicle() {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedModel, setSelectedModel] = useState(null);
   const [brandModels, setBrandModels] = useState([]); // loaded from BrandSelection
+  const [brandList, setBrandList] = useState([]);
+  const [brandListCache, setBrandListCache] = useState({});
 
   const currentStep = !selectedType
     ? 1
@@ -55,6 +58,37 @@ export default function AddNewVehicle() {
     else if (currentStep === 2) setSelectedType(null);
   };
 
+  // Fetch brands when selectedType changes
+  useEffect(() => {
+    if (!selectedType) return;
+
+    // Only fetch if not already cached
+    if (brandListCache[selectedType]) {
+      setBrandList(brandListCache[selectedType]);
+      return;
+    }
+
+    const fetchBrands = async () => {
+      try {
+        const brandRef = collection(
+          db,
+          `maintenanceMeta/${selectedType}/brands`
+        );
+        const snapshot = await getDocs(brandRef);
+        const list = snapshot.docs.map((doc) => ({
+          brand: doc.id,
+          models: doc.data().models,
+        }));
+        setBrandList(list);
+        setBrandListCache((prev) => ({ ...prev, [selectedType]: list }));
+      } catch (error) {
+        console.error("Error fetching brand metadata:", error);
+      }
+    };
+
+    fetchBrands();
+  }, [selectedType]);
+
   return (
     <PaperProvider>
       <SafeAreaView style={styles.safeArea}>
@@ -69,6 +103,7 @@ export default function AddNewVehicle() {
           )}
           {currentStep === 3 && (
             <VehicleBrandSelection
+              brands={brandList}
               onSelectBrand={(brand, models) => {
                 setSelectedBrand(brand);
                 setBrandModels(models);
@@ -89,7 +124,7 @@ export default function AddNewVehicle() {
                   style={styles.card}
                   onPress={() => {
                     setSelectedModel(model.name);
-                    setSelectedCategory(model.category); // auto-set category
+                    setSelectedCategory(model.category);
                   }}
                 >
                   <Text style={{ fontSize: 16 }}>{model.name}</Text>
@@ -114,7 +149,7 @@ export default function AddNewVehicle() {
 }
 
 function StepIndicator({ currentStep }) {
-  const steps = ["Type", "Colour", "Brand", "Category", "Details"];
+  const steps = ["Type", "Colour", "Brand", "Model", "Details"];
 
   return (
     <View style={styles.stepContainer}>

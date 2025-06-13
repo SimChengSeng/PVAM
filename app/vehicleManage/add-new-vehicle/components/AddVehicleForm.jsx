@@ -16,6 +16,10 @@ import {
   Switch,
   HelperText,
   ActivityIndicator,
+  Card,
+  Divider,
+  List,
+  Snackbar,
 } from "react-native-paper";
 import { Dropdown } from "react-native-paper-dropdown";
 import { useForm, Controller } from "react-hook-form";
@@ -101,7 +105,7 @@ const typeToCollection = {
   car: "maintenanceDetailsCar",
   truck: "maintenanceDetailsTruck",
   motorcycle: "maintenanceDetailsMotorcycle",
-  others: "maintenanceDetailsOther",
+  van: "maintenanceDetailsVan",
 };
 
 export default function AddNewVehicleForm({
@@ -142,6 +146,9 @@ export default function AddNewVehicleForm({
   const [weeklyInspectionDay, setWeeklyInspectionDay] = useState("");
   const [modelLoading, setModelLoading] = useState(false);
   const [modelList, setModelList] = useState([]);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [snackbarVisible, setSnackbarVisible] = useState(false);
+  const [snackbarMsg, setSnackbarMsg] = useState("");
   const router = useRouter();
 
   useEffect(() => {
@@ -194,102 +201,104 @@ export default function AddNewVehicleForm({
     setLoading(true);
 
     try {
-      // Use the mapping to get the correct collection name
-      const selectedCollection = typeToCollection[vehicleType.toLowerCase()];
-      if (!selectedCollection) throw new Error("Invalid vehicle type.");
+      let maintenanceDetails = null;
+      let nextService = null;
+      let partCondition = [];
 
-      // Fetch maintenance details from Firestore
-      const maintenanceDetailsRef = doc(
-        db,
-        selectedCollection,
-        data.brand,
-        data.vehicleCategory,
-        data.model
-      );
-      const maintenanceDetailsSnap = await getDoc(maintenanceDetailsRef);
+      // Only fetch maintenance details for car and truck (not motorcycle/van)
+      if (vehicleType !== "motorcycle" && vehicleType !== "van") {
+        const selectedCollection = typeToCollection[vehicleType.toLowerCase()];
+        const maintenanceDetailsRef = doc(
+          db,
+          selectedCollection,
+          data.brand,
+          data.vehicleCategory,
+          data.model
+        );
+        const maintenanceDetailsSnap = await getDoc(maintenanceDetailsRef);
 
-      if (!maintenanceDetailsSnap.exists()) {
-        throw new Error("Maintenance details not found for this vehicle.");
+        if (maintenanceDetailsSnap.exists()) {
+          maintenanceDetails = maintenanceDetailsSnap.data();
+
+          // Prepare partCondition if parts exist
+          if (maintenanceDetails.parts) {
+            partCondition = maintenanceDetails.parts.map((part) => ({
+              partId: part.partId,
+              name: part.name,
+              lastServiceMileage: "",
+              lastServiceDate: "",
+              defaultLifespanKm: part.defaultLifespanKm,
+              defaultLifespanMonth: part.defaultLifespanMonth,
+            }));
+          }
+
+          // Find next service only if intervals exist
+          if (Array.isArray(maintenanceDetails.serviceIntervals)) {
+            const currentMileage = parseInt(data.Mileage, 10);
+            nextService = maintenanceDetails.serviceIntervals.find(
+              (interval) => interval.interval.km > currentMileage
+            );
+          }
+        }
       }
 
-      const maintenanceDetails = maintenanceDetailsSnap.data();
-
-      // Create partCondition from maintenance parts
-      const partCondition = (maintenanceDetails.parts || []).map((part) => ({
-        partId: part.partId,
-        name: part.name,
-        lastServiceMileage: "",
-        lastServiceDate: "",
-        defaultLifespanKm: part.defaultLifespanKm,
-        defaultLifespanMonth: part.defaultLifespanMonth,
-      }));
-
-      // Add fixedPartList to partCondition
-      const combinedPartCondition = [
-        ...partCondition,
-        ...fixedPartList.map((part) => ({
-          partId: part.partId,
-          name: part.name,
-          lastServiceMileage: "",
-          lastServiceDate: "",
-          defaultLifespanKm: part.defaultLifespanKm,
-          defaultLifespanMonth: part.defaultLifespanMonth,
-        })),
-      ];
-
-      // Add the new vehicle to the "vehicles" collection
+      // Add the new vehicle
       const vehicleRef = collection(db, "vehicles");
       const vehicleDoc = await addDoc(vehicleRef, {
         ...data,
         userEmail: user?.email,
         userId: user?.uid,
         createdAt: serverTimestamp(),
-        partCondition: combinedPartCondition,
+        partCondition: [
+          ...partCondition,
+          ...fixedPartList.map((part) => ({
+            partId: part.partId,
+            name: part.name,
+            lastServiceMileage: "",
+            lastServiceDate: "",
+            defaultLifespanKm: part.defaultLifespanKm,
+            defaultLifespanMonth: part.defaultLifespanMonth,
+          })),
+        ],
         inspectionReminderEnabled,
         weeklyInspectionDay: inspectionReminderEnabled
           ? weeklyInspectionDay
           : null,
-        lastWeeklyReminderSent: null, // Initialize as null
-        pushToken: pushToken || null, // fallback if null
+        lastWeeklyReminderSent: null,
+        pushToken: pushToken || null,
         isContactable: true,
       });
 
-      // Compare current mileage to estimate next service
-      const currentMileage = parseInt(data.Mileage, 10);
-      const nextService = maintenanceDetails.serviceIntervals.find(
-        (interval) => interval.interval.km > currentMileage
-      );
-
-      if (!nextService) {
-        throw new Error("No next service interval found for this mileage.");
+      // Only create maintenance record if nextService is found
+      if (nextService) {
+        const maintenanceRef = collection(db, "maintenanceRecords");
+        await addDoc(maintenanceRef, {
+          userEmail: user?.email,
+          vehicleId: vehicleDoc.id,
+          type: nextService.services.map((s) => s.name).join(", "),
+          services: nextService.services,
+          mechanic: "N/A",
+          laborCost: nextService.laborCost,
+          serviceTax: nextService.serviceTax,
+          cost: nextService.totalCost,
+          notes: "Estimated Maintenance",
+          nextServiceDate: "N/A",
+          estimateNextServiceDate: nextService.interval.month,
+          nextServiceMileage: nextService.interval.km,
+          currentServiceMileage: parseInt(data.Mileage, 10),
+          statusDone: false,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
       }
-
-      // Automatically add a next maintenance record for the new vehicle
-      const maintenanceRef = collection(db, "maintenanceRecords");
-      await addDoc(maintenanceRef, {
-        userEmail: user?.email,
-        vehicleId: vehicleDoc.id, // Reference to the newly added vehicle
-        type: nextService.services.map((service) => service.name).join(", "),
-        services: nextService.services,
-        mechanic: "N/A",
-        laborCost: nextService.laborCost,
-        serviceTax: nextService.serviceTax,
-        cost: nextService.totalCost,
-        notes: "Estimated Maintenance",
-        nextServiceDate: "N/A", // Use the provided next service date
-        estimateNextServiceDate: nextService.interval.month,
-        nextServiceMileage: nextService.interval.km,
-        currentServiceMileage: currentMileage,
-        statusDone: false,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
 
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: "🚗 New Vehicle Added",
-          body: `${data.plate} - ${data.brand} ${data.model} has been added successfully.`,
-          subtitle: "Vehicle and next maintenance record added successfully!",
+          title: "🚗 Vehicle Added",
+          body: `${data.plate} - ${data.brand} ${data.model} created successfully.`,
+          subtitle: nextService
+            ? "Next maintenance record also added."
+            : "No maintenance record created.",
           data: {
             type: "vehicle",
             screen: "VehicleDetailScreen",
@@ -306,11 +315,13 @@ export default function AddNewVehicleForm({
             },
           },
         },
-        trigger: null, // immediate
+        trigger: null,
       });
 
       setLoading(false);
       reset();
+      setSnackbarMsg("Vehicle added successfully!");
+      setSnackbarVisible(true);
       router.push({
         pathname: "/vehicleManage/VehicleDetailScreen",
         params: {
@@ -351,6 +362,27 @@ export default function AddNewVehicleForm({
           <Text style={styles.title}>Vehicle Information</Text>
           <Text style={styles.subtitle}>Enter the details of your vehicle</Text>
 
+          <Card style={[styles.card, { marginBottom: 16 }]}>
+            <Card.Content>
+              <Text
+                style={{ fontWeight: "700", fontSize: 16, marginBottom: 4 }}
+              >
+                Brand:{" "}
+                <Text style={{ fontWeight: "400" }}>{vehicleBrand || "-"}</Text>
+              </Text>
+              <Text
+                style={{ fontWeight: "700", fontSize: 16, marginBottom: 4 }}
+              >
+                Model:{" "}
+                <Text style={{ fontWeight: "400" }}>{vehicleModel || "-"}</Text>
+              </Text>
+              <Text style={{ fontWeight: "700", fontSize: 16 }}>
+                Color:{" "}
+                <Text style={{ fontWeight: "400" }}>{vehicleColor || "-"}</Text>
+              </Text>
+            </Card.Content>
+          </Card>
+
           <Controller
             control={control}
             name="plate"
@@ -370,7 +402,7 @@ export default function AddNewVehicleForm({
             )}
           />
 
-          <Controller
+          {/* <Controller
             control={control}
             name="brand"
             render={({ field: { onChange, value } }) => (
@@ -405,7 +437,7 @@ export default function AddNewVehicleForm({
                 </HelperText>
               </>
             )}
-          />
+          /> */}
 
           <Controller
             control={control}
@@ -559,47 +591,72 @@ export default function AddNewVehicleForm({
             />
           )}
 
-          {vehicleType === "motorcycle" && (
-            <Controller
-              control={control}
-              name="engineSize"
-              render={({ field: { onChange, value } }) => (
-                <>
-                  <TextInput
-                    label="Engine Size (cc)"
-                    value={value}
-                    onChangeText={onChange}
-                    mode="outlined"
-                    keyboardType="numeric"
-                  />
-                  <HelperText type="error" visible={!!errors.engineSize}>
-                    {errors.engineSize?.message}
-                  </HelperText>
-                </>
-              )}
-            />
-          )}
+          {/* Advanced Options */}
+          <Card style={styles.card}>
+            <Card.Title title="Advanced Options" />
+            <Card.Content>
+              <List.Accordion
+                title="Vehicle Specific Details"
+                titleStyle={{ fontWeight: "600", color: "#6b21a8" }}
+                left={(props) => <List.Icon {...props} icon="car-cog" />}
+                style={styles.accordion}
+                theme={{ colors: { background: "transparent" } }}
+              >
+                <View style={styles.accordionContent}>
+                  {vehicleType === "motorcycle" && (
+                    <Controller
+                      control={control}
+                      name="engineSize"
+                      render={({ field: { onChange, value } }) => (
+                        <>
+                          <TextInput
+                            label="Engine Size (cc)"
+                            value={value}
+                            onChangeText={onChange}
+                            mode="outlined"
+                            keyboardType="numeric"
+                            style={styles.inputRounded}
+                          />
+                          <HelperText
+                            type="error"
+                            visible={!!errors.engineSize}
+                          >
+                            {errors.engineSize?.message}
+                          </HelperText>
+                        </>
+                      )}
+                    />
+                  )}
 
-          {vehicleType === "truck" && (
-            <Controller
-              control={control}
-              name="cargoCapacity"
-              render={({ field: { onChange, value } }) => (
-                <>
-                  <TextInput
-                    label="Cargo Capacity (kg)"
-                    value={value}
-                    onChangeText={onChange}
-                    mode="outlined"
-                    keyboardType="numeric"
-                  />
-                  <HelperText type="error" visible={!!errors.cargoCapacity}>
-                    {errors.cargoCapacity?.message}
-                  </HelperText>
-                </>
-              )}
-            />
-          )}
+                  {vehicleType === "truck" && (
+                    <Controller
+                      control={control}
+                      name="cargoCapacity"
+                      render={({ field: { onChange, value } }) => (
+                        <>
+                          <TextInput
+                            label="Cargo Capacity (kg)"
+                            value={value}
+                            onChangeText={onChange}
+                            mode="outlined"
+                            keyboardType="numeric"
+                            style={styles.inputRounded}
+                          />
+                          <HelperText
+                            type="error"
+                            visible={!!errors.cargoCapacity}
+                          >
+                            {errors.cargoCapacity?.message}
+                          </HelperText>
+                        </>
+                      )}
+                    />
+                  )}
+                </View>
+              </List.Accordion>
+            </Card.Content>
+          </Card>
+
           {loading ? (
             <ActivityIndicator
               animating={true}
@@ -615,6 +672,18 @@ export default function AddNewVehicleForm({
               Add Vehicle
             </Button>
           )}
+
+          <Snackbar
+            visible={snackbarVisible}
+            onDismiss={() => setSnackbarVisible(false)}
+            duration={3000}
+            action={{
+              label: "OK",
+              onPress: () => setSnackbarVisible(false),
+            }}
+          >
+            {snackbarMsg}
+          </Snackbar>
         </ScrollView>
       </SafeAreaView>
     </KeyboardAvoidingView>
@@ -646,5 +715,27 @@ const styles = StyleSheet.create({
   },
   button: {
     marginTop: 20,
+  },
+  card: {
+    marginTop: 20,
+    borderRadius: 16,
+    elevation: 2,
+    backgroundColor: "#f8f4fc", // soft lavender / light pastel
+  },
+  accordion: {
+    backgroundColor: "transparent",
+  },
+  accordionContent: {
+    paddingTop: 12,
+    paddingBottom: 16,
+    backgroundColor: "#fdfcff",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+  },
+  inputRounded: {
+    marginBottom: 12,
+    borderRadius: 12,
+    backgroundColor: "#fff",
+    elevation: 1,
   },
 });

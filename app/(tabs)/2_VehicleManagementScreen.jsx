@@ -6,6 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   RefreshControl,
+  ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { collection, query, where, getDocs } from "firebase/firestore";
@@ -19,6 +20,7 @@ const VehicleManagementScreen = () => {
   const [activeTab, setActiveTab] = useState("all"); // all, maintenance, good
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [sortBy, setSortBy] = useState("year_desc"); // "year_desc" | "year_asc" | "brand_asc"
   const router = useRouter();
 
   // Fetch vehicle data from Firestore
@@ -52,14 +54,40 @@ const VehicleManagementScreen = () => {
     }
   };
 
+  // Add this function to handle sorting
+  const sortVehicles = (list) => {
+    if (sortBy === "year_desc") {
+      return list
+        .slice()
+        .sort((a, b) => (parseInt(b.year) || 0) - (parseInt(a.year) || 0));
+    }
+    if (sortBy === "year_asc") {
+      return list
+        .slice()
+        .sort((a, b) => (parseInt(a.year) || 0) - (parseInt(b.year) || 0));
+    }
+    if (sortBy === "brand_asc") {
+      return list
+        .slice()
+        .sort((a, b) => (a.brand || "").localeCompare(b.brand || ""));
+    }
+    return list;
+  };
+
   // Filter vehicles based on the active tab
   const filterVehicles = () => {
-    if (activeTab === "maintenance") {
-      return vehicles.filter((vehicle) => vehicle.status === "maintenance");
-    } else if (activeTab === "good") {
-      return vehicles.filter((vehicle) => vehicle.status === "good");
+    let filtered = vehicles;
+    if (
+      activeTab === "car" ||
+      activeTab === "motorcycle" ||
+      activeTab === "truck" ||
+      activeTab === "van"
+    ) {
+      filtered = vehicles.filter(
+        (vehicle) => vehicle.vehicleType === activeTab
+      );
     }
-    return vehicles; // Default: all vehicles
+    return sortVehicles(filtered);
   };
 
   // Refresh handler
@@ -76,7 +104,7 @@ const VehicleManagementScreen = () => {
   const renderVehicle = ({ item }) => (
     <View style={styles.vehicleCard}>
       <View style={styles.vehicleInfo}>
-        <Text style={styles.vehicleLicense}>{item.plate}</Text>
+        <Text style={styles.vehiclePlate}>{item.plate}</Text>
         <Text style={styles.vehicleName}>
           {item.brand} {item.model}
         </Text>
@@ -108,48 +136,117 @@ const VehicleManagementScreen = () => {
       <Text style={styles.title}>My Vehicles</Text>
       <Text style={styles.subtitle}>Manage your registered vehicles.</Text>
 
-      {/* Tabs for filtering */}
-      <View style={styles.tabs}>
+      {/* Sort Button */}
+      <View style={styles.sortRow}>
+        <Text style={styles.sortLabel}>Sort by:</Text>
         <TouchableOpacity
-          style={[styles.tab, activeTab === "all" && styles.activeTab]}
-          onPress={() => setActiveTab("all")}
+          style={[
+            styles.sortButton,
+            sortBy === "year_desc" && styles.sortButtonActive,
+          ]}
+          onPress={() => setSortBy("year_desc")}
         >
+          <Ionicons
+            name="arrow-down"
+            size={16}
+            color={sortBy === "year_desc" ? "#fff" : "#007aff"}
+          />
           <Text
             style={[
-              styles.tabText,
-              activeTab === "all" && styles.activeTabText,
+              styles.sortButtonText,
+              sortBy === "year_desc" && styles.sortButtonTextActive,
             ]}
           >
-            All Vehicles
+            Year
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.tab, activeTab === "maintenance" && styles.activeTab]}
-          onPress={() => setActiveTab("maintenance")}
+          style={[
+            styles.sortButton,
+            sortBy === "year_asc" && styles.sortButtonActive,
+          ]}
+          onPress={() => setSortBy("year_asc")}
         >
+          <Ionicons
+            name="arrow-up"
+            size={16}
+            color={sortBy === "year_asc" ? "#fff" : "#007aff"}
+          />
           <Text
             style={[
-              styles.tabText,
-              activeTab === "maintenance" && styles.activeTabText,
+              styles.sortButtonText,
+              sortBy === "year_asc" && styles.sortButtonTextActive,
             ]}
           >
-            Needs Maintenance
+            Year
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.tab, activeTab === "good" && styles.activeTab]}
-          onPress={() => setActiveTab("good")}
+          style={[
+            styles.sortButton,
+            sortBy === "brand_asc" && styles.sortButtonActive,
+          ]}
+          onPress={() => setSortBy("brand_asc")}
         >
+          <Ionicons
+            name="pricetag-outline"
+            size={16}
+            color={sortBy === "brand_asc" ? "#fff" : "#007aff"}
+          />
           <Text
             style={[
-              styles.tabText,
-              activeTab === "good" && styles.activeTabText,
+              styles.sortButtonText,
+              sortBy === "brand_asc" && styles.sortButtonTextActive,
             ]}
           >
-            Good Condition
+            Brand A-Z
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Tabs for filtering */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.tabContainer}
+        style={{ maxHeight: 100 }}
+        pagingEnabled={false}
+        snapToAlignment="start"
+        decelerationRate="fast"
+        overScrollMode="never"
+      >
+        {[
+          { key: "all", label: "All", icon: "apps-outline" },
+          { key: "car", label: "Car", icon: "car-sport-outline" },
+          { key: "motorcycle", label: "Motorcycle", icon: "bicycle-outline" },
+          { key: "truck", label: "Truck", icon: "bus-outline" },
+          { key: "van", label: "Van", icon: "cube-outline" },
+        ].map((tab) => (
+          <TouchableOpacity
+            key={tab.key}
+            style={[
+              styles.tabItem,
+              activeTab === tab.key && styles.tabItemActive,
+            ]}
+            onPress={() => setActiveTab(tab.key)}
+          >
+            <Ionicons
+              name={tab.icon}
+              size={22}
+              color={activeTab === tab.key ? "#333" : "#007aff"}
+              style={{ marginRight: 8 }}
+            />
+            <Text
+              style={[
+                styles.tabLabel,
+                activeTab === tab.key && styles.tabLabelActive,
+              ]}
+            >
+              {tab.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
 
       {/* Vehicle List */}
       {filterVehicles().length > 0 ? (
@@ -197,27 +294,68 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     textAlign: "center",
   },
-  tabs: {
+  sortRow: {
     flexDirection: "row",
-    justifyContent: "space-around",
-    marginBottom: 16,
+    alignItems: "center",
+    marginBottom: 8,
+    marginTop: 4,
+    left: 15,
   },
-  tab: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    backgroundColor: "#e0e0e0",
+  sortLabel: {
+    fontSize: 15,
+    color: "#666",
+    marginRight: 8,
   },
-  activeTab: {
+  sortButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#e5e7eb",
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginRight: 8,
+  },
+  sortButtonActive: {
     backgroundColor: "#007aff",
   },
-  tabText: {
-    fontSize: 14,
-    color: "#666",
+  sortButtonText: {
+    color: "#007aff",
+    marginLeft: 4,
+    fontWeight: "600",
   },
-  activeTabText: {
+  sortButtonTextActive: {
     color: "#fff",
-    fontWeight: "bold",
+  },
+  tabContainer: {
+    flexDirection: "row",
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    marginBottom: 16,
+    minHeight: 60,
+  },
+  tabItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 130,
+    height: 40,
+    backgroundColor: "#e5e7eb",
+    borderRadius: 30,
+    marginRight: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 3,
+    minWidth: 120,
+  },
+  tabLabel: {
+    fontSize: 16,
+    color: "#007aff",
+    fontWeight: "600",
+  },
+  tabLabelActive: {
+    color: "#333",
+    fontWeight: "700",
   },
   list: {
     marginTop: 10,
@@ -235,7 +373,7 @@ const styles = StyleSheet.create({
   vehicleInfo: {
     marginBottom: 8,
   },
-  vehicleLicense: {
+  vehiclePlate: {
     fontSize: 18,
     fontWeight: "bold",
     color: "#333",
@@ -291,26 +429,6 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   addVehicleButtonText: {
-    color: "#fff",
-    marginLeft: 8,
-    fontWeight: "600",
-  },
-  addButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#007aff",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 25,
-    position: "absolute",
-    bottom: 30,
-    right: 30,
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 6,
-  },
-  addButtonText: {
     color: "#fff",
     marginLeft: 8,
     fontWeight: "600",

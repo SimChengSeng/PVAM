@@ -28,7 +28,7 @@ export default function VehicleColourSelection({ onSelectType }) {
           <Pressable
             key={type.label}
             style={styles.card}
-            onPress={() => onSelectType(type.label.toLowerCase())}
+            onPress={() => onSelectType(type.label)}
           >
             <View
               style={[styles.colorCircle, { backgroundColor: type.colorCode }]}
