@@ -1,13 +1,27 @@
-import { Stack } from 'expo-router/stack';
-import { Provider as PaperProvider } from 'react-native-paper';
+import { Stack } from "expo-router/stack";
+import { Provider as PaperProvider } from "react-native-paper";
+import { ThemeProvider, useThemeToggle } from "../context/ThemeContext";
+import { StatusBar } from "expo-status-bar";
 
-export default function Layout() {
+function ThemedLayout() {
+  const { theme } = useThemeToggle(); // useThemeToggle provides { theme }
+  const isDark = theme.dark;
+
   return (
-    <PaperProvider>
+    <PaperProvider theme={theme}>
+      <StatusBar style={isDark ? "light" : "dark"} />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="(auth)" />
       </Stack>
     </PaperProvider>
+  );
+}
+
+export default function Layout() {
+  return (
+    <ThemeProvider>
+      <ThemedLayout />
+    </ThemeProvider>
   );
 }

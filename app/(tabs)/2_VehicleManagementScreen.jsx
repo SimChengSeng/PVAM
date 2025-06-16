@@ -10,20 +10,22 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { collection, query, where, getDocs } from "firebase/firestore";
-import { db } from "../../config/FirebaseConfig"; // Ensure Firebase is configured
-import { getLocalStorage } from "../../service/Storage"; // Local storage utility
+import { db } from "../../config/FirebaseConfig";
+import { getLocalStorage } from "../../service/Storage";
 import { useRouter } from "expo-router";
-import { globalStyles } from "../../styles/globalStyles";
+import { globalStyles, getThemedStyles } from "../../styles/globalStyles";
+import { useTheme, Card } from "react-native-paper";
 
 const VehicleManagementScreen = () => {
   const [vehicles, setVehicles] = useState([]);
-  const [activeTab, setActiveTab] = useState("all"); // all, maintenance, good
+  const [activeTab, setActiveTab] = useState("all");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [sortBy, setSortBy] = useState("year_desc"); // "year_desc" | "year_asc" | "brand_asc"
+  const [sortBy, setSortBy] = useState("year_desc");
   const router = useRouter();
+  const theme = useTheme();
+  const themed = getThemedStyles(theme);
 
-  // Fetch vehicle data from Firestore
   const GetVehicleList = async () => {
     const user = await getLocalStorage("userDetail");
 
@@ -54,7 +56,6 @@ const VehicleManagementScreen = () => {
     }
   };
 
-  // Add this function to handle sorting
   const sortVehicles = (list) => {
     if (sortBy === "year_desc") {
       return list
@@ -74,7 +75,6 @@ const VehicleManagementScreen = () => {
     return list;
   };
 
-  // Filter vehicles based on the active tab
   const filterVehicles = () => {
     let filtered = vehicles;
     if (
@@ -90,35 +90,55 @@ const VehicleManagementScreen = () => {
     return sortVehicles(filtered);
   };
 
-  // Refresh handler
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     GetVehicleList();
   }, []);
 
-  // Fetch data on component mount
   useEffect(() => {
     GetVehicleList();
   }, []);
 
   const renderVehicle = ({ item }) => (
-    <View style={styles.vehicleCard}>
+    <Card style={[globalStyles.card, themed.card]}>
       <View style={styles.vehicleInfo}>
-        <Text style={styles.vehiclePlate}>{item.plate}</Text>
-        <Text style={styles.vehicleName}>
+        <Text style={[styles.vehiclePlate, { color: theme.colors.primary }]}>
+          {item.plate}
+        </Text>
+        <Text
+          style={[
+            styles.vehicleName,
+            { color: theme.colors.onSurface, fontWeight: "600" },
+          ]}
+        >
           {item.brand} {item.model}
         </Text>
-        <Text style={styles.vehicleYear}>{item.year}</Text>
+        <Text
+          style={[styles.vehicleYear, { color: theme.colors.onSurfaceVariant }]}
+        >
+          {item.year}
+        </Text>
       </View>
       <View style={styles.vehicleStatus}>
         {item.status === "good" ? (
-          <Ionicons name="checkmark-circle" size={24} color="#4caf50" />
+          <Ionicons
+            name="checkmark-circle"
+            size={24}
+            color={theme.colors.success || "#4caf50"}
+          />
         ) : (
-          <Ionicons name="time" size={24} color="#ff9800" />
+          <Ionicons
+            name="time"
+            size={24}
+            color={theme.colors.warning || "#ff9800"}
+          />
         )}
       </View>
       <TouchableOpacity
-        style={styles.detailsButton}
+        style={[
+          styles.detailsButton,
+          { backgroundColor: theme.colors.primary },
+        ]}
         onPress={() =>
           router.push({
             pathname: "vehicleManage/VehicleDetailScreen",
@@ -128,91 +148,138 @@ const VehicleManagementScreen = () => {
       >
         <Text style={styles.detailsButtonText}>View Details</Text>
       </TouchableOpacity>
-    </View>
+    </Card>
   );
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>My Vehicles</Text>
-      <Text style={styles.subtitle}>Manage your registered vehicles.</Text>
+    <View
+      style={[
+        globalStyles.container,
+        themed.containerBg,
+        { paddingHorizontal: 16, paddingTop: 50 },
+      ]}
+    >
+      <Text style={[styles.title, themed.label]}>My Vehicles</Text>
+      <Text style={[styles.subtitle, themed.textDetail]}>
+        Manage your registered vehicles.
+      </Text>
 
-      {/* Sort Button */}
       <View style={styles.sortRow}>
-        <Text style={styles.sortLabel}>Sort by:</Text>
+        <Text style={[styles.sortLabel, { color: theme.colors.onSurface }]}>
+          Sort by:
+        </Text>
+
+        {/* Year Descending */}
         <TouchableOpacity
           style={[
             styles.sortButton,
-            sortBy === "year_desc" && styles.sortButtonActive,
+            { backgroundColor: theme.colors.surface },
+            sortBy === "year_desc" && {
+              backgroundColor: theme.colors.primary,
+            },
           ]}
           onPress={() => setSortBy("year_desc")}
         >
           <Ionicons
             name="arrow-down"
             size={16}
-            color={sortBy === "year_desc" ? "#fff" : "#007aff"}
+            color={
+              sortBy === "year_desc"
+                ? theme.colors.onPrimary
+                : theme.colors.primary
+            }
           />
           <Text
-            style={[
-              styles.sortButtonText,
-              sortBy === "year_desc" && styles.sortButtonTextActive,
-            ]}
+            style={{
+              color:
+                sortBy === "year_desc"
+                  ? theme.colors.onPrimary
+                  : theme.colors.primary,
+              fontWeight: "600",
+              marginLeft: 4,
+            }}
           >
             Year
           </Text>
         </TouchableOpacity>
+
+        {/* Year Ascending */}
         <TouchableOpacity
           style={[
             styles.sortButton,
-            sortBy === "year_asc" && styles.sortButtonActive,
+            { backgroundColor: theme.colors.surface },
+            sortBy === "year_asc" && {
+              backgroundColor: theme.colors.primary,
+            },
           ]}
           onPress={() => setSortBy("year_asc")}
         >
           <Ionicons
             name="arrow-up"
             size={16}
-            color={sortBy === "year_asc" ? "#fff" : "#007aff"}
+            color={
+              sortBy === "year_asc"
+                ? theme.colors.onPrimary
+                : theme.colors.primary
+            }
           />
           <Text
-            style={[
-              styles.sortButtonText,
-              sortBy === "year_asc" && styles.sortButtonTextActive,
-            ]}
+            style={{
+              color:
+                sortBy === "year_asc"
+                  ? theme.colors.onPrimary
+                  : theme.colors.primary,
+              fontWeight: "600",
+              marginLeft: 4,
+            }}
           >
             Year
           </Text>
         </TouchableOpacity>
+
+        {/* Brand A-Z */}
         <TouchableOpacity
           style={[
             styles.sortButton,
-            sortBy === "brand_asc" && styles.sortButtonActive,
+            { backgroundColor: theme.colors.surface },
+            sortBy === "brand_asc" && {
+              backgroundColor: theme.colors.primary,
+            },
           ]}
           onPress={() => setSortBy("brand_asc")}
         >
           <Ionicons
             name="pricetag-outline"
             size={16}
-            color={sortBy === "brand_asc" ? "#fff" : "#007aff"}
+            color={
+              sortBy === "brand_asc"
+                ? theme.colors.onPrimary
+                : theme.colors.primary
+            }
           />
           <Text
-            style={[
-              styles.sortButtonText,
-              sortBy === "brand_asc" && styles.sortButtonTextActive,
-            ]}
+            style={{
+              color:
+                sortBy === "brand_asc"
+                  ? theme.colors.onPrimary
+                  : theme.colors.primary,
+              fontWeight: "600",
+              marginLeft: 4,
+            }}
           >
             Brand A-Z
           </Text>
         </TouchableOpacity>
       </View>
 
-      {/* Tabs for filtering */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.tabContainer}
-        style={{ maxHeight: 100 }}
-        pagingEnabled={false}
-        snapToAlignment="start"
-        decelerationRate="fast"
+        contentContainerStyle={[
+          styles.tabContainer,
+          { backgroundColor: theme.colors.surface },
+        ]}
+        style={{ maxHeight: 70 }}
         overScrollMode="never"
       >
         {[
@@ -221,55 +288,74 @@ const VehicleManagementScreen = () => {
           { key: "motorcycle", label: "Motorcycle", icon: "bicycle-outline" },
           { key: "truck", label: "Truck", icon: "bus-outline" },
           { key: "van", label: "Van", icon: "cube-outline" },
-        ].map((tab) => (
-          <TouchableOpacity
-            key={tab.key}
-            style={[
-              styles.tabItem,
-              activeTab === tab.key && styles.tabItemActive,
-            ]}
-            onPress={() => setActiveTab(tab.key)}
-          >
-            <Ionicons
-              name={tab.icon}
-              size={22}
-              color={activeTab === tab.key ? "#333" : "#007aff"}
-              style={{ marginRight: 8 }}
-            />
-            <Text
+        ].map((tab) => {
+          const isActive = activeTab === tab.key;
+          return (
+            <TouchableOpacity
+              key={tab.key}
+              onPress={() => setActiveTab(tab.key)}
               style={[
-                styles.tabLabel,
-                activeTab === tab.key && styles.tabLabelActive,
+                styles.tabItem,
+                {
+                  backgroundColor: isActive
+                    ? theme.colors.primary
+                    : theme.colors.surfaceVariant || "#eee",
+                  borderWidth: 1,
+                  borderColor: isActive
+                    ? theme.colors.primary
+                    : theme.colors.outlineVariant || "transparent",
+                },
               ]}
             >
-              {tab.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+              <Ionicons
+                name={tab.icon}
+                size={18}
+                color={isActive ? theme.colors.onPrimary : theme.colors.primary}
+                style={{ marginRight: 6 }}
+              />
+              <Text
+                style={{
+                  fontWeight: "600",
+                  fontSize: 14,
+                  color: isActive
+                    ? theme.colors.onPrimary
+                    : theme.colors.primary,
+                }}
+              >
+                {tab.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
 
       {/* Vehicle List */}
       {filterVehicles().length > 0 ? (
-        <FlatList
-          data={filterVehicles()}
-          keyExtractor={(item) => item.id}
-          renderItem={renderVehicle}
-          style={styles.list}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-        />
+        <View style={{ flex: 1, width: "100%" }}>
+          <FlatList
+            key={activeTab + sortBy}
+            data={filterVehicles()}
+            keyExtractor={(item) => item.id}
+            renderItem={renderVehicle}
+            contentContainerStyle={{ paddingBottom: 20 }}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+          />
+        </View>
       ) : (
-        <View style={styles.emptyState}>
-          <Ionicons name="car-outline" size={64} color="#777" />
-          <Text style={styles.emptyTitle}>Add a new vehicle</Text>
-          <Text style={styles.emptyMessage}>
-            Add your vehicle details to start tracking
+        <View style={globalStyles.emptyState}>
+          <Ionicons
+            name="car-outline"
+            size={64}
+            color={theme.colors.outline || "#777"}
+          />
+          <Text style={[globalStyles.emptyTitle, themed.emptyTitle]}>
+            No vehicles added yet
           </Text>
-          <TouchableOpacity style={styles.addVehicleButton}>
-            <Ionicons name="add-circle" size={20} color="#fff" />
-            <Text style={styles.addVehicleButtonText}>Add Vehicle</Text>
-          </TouchableOpacity>
+          <Text style={[globalStyles.emptyMessage, themed.emptyMessage]}>
+            Tap the button below to add your first vehicle
+          </Text>
         </View>
       )}
     </View>
@@ -277,11 +363,6 @@ const VehicleManagementScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: "#f8f9fa",
-  },
   title: {
     fontSize: 24,
     fontWeight: "bold",
@@ -290,7 +371,6 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
-    color: "#666",
     marginBottom: 20,
     textAlign: "center",
   },
@@ -303,28 +383,20 @@ const styles = StyleSheet.create({
   },
   sortLabel: {
     fontSize: 15,
-    color: "#666",
     marginRight: 8,
   },
   sortButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#e5e7eb",
     borderRadius: 16,
     paddingHorizontal: 10,
     paddingVertical: 4,
     marginRight: 8,
   },
-  sortButtonActive: {
-    backgroundColor: "#007aff",
-  },
+
   sortButtonText: {
-    color: "#007aff",
     marginLeft: 4,
     fontWeight: "600",
-  },
-  sortButtonTextActive: {
-    color: "#fff",
   },
   tabContainer: {
     flexDirection: "row",
@@ -339,7 +411,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: 130,
     height: 40,
-    backgroundColor: "#e5e7eb",
     borderRadius: 30,
     marginRight: 12,
     shadowColor: "#000",
@@ -350,25 +421,6 @@ const styles = StyleSheet.create({
   },
   tabLabel: {
     fontSize: 16,
-    color: "#007aff",
-    fontWeight: "600",
-  },
-  tabLabelActive: {
-    color: "#333",
-    fontWeight: "700",
-  },
-  list: {
-    marginTop: 10,
-  },
-  vehicleCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
   },
   vehicleInfo: {
     marginBottom: 8,
@@ -376,15 +428,12 @@ const styles = StyleSheet.create({
   vehiclePlate: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#333",
   },
   vehicleYear: {
     fontSize: 16,
-    color: "#666",
   },
   vehicleName: {
     fontSize: 14,
-    color: "#999",
   },
   vehicleStatus: {
     position: "absolute",
@@ -395,7 +444,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: "#007aff",
     alignItems: "center",
   },
   detailsButtonText: {

@@ -6,38 +6,27 @@ import {
   StyleSheet,
   TouchableOpacity,
   RefreshControl,
-  Pressable,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  updateDoc,
-  doc,
-} from "firebase/firestore";
-import { db } from "../../config/FirebaseConfig"; // Firebase configuration
-import { getLocalStorage } from "../../service/Storage"; // Local storage utility
-import { globalStyles } from "../../styles/globalStyles";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "../../config/FirebaseConfig";
+import { getLocalStorage } from "../../service/Storage";
+import { globalStyles, getThemedStyles } from "../../styles/globalStyles";
 import { useRouter } from "expo-router";
-// import CarMaintenanceViewer from "../vehicle-manage/components/CarMaintenanceViewer"; // 3D car viewer component
-import { GestureHandlerRootView } from "react-native-gesture-handler"; // Gesture handler for 3D viewer
+import { useTheme } from "react-native-paper";
 
 const MaintenanceScreen = () => {
   const router = useRouter();
+  const theme = useTheme();
   const [records, setRecords] = useState([]);
-  const [activeTab, setActiveTab] = useState("upcoming"); // upcoming, completed, all
+  const [activeTab, setActiveTab] = useState("upcoming");
   const [refreshing, setRefreshing] = useState(false);
+  const themed = getThemedStyles(theme);
 
-  // Fetch maintenance records from Firestore
   const fetchMaintenanceRecords = async () => {
     const user = await getLocalStorage("userDetail");
 
-    if (!user || !user.email) {
-      console.error("User email is undefined");
-      return;
-    }
+    if (!user?.email) return console.error("User email is undefined");
 
     try {
       const q = query(
@@ -46,11 +35,10 @@ const MaintenanceScreen = () => {
       );
 
       const querySnapshot = await getDocs(q);
-      const maintenanceList = [];
-
-      querySnapshot.forEach((doc) => {
-        maintenanceList.push({ id: doc.id, ...doc.data() });
-      });
+      const maintenanceList = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
 
       setRecords(maintenanceList);
     } catch (error) {
@@ -58,137 +46,154 @@ const MaintenanceScreen = () => {
     }
   };
 
-  // Mark a maintenance record as complete
-  const markComplete = async (recordId) => {
-    try {
-      const recordRef = doc(db, "maintenanceRecords", recordId);
-      await updateDoc(recordRef, {
-        statusDone: true,
-        updatedAt: new Date(),
-      });
-      fetchMaintenanceRecords(); // Refresh the list
-    } catch (error) {
-      console.error("Error marking record as complete:", error);
-    }
-  };
-
-  // Filter records based on the active tab
   const filterRecords = () => {
-    if (activeTab === "upcoming") {
-      return records.filter((record) => !record.statusDone);
-    } else if (activeTab === "completed") {
-      return records.filter((record) => record.statusDone);
-    }
-    return records; // Default: all records
+    if (activeTab === "upcoming") return records.filter((r) => !r.statusDone);
+    if (activeTab === "completed") return records.filter((r) => r.statusDone);
+    return records;
   };
 
-  // Refresh handler
   const onRefresh = async () => {
     setRefreshing(true);
     await fetchMaintenanceRecords();
     setRefreshing(false);
   };
 
-  // Fetch data on component mount
   useEffect(() => {
     fetchMaintenanceRecords();
   }, []);
 
-  const renderRecord = ({ item }) => (
-    <View style={styles.recordCard}>
-      <View style={styles.recordInfo}>
-        <Text style={styles.recordType}>{item.type}</Text>
-        <Text style={styles.recordVehicle}>{item.vehicleName}</Text>
-        <Text style={styles.recordDate}>
-          Due on: {item.nextServiceDate} ({item.nextServiceMileage} km)
-        </Text>
-      </View>
-      <View style={styles.recordActions}>
-        <TouchableOpacity
-          style={styles.detailsButton}
-          onPress={() =>
-            router.push({
-              pathname: "/maintenanceManage/MaintenanceDetailScreen",
-              params: {
-                ...item,
-                services: JSON.stringify(item.services || []),
-              },
-            })
-          }
-        >
-          <Text style={styles.detailsButtonText}>View Details</Text>
-        </TouchableOpacity>
-        {!item.statusDone && (
+  const renderRecord = ({ item }) => {
+    console.log("Maintenance Record Item:", item); // <-- Add this line for debugging
+
+    return (
+      <View style={[globalStyles.card, themed.card]}>
+        <View style={styles.recordInfo}>
+          <Text style={[styles.recordType, { color: theme.colors.onSurface }]}>
+            {item.type}
+          </Text>
+          <Text
+            style={[
+              styles.recordVehicle,
+              { color: theme.colors.onSurfaceVariant },
+            ]}
+          >
+            {item.vehicleName}
+          </Text>
+          <Text style={[styles.recordDate, { color: theme.colors.outline }]}>
+            Due on: {item.plateNumber}
+          </Text>
+          <Text style={[styles.recordDate, { color: theme.colors.outline }]}>
+            Due on: {item.nextServiceDate} ({item.nextServiceMileage} km)
+          </Text>
+        </View>
+        <View style={styles.recordActions}>
           <TouchableOpacity
-            style={styles.completeButton}
+            style={[
+              styles.detailsButton,
+              { backgroundColor: theme.colors.primary },
+            ]}
             onPress={() =>
               router.push({
-                pathname: "/maintenanceManage/maintenanceUpdateForm",
+                pathname: "/maintenanceManage/MaintenanceDetailScreen",
                 params: {
                   ...item,
-                  services: JSON.stringify(item.services),
+                  services: JSON.stringify(item.services || []),
                 },
               })
             }
           >
-            <Text style={styles.completeButtonText}>Mark as Done</Text>
+            <Text
+              style={[
+                styles.detailsButtonText,
+                { color: theme.colors.onPrimary },
+              ]}
+            >
+              View Details
+            </Text>
           </TouchableOpacity>
-        )}
+
+          {!item.statusDone && (
+            <TouchableOpacity
+              style={[
+                styles.completeButton,
+                { backgroundColor: theme.colors.surfaceVariant },
+              ]}
+              onPress={() =>
+                router.push({
+                  pathname: "/maintenanceManage/maintenanceUpdateForm",
+                  params: {
+                    ...item,
+                    services: JSON.stringify(item.services),
+                  },
+                })
+              }
+            >
+              <Text
+                style={[
+                  styles.completeButtonText,
+                  { color: theme.colors.Primary },
+                ]}
+              >
+                Mark as Done
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   return (
-    <View style={styles.container}>
-      {/* <CarMaintenanceViewer /> */}
+    <View
+      style={[
+        globalStyles.container,
+        themed.containerBg,
+        { paddingHorizontal: 10, paddingTop: 50 },
+      ]}
+    >
+      <Text style={[styles.title, { color: theme.colors.onBackground }]}>
+        Maintenance
+      </Text>
+      <Text style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>
+        Track and manage vehicle maintenance.
+      </Text>
 
-      <Text style={styles.title}>Maintenance</Text>
-      <Text style={styles.subtitle}>Track and manage vehicle maintenance.</Text>
-
-      {/* Tabs for filtering */}
+      {/* Tabs */}
       <View style={styles.tabs}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === "upcoming" && styles.activeTab]}
-          onPress={() => setActiveTab("upcoming")}
-        >
-          <Text
+        {["upcoming", "completed", "all"].map((key) => (
+          <TouchableOpacity
+            key={key}
             style={[
-              styles.tabText,
-              activeTab === "upcoming" && styles.activeTabText,
+              styles.tab,
+              {
+                backgroundColor:
+                  activeTab === key
+                    ? theme.colors.primary
+                    : theme.colors.surfaceVariant,
+              },
             ]}
+            onPress={() => setActiveTab(key)}
           >
-            Upcoming
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === "completed" && styles.activeTab]}
-          onPress={() => setActiveTab("completed")}
-        >
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === "completed" && styles.activeTabText,
-            ]}
-          >
-            Completed
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === "all" && styles.activeTab]}
-          onPress={() => setActiveTab("all")}
-        >
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === "all" && styles.activeTabText,
-            ]}
-          >
-            All Records
-          </Text>
-        </TouchableOpacity>
+            <Text
+              style={[
+                styles.tabText,
+                {
+                  color:
+                    activeTab === key
+                      ? theme.colors.onPrimary
+                      : theme.colors.onSurfaceVariant,
+                },
+              ]}
+            >
+              {key === "all"
+                ? "All Records"
+                : key.charAt(0).toUpperCase() + key.slice(1)}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
-      {/* Maintenance Records */}
+      {/* Record List */}
       <FlatList
         data={filterRecords()}
         keyExtractor={(item) => item.id}
@@ -198,24 +203,11 @@ const MaintenanceScreen = () => {
         }
         style={styles.list}
       />
-
-      {/* <Pressable
-        style={globalStyles.addButton}
-        onPress={() => router.push("/add-new-maintenance")}
-      >
-        <Ionicons name="add-circle" size={28} color="#fff" />
-        <Text style={globalStyles.addText}>Add Vehicle</Text>
-      </Pressable> */}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: "#f8f9fa",
-  },
   title: {
     fontSize: 24,
     fontWeight: "bold",
@@ -224,7 +216,6 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
-    color: "#666",
     marginBottom: 20,
     textAlign: "center",
   },
@@ -237,24 +228,18 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
-    backgroundColor: "#e0e0e0",
-  },
-  activeTab: {
-    backgroundColor: "#007aff",
+    alignItems: "center",
+    marginHorizontal: 4,
+    elevation: 2,
   },
   tabText: {
     fontSize: 14,
-    color: "#666",
-  },
-  activeTabText: {
-    color: "#fff",
-    fontWeight: "bold",
+    fontWeight: "600",
   },
   list: {
     marginTop: 10,
   },
   recordCard: {
-    backgroundColor: "#fff",
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -269,15 +254,12 @@ const styles = StyleSheet.create({
   recordType: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#333",
   },
   recordVehicle: {
     fontSize: 16,
-    color: "#666",
   },
   recordDate: {
     fontSize: 14,
-    color: "#999",
   },
   recordActions: {
     flexDirection: "row",
@@ -288,20 +270,16 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 8,
-    backgroundColor: "#007aff",
   },
   detailsButtonText: {
-    color: "#fff",
     fontWeight: "bold",
   },
   completeButton: {
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 8,
-    backgroundColor: "#4caf50",
   },
   completeButtonText: {
-    color: "#fff",
     fontWeight: "bold",
   },
 });

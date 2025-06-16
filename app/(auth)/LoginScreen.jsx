@@ -1,21 +1,21 @@
+import React, { useState } from "react";
 import {
   View,
-  Text,
-  TextInput,
-  TouchableOpacity,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
   ToastAndroid,
 } from "react-native";
-import React, { useState } from "react";
+import { Text, TextInput, Button, useTheme, Card } from "react-native-paper";
 import { useRouter } from "expo-router";
-import { auth } from "../../config/FirebaseConfig";
 import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../../config/FirebaseConfig";
 import { setLocalStorage } from "../../service/Storage";
+import { globalStyles, getThemedStyles } from "../../styles/globalStyles";
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -28,82 +28,84 @@ export default function LoginScreen() {
     signInWithEmailAndPassword(auth, email, password)
       .then(async (userCredential) => {
         const user = userCredential.user;
-
         await setLocalStorage("userDetail", user);
-
-        console.log("Login successful:", user);
         ToastAndroid.show("Welcome back!", ToastAndroid.SHORT);
-
-        router.replace("/"); // Navigate only after successful login
+        router.replace("/");
       })
       .catch((error) => {
-        const errorCode = error.code;
-        console.log("Login error:", errorCode);
-
-        if (errorCode === "auth/invalid-email") {
-          ToastAndroid.show("Invalid email format", ToastAndroid.SHORT);
-        } else if (errorCode === "auth/user-not-found") {
-          ToastAndroid.show("User not found", ToastAndroid.SHORT);
-        } else if (errorCode === "auth/wrong-password") {
-          ToastAndroid.show("Incorrect password", ToastAndroid.SHORT);
-        } else {
-          ToastAndroid.show("Login failed", ToastAndroid.SHORT);
-        }
+        const msg =
+          error.code === "auth/invalid-email"
+            ? "Invalid email format"
+            : error.code === "auth/user-not-found"
+            ? "User not found"
+            : error.code === "auth/wrong-password"
+            ? "Incorrect password"
+            : "Login failed";
+        ToastAndroid.show(msg, ToastAndroid.SHORT);
       });
   };
 
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
     >
-      <View style={styles.card}>
-        <View style={styles.iconCircle}>
-          <Text style={styles.carIcon}>🚗</Text>
-        </View>
-        <Text style={styles.title}>Vehicle Assistant</Text>
-        <Text style={styles.subtitle}>Manage your vehicles with ease</Text>
+      <Card style={[globalStyles.card, getThemedStyles.card]}>
+        <Card.Content>
+          <View style={styles.iconCircle}>
+            <Text style={styles.carIcon}>🚗</Text>
+          </View>
+          <Text
+            variant="titleLarge"
+            style={[styles.title, { color: colors.primary }]}
+          >
+            Vehicle Assistant
+          </Text>
+          <Text variant="bodyMedium" style={styles.subtitle}>
+            Manage your vehicles with ease
+          </Text>
 
-        <TextInput
-          style={styles.input}
-          placeholder="name@example.com"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          value={email}
-          onChangeText={setEmail}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
+          <TextInput
+            label="Email"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            mode="outlined"
+            style={styles.input}
+          />
+          <TextInput
+            label="Password"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            mode="outlined"
+            style={styles.input}
+          />
 
-        <TouchableOpacity onPress={handleLogin} style={styles.submitButton}>
-          <Text style={styles.buttonText}>Sign In</Text>
-        </TouchableOpacity>
+          <Button
+            mode="contained"
+            onPress={handleLogin}
+            style={styles.submitButton}
+          >
+            Sign In
+          </Button>
 
-        <TouchableOpacity
-          onPress={() => router.push("/(auth)/RegisterScreen")}
-          style={{ marginTop: 10 }}
-        >
-          <Text style={styles.link}>Don't have an account? Register</Text>
-        </TouchableOpacity>
+          <Button
+            mode="text"
+            onPress={() => router.push("/(auth)/RegisterScreen")}
+          >
+            Don't have an account? Register
+          </Button>
 
-        <TouchableOpacity
-          onPress={() => router.push("/(auth)/ForgotPasswordScreen")}
-          style={{ marginTop: 10 }}
-        >
-          <Text style={styles.link}>Forgot Password?</Text>
-        </TouchableOpacity>
-
-        <Text style={styles.termsText}>
-          By continuing, you agree to our{" "}
-          <Text style={styles.link}>Terms of Service</Text> and{" "}
-          <Text style={styles.link}>Privacy Policy</Text>.
-        </Text>
-      </View>
+          <Button
+            mode="text"
+            onPress={() => router.push("/(auth)/ForgotPasswordScreen")}
+          >
+            Forgot Password?
+          </Button>
+        </Card.Content>
+      </Card>
     </KeyboardAvoidingView>
   );
 }
@@ -111,13 +113,11 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
     justifyContent: "center",
     padding: 20,
   },
   card: {
-    backgroundColor: "#fff",
-    padding: 25,
+    padding: 0,
     borderRadius: 12,
     elevation: 6,
   },
@@ -131,41 +131,19 @@ const styles = StyleSheet.create({
   carIcon: { fontSize: 28 },
   title: {
     textAlign: "center",
-    fontSize: 22,
     fontWeight: "bold",
     marginBottom: 4,
   },
   subtitle: {
     textAlign: "center",
-    fontSize: 14,
     color: "#64748B",
     marginBottom: 20,
   },
   input: {
-    backgroundColor: "#F8FAFC",
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
     marginBottom: 12,
   },
   submitButton: {
-    backgroundColor: "#000",
-    padding: 14,
-    borderRadius: 8,
-    alignItems: "center",
     marginTop: 10,
-  },
-  buttonText: { color: "#fff", fontWeight: "bold" },
-  termsText: {
-    fontSize: 12,
-    textAlign: "center",
-    color: "#64748B",
-    marginTop: 16,
-  },
-  link: {
-    textDecorationLine: "underline",
-    color: "#0F172A",
-    textAlign: "center",
+    marginBottom: 10,
   },
 });
