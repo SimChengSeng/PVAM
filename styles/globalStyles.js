@@ -87,7 +87,7 @@ export const getThemedStyles = (theme) => ({
   },
   card: {
     backgroundColor:
-      theme.colors.elevation?.level1 || theme.colors.secondaryContainer,
+      theme.colors.elevation?.level2 || theme.colors.secondaryContainer,
     shadowColor: theme.colors.shadow || "#000",
     borderColor: theme.colors.outlineVariant || "#e0e0e0",
   },
@@ -107,6 +107,7 @@ export const getThemedStyles = (theme) => ({
   input: {
     backgroundColor: theme.colors.surfaceVariant || "#eee",
     color: theme.colors.onSurface,
+    labelColor: theme.colors.onSurfaceVariant || theme.colors.onSurface,
   },
   emptyTitle: {
     color: theme.colors.onSurface,
