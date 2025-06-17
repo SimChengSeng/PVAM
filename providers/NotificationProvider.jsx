@@ -45,13 +45,16 @@ export default function NotificationProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    saveUserPushToken();
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user && expoPushToken) {
+        saveUserPushToken(user);
+      }
+    });
+    return unsubscribe;
   }, [expoPushToken]);
 
-  const saveUserPushToken = async () => {
-    const user = auth.currentUser;
+  const saveUserPushToken = async (user) => {
     if (!user?.uid || !expoPushToken) return;
-
     try {
       await setDoc(
         doc(db, "notificationTokens", user.uid),
@@ -63,9 +66,9 @@ export default function NotificationProvider({ children }) {
         },
         { merge: true }
       );
-      console.log("Push token saved to Firestore");
+      console.log("✅ Push token saved for:", user.email);
     } catch (error) {
-      console.error("Failed to save token:", error);
+      console.error("❌ Failed to save token:", error);
     }
   };
 

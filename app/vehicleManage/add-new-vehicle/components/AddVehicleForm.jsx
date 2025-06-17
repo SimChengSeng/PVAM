@@ -207,7 +207,7 @@ export default function AddNewVehicleForm({
 
   const onSubmit = async (data) => {
     const user = await getLocalStorage("userDetail");
-    const pushToken = await getLocalStorage("expoPushToken");
+
     setLoading(true);
 
     try {
@@ -275,7 +275,6 @@ export default function AddNewVehicleForm({
           ? weeklyInspectionDay
           : null,
         lastWeeklyReminderSent: null,
-        pushToken: pushToken || null,
         isContactable: true,
       });
 
@@ -332,7 +331,7 @@ export default function AddNewVehicleForm({
       reset();
       setSnackbarMsg("Vehicle added successfully!");
       setSnackbarVisible(true);
-      router.push({
+      router.replace({
         pathname: "/vehicleManage/VehicleDetailScreen",
         params: {
           id: vehicleDoc.id,

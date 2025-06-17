@@ -1,46 +1,45 @@
 import React, { useEffect, useState } from "react";
+import { View, FlatList, StyleSheet } from "react-native";
 import {
-  View,
   Text,
-  FlatList,
+  Card,
+  Divider,
+  useTheme,
+  Chip,
   ActivityIndicator,
-  StyleSheet,
-} from "react-native";
+  Searchbar,
+} from "react-native-paper";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "../../config/FirebaseConfig";
+import { useLocalSearchParams } from "expo-router";
 
-// Assume you receive vehicleId via navigation params
-const MaintenanceListScreen = ({ route }) => {
-  const { vehicleId } = route.params;
+const MaintenanceListScreen = () => {
+  const theme = useTheme();
+  const { vehicleId, plateNumber, brand, model, category } =
+    useLocalSearchParams();
+
   const [maintenanceList, setMaintenanceList] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [filtered, setFiltered] = useState([]);
+  const [filterStatus, setFilterStatus] = useState("all");
 
   useEffect(() => {
-    // Replace with your API call or data fetching logic
     const fetchMaintenance = async () => {
       try {
-        // Example: fetch from API
-        // const response = await fetch(`https://your-api.com/vehicles/${vehicleId}/maintenance`);
-        // const data = await response.json();
-        // setMaintenanceList(data);
-
-        // Mock data for demonstration
-        setTimeout(() => {
-          setMaintenanceList([
-            {
-              id: "1",
-              title: "Oil Change",
-              date: "2024-05-01",
-              description: "Changed engine oil",
-            },
-            {
-              id: "2",
-              title: "Tire Rotation",
-              date: "2024-04-15",
-              description: "Rotated all tires",
-            },
-          ]);
-          setLoading(false);
-        }, 1000);
-      } catch (error) {
+        const q = query(
+          collection(db, "maintenanceRecords"),
+          where("vehicleId", "==", vehicleId)
+        );
+        const snapshot = await getDocs(q);
+        const fetched = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setMaintenanceList(fetched);
+      } catch (e) {
+        console.error("Failed to load maintenance list:", e);
+      } finally {
         setLoading(false);
       }
     };
@@ -48,54 +47,237 @@ const MaintenanceListScreen = ({ route }) => {
     fetchMaintenance();
   }, [vehicleId]);
 
+  useEffect(() => {
+    let data = maintenanceList.map((item) => ({
+      ...item,
+      status: item.statusDone ? "Completed" : "Pending",
+    }));
+
+    if (filterStatus !== "all") {
+      data = data.filter((item) => item.status.toLowerCase() === filterStatus);
+    }
+
+    if (search.trim()) {
+      data = data.filter((item) =>
+        item.services?.some(
+          (service) =>
+            service.name?.toLowerCase().includes(search.toLowerCase()) ||
+            service.partId?.toLowerCase().includes(search.toLowerCase())
+        )
+      );
+    }
+
+    setFiltered(data);
+  }, [maintenanceList, search, filterStatus]);
+
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color={theme.colors.primary} />
       </View>
     );
   }
 
-  if (maintenanceList.length === 0) {
+  const renderItem = ({ item }) => {
+    const services = item.services || [];
+
     return (
-      <View style={styles.centered}>
-        <Text>No maintenance records found for this vehicle.</Text>
-      </View>
-    );
-  }
+      <Card
+        style={[
+          styles.itemContainer,
+          {
+            backgroundColor: theme.colors.surface,
+            borderColor: theme.colors.outline,
+          },
+        ]}
+        elevation={2}
+      >
+        <Card.Content>
+          <View style={styles.cardHeader}>
+            <Text style={[styles.title, { color: theme.colors.primary }]}>
+              Maintenance Services
+            </Text>
+            <Chip
+              style={{
+                backgroundColor:
+                  item.status === "Completed"
+                    ? theme.colors.secondaryContainer
+                    : theme.colors.errorContainer,
+              }}
+              textStyle={{
+                color:
+                  item.status === "Completed"
+                    ? theme.colors.onSecondaryContainer
+                    : theme.colors.onErrorContainer,
+                fontWeight: "bold",
+              }}
+            >
+              {item.status}
+            </Chip>
+          </View>
 
-  const renderItem = ({ item }) => (
-    <View style={styles.itemContainer}>
-      <Text style={styles.title}>{item.title}</Text>
-      <Text style={styles.date}>{item.date}</Text>
-      <Text style={styles.description}>{item.description}</Text>
-    </View>
-  );
+          <Divider
+            style={{
+              marginVertical: 8,
+              backgroundColor: theme.colors.outlineVariant,
+            }}
+          />
+
+          {services.length === 0 ? (
+            <Text style={{ color: theme.colors.onSurfaceVariant }}>
+              No services found.
+            </Text>
+          ) : (
+            services.map((service, idx) => (
+              <View key={idx} style={{ marginBottom: 8 }}>
+                <Text
+                  style={[
+                    styles.label,
+                    { color: theme.colors.onSurfaceVariant },
+                  ]}
+                >
+                  Service:{" "}
+                  <Text style={{ color: theme.colors.onSurface }}>
+                    {service.name || "N/A"}
+                  </Text>
+                </Text>
+                {service.cost !== undefined &&
+                  service.cost !== null &&
+                  service.cost !== "" && (
+                    <Text
+                      style={[
+                        styles.label,
+                        { color: theme.colors.onSurfaceVariant },
+                      ]}
+                    >
+                      Cost:{" "}
+                      <Text style={{ color: theme.colors.onSurface }}>
+                        RM {service.cost}
+                      </Text>
+                    </Text>
+                  )}
+                <Divider style={{ marginVertical: 4 }} />
+              </View>
+            ))
+          )}
+
+          <Text
+            style={[styles.label, { color: theme.colors.onSurfaceVariant }]}
+          >
+            Date:{" "}
+            <Text style={{ color: theme.colors.onSurface }}>
+              {item.status === "Completed"
+                ? item.serviceDate || "N/A"
+                : item.nextServiceDate || "N/A"}
+            </Text>
+          </Text>
+          <Text
+            style={[styles.label, { color: theme.colors.onSurfaceVariant }]}
+          >
+            Mileage:{" "}
+            <Text style={{ color: theme.colors.onSurface }}>
+              {item.status === "Completed"
+                ? item.currentServiceMileage || "N/A"
+                : item.nextServiceMileage || "N/A"}
+            </Text>
+          </Text>
+        </Card.Content>
+      </Card>
+    );
+  };
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+    >
+      <View style={{ padding: 16 }}>
+        <Text
+          style={{
+            fontSize: 20,
+            fontWeight: "bold",
+            color: theme.colors.primary,
+          }}
+        >
+          {plateNumber} - {brand} {model}
+        </Text>
+        <Text
+          style={{
+            color: theme.colors.onSurfaceVariant,
+            marginBottom: 8,
+          }}
+        >
+          Category: {category}
+        </Text>
+        <Searchbar
+          placeholder="Search by part, title, or description"
+          value={search}
+          onChangeText={setSearch}
+          style={{
+            marginBottom: 12,
+            backgroundColor: theme.colors.surface,
+            color: theme.colors.onSurface,
+          }}
+          inputStyle={{ color: theme.colors.onSurface }}
+          iconColor={theme.colors.primary}
+        />
+        <View style={{ flexDirection: "row", marginBottom: 12 }}>
+          {["all", "completed", "pending"].map((status) => (
+            <Chip
+              key={status}
+              selected={filterStatus === status}
+              onPress={() => setFilterStatus(status)}
+              style={{
+                marginRight: 8,
+                backgroundColor: theme.colors.secondaryContainer,
+              }}
+              textStyle={{ color: theme.colors.onSecondaryContainer }}
+            >
+              {status.charAt(0).toUpperCase() + status.slice(1)}
+            </Chip>
+          ))}
+        </View>
+      </View>
       <FlatList
-        data={maintenanceList}
+        data={filtered}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
-        contentContainerStyle={{ padding: 16 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={styles.centered}>
+            <Text style={{ color: theme.colors.onBackground }}>
+              {search.trim()
+                ? "No maintenance records match your search."
+                : "No maintenance records found for this vehicle."}
+            </Text>
+          </View>
+        }
       />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: {
+    flex: 1,
+
+    paddingTop: 50,
+  },
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
   itemContainer: {
-    backgroundColor: "#f2f2f2",
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 12,
+    borderRadius: 12,
+    padding: 5,
+    marginBottom: 16,
+    borderWidth: 1,
   },
-  title: { fontSize: 16, fontWeight: "bold" },
-  date: { fontSize: 14, color: "#888", marginTop: 4 },
+  title: { fontSize: 18, fontWeight: "bold" },
+  label: { fontSize: 14, marginBottom: 2 },
   description: { fontSize: 14, marginTop: 8 },
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
 });
 
 export default MaintenanceListScreen;

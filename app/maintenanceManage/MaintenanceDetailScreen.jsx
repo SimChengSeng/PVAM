@@ -104,22 +104,6 @@ export default function MaintenanceDetailScreen() {
       </Pressable>
 
       <Pressable
-        style={styles.editButton}
-        onPress={() =>
-          router.push({
-            pathname: "/maintenanceManage/Refactored_MaintenanceUpdateForm",
-            params: {
-              ...params,
-              services: JSON.stringify(services),
-            },
-          })
-        }
-      >
-        <Ionicons name="create-outline" size={20} color="#fff" />
-        <Text style={styles.editButtonText}>Edit or Mark as Done</Text>
-      </Pressable>
-
-      <Pressable
         style={styles.deleteButton}
         onPress={() =>
           Alert.alert(

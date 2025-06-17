@@ -148,7 +148,7 @@ const MaintenanceScreen = () => {
       style={[
         globalStyles.container,
         themed.containerBg,
-        { paddingHorizontal: 10, paddingTop: 50 },
+        { paddingHorizontal: 10, paddingTop: 40 },
       ]}
     >
       <Text style={[styles.title, { color: theme.colors.onBackground }]}>

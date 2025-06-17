@@ -13,10 +13,10 @@ export const globalStyles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 4,
+    // shadowOffset: { width: 0, height: 2 },
+    // shadowOpacity: 0.08,
+    // shadowRadius: 6,
+    // elevation: 4,
     borderWidth: 1,
   },
   cardHeaderTitle: {
@@ -86,7 +86,8 @@ export const getThemedStyles = (theme) => ({
     backgroundColor: theme.colors.background,
   },
   card: {
-    backgroundColor: theme.colors.elevation?.level1 || theme.colors.surface,
+    backgroundColor:
+      theme.colors.elevation?.level1 || theme.colors.secondaryContainer,
     shadowColor: theme.colors.shadow || "#000",
     borderColor: theme.colors.outlineVariant || "#e0e0e0",
   },
