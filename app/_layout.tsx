@@ -4,16 +4,13 @@ import { ThemeProvider, useThemeToggle } from "../context/ThemeContext";
 import { StatusBar } from "expo-status-bar";
 
 function ThemedLayout() {
-  const { theme } = useThemeToggle(); // useThemeToggle provides { theme }
+  const { theme } = useThemeToggle();
   const isDark = theme.dark;
 
   return (
     <PaperProvider theme={theme}>
       <StatusBar style={isDark ? "light" : "dark"} />
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="(auth)" />
-      </Stack>
+      <Stack screenOptions={{ headerShown: false }} />
     </PaperProvider>
   );
 }

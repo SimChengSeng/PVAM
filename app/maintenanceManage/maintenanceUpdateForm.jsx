@@ -46,6 +46,8 @@ export default function MaintenanceUpdateForm() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [lastDeleted, setLastDeleted] = useState(null);
+  const [loadingSave, setLoadingSave] = useState(false);
+  const [loadingDone, setLoadingDone] = useState(false);
 
   const [services, setServices] = useState(() => {
     try {
@@ -84,8 +86,10 @@ export default function MaintenanceUpdateForm() {
   }, [services, laborCost, serviceTax]);
 
   const handleSaveUpdates = async () => {
+    setLoadingSave(true);
     if (!params.id) {
       Alert.alert("Error", "Maintenance record ID is missing.");
+      setLoadingSave(false);
       return;
     }
     try {
@@ -93,6 +97,7 @@ export default function MaintenanceUpdateForm() {
       const test = await getDoc(recordRef);
       if (!test.exists()) {
         Alert.alert("Error", "Maintenance record not found.");
+        setLoadingSave(false);
         return;
       }
       await updateDoc(recordRef, {
@@ -111,6 +116,7 @@ export default function MaintenanceUpdateForm() {
         error.message || "Something went wrong while saving."
       );
     }
+    setLoadingSave(false);
   };
 
   const handleConfirm = () => {
@@ -119,8 +125,10 @@ export default function MaintenanceUpdateForm() {
   };
 
   const handleUpdate = async () => {
+    setLoadingDone(true);
     if (!params.id) {
       Alert.alert("Error", "Maintenance record ID is missing.");
+      setLoadingDone(false);
       return;
     }
     try {
@@ -128,6 +136,7 @@ export default function MaintenanceUpdateForm() {
       const test = await getDoc(recordRef);
       if (!test.exists()) {
         Alert.alert("Error", "Maintenance record not found.");
+        setLoadingDone(false);
         return;
       }
       await updateDoc(recordRef, {
@@ -149,6 +158,7 @@ export default function MaintenanceUpdateForm() {
     } catch (error) {
       Alert.alert("Error", error.message || "Something went wrong");
     }
+    setLoadingDone(false);
   };
 
   const updateService = (id, key, value) => {
@@ -246,7 +256,10 @@ export default function MaintenanceUpdateForm() {
                       label="Cost (RM)"
                       mode="outlined"
                       keyboardType="numeric"
-                      style={styles.costInput}
+                      style={{
+                        ...styles.costInput,
+                        backgroundColor: theme.colors.surface,
+                      }}
                       value={service.cost?.toString() || ""}
                       onChangeText={(text) =>
                         updateService(service.id, "cost", text)
@@ -260,6 +273,7 @@ export default function MaintenanceUpdateForm() {
                         },
                       }}
                       textColor={theme.colors.onSurface}
+                      placeholderTextColor={theme.colors.onSurfaceVariant}
                     />
                   </View>
                 </Card.Content>
@@ -405,62 +419,90 @@ export default function MaintenanceUpdateForm() {
           </>
         ) : (
           <>
-            <Card style={[styles.card, getThemedStyles.card]}>
+            <Card
+              style={[styles.card, { backgroundColor: theme.colors.surface }]}
+            >
               <Card.Title
                 title="✅ Maintenance Summary"
                 titleStyle={{ color: theme.colors.primary }}
               />
               <Card.Content>
                 <View style={{ marginBottom: 12 }}>
-                  <Text style={styles.label}>
+                  <Text style={[styles.label, { color: theme.colors.primary }]}>
                     <Ionicons
                       name="calendar-outline"
                       size={16}
                       color={theme.colors.primary}
                     />{" "}
                     Service Date:{" "}
-                    <Text style={styles.value}>
+                    <Text
+                      style={[styles.value, { color: theme.colors.onSurface }]}
+                    >
                       {nextServiceDate.toISOString().split("T")[0]}
                     </Text>
                   </Text>
-                  <Text style={styles.label}>
+                  <Text style={[styles.label, { color: theme.colors.primary }]}>
                     <Ionicons
                       name="speedometer-outline"
                       size={16}
                       color={theme.colors.primary}
                     />{" "}
                     Mileage:{" "}
-                    <Text style={styles.value}>{currentMileage} km</Text>
+                    <Text
+                      style={[styles.value, { color: theme.colors.onSurface }]}
+                    >
+                      {currentMileage} km
+                    </Text>
                   </Text>
-                  <Text style={styles.label}>
+                  <Text style={[styles.label, { color: theme.colors.primary }]}>
                     <Ionicons
                       name="person-outline"
                       size={16}
                       color={theme.colors.primary}
                     />{" "}
                     Mechanic:{" "}
-                    <Text style={styles.value}>{mechanic || "—"}</Text>
+                    <Text
+                      style={[styles.value, { color: theme.colors.onSurface }]}
+                    >
+                      {mechanic || "—"}
+                    </Text>
                   </Text>
-                  <Text style={styles.label}>
+                  <Text style={[styles.label, { color: theme.colors.primary }]}>
                     <Ionicons
                       name="document-text-outline"
                       size={16}
                       color={theme.colors.primary}
                     />{" "}
                     Notes:{" "}
-                    <Text style={styles.value}>{notes?.trim() || "—"}</Text>
+                    <Text
+                      style={[styles.value, { color: theme.colors.onSurface }]}
+                    >
+                      {notes?.trim() || "—"}
+                    </Text>
                   </Text>
                 </View>
                 <Divider style={styles.divider} />
 
-                <Text style={{ fontWeight: "bold", marginBottom: 4 }}>
+                <Text
+                  style={{
+                    fontWeight: "bold",
+                    marginBottom: 4,
+                    color: theme.colors.primary,
+                  }}
+                >
                   Services:
                 </Text>
                 {services.length > 0 ? (
                   services
                     .filter((s) => s.checked)
                     .map((s, i) => (
-                      <Text key={i}>
+                      <Text
+                        key={i}
+                        style={{
+                          marginBottom: 4,
+                          color: theme.colors.onSurface,
+                        }}
+                      >
                         • {s.name} - RM {parseFloat(s.cost).toFixed(2)}
                       </Text>
                     ))
@@ -470,17 +512,17 @@ export default function MaintenanceUpdateForm() {
 
                 <Divider style={styles.divider} />
 
-                <Text style={styles.total}>
+                <Text style={[styles.total, { color: theme.colors.primary }]}>
                   Subtotal: RM{" "}
                   {services
                     .filter((s) => s.checked)
                     .reduce((sum, s) => sum + parseFloat(s.cost || 0), 0)
                     .toFixed(2)}
                 </Text>
-                <Text style={styles.total}>
+                <Text style={[styles.total, { color: theme.colors.primary }]}>
                   Labor Cost: RM {parseFloat(laborCost || 0).toFixed(2)}
                 </Text>
-                <Text style={styles.total}>
+                <Text style={[styles.total, { color: theme.colors.primary }]}>
                   Service Tax: RM {parseFloat(serviceTax || 0).toFixed(2)}
                 </Text>
 
@@ -508,6 +550,8 @@ export default function MaintenanceUpdateForm() {
                 ]}
                 textColor={theme.colors.onPrimary}
                 onPress={handleSaveUpdates}
+                loading={loadingSave}
+                disabled={loadingSave || loadingDone}
               >
                 Save Updates
               </Button>
@@ -519,6 +563,8 @@ export default function MaintenanceUpdateForm() {
                 ]}
                 textColor="#fff"
                 onPress={handleUpdate}
+                loading={loadingDone}
+                disabled={loadingDone || loadingSave}
               >
                 Mark as Done
               </Button>
@@ -542,7 +588,7 @@ const styles = StyleSheet.create({
   container: {
     padding: 16,
     paddingTop: 50,
-    minHeight: 600,
+    minHeight: "100%",
   },
   title: {
     marginBottom: 8,
@@ -610,7 +656,6 @@ const styles = StyleSheet.create({
   },
   value: {
     fontWeight: "normal",
-    color: "#111827",
   },
   total: {
     fontWeight: "bold",

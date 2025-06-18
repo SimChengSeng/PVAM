@@ -8,7 +8,7 @@ export default {
     orientation: "portrait",
     icon: "./assets/images/icon.png",
     scheme: "myapp",
-    userInterfaceStyle: "light",
+    userInterfaceStyle: "automatic",
     newArchEnabled: true,
     ios: {
       supportsTablet: true,
@@ -32,9 +32,12 @@ export default {
         "expo-splash-screen",
         {
           image: "./assets/images/splash-icon.png",
-          imageWidth: 200,
           resizeMode: "contain",
           backgroundColor: "#ffffff",
+          dark: {
+            image: "./assets/images/splash-icon-dark.png",
+            backgroundColor: "#18181b",
+          },
         },
       ],
     ],
