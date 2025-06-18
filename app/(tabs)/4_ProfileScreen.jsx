@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, ScrollView, StyleSheet, Pressable } from "react-native";
+import { View, ScrollView, StyleSheet, Pressable, Alert } from "react-native";
 import { Avatar, Text, IconButton, useTheme } from "react-native-paper";
 import { useRouter } from "expo-router";
 import { signOut } from "firebase/auth";
@@ -20,10 +20,25 @@ export default function ProfileScreen() {
     loadUser();
   }, []);
 
-  const handleLogout = async () => {
-    await signOut(auth);
-    await removeLocalStorage();
-    router.replace("(auth)/LoginScreen");
+  // Update handleLogout to show a confirmation dialog
+  const handleLogout = () => {
+    Alert.alert(
+      "Logout",
+      "Are you sure you want to logout?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Logout",
+          style: "destructive",
+          onPress: async () => {
+            await signOut(auth);
+            await removeLocalStorage();
+            router.replace("(auth)/LoginScreen");
+          },
+        },
+      ],
+      { cancelable: true }
+    );
   };
 
   return (
@@ -102,17 +117,45 @@ export default function ProfileScreen() {
         <Section title="Support" theme={theme}>
           <SettingItem icon="chat-outline" label="Chat with us" theme={theme} />
         </Section>
-      </ScrollView>
 
-      {/* Logout button fixed at the bottom */}
-      <View style={styles.logoutContainer}>
-        <SettingItem
-          icon="logout"
-          label="Logout"
-          onPress={handleLogout}
-          theme={theme}
-        />
-      </View>
+        <Section title="About" theme={theme}>
+          <SettingItem
+            icon="information-outline"
+            label="About Us"
+            theme={theme}
+          />
+          <SettingItem
+            icon="shield-outline"
+            label="Privacy Policy"
+            theme={theme}
+          />
+        </Section>
+
+        <View style={styles.logoutWrapper}>
+          <Pressable
+            onPress={handleLogout}
+            style={({ pressed }) => [
+              styles.logoutButton,
+              {
+                backgroundColor: theme.colors.error,
+                opacity: pressed ? 0.8 : 1,
+              },
+            ]}
+          >
+            <Ionicons
+              name="log-out-outline"
+              size={20}
+              color={theme.colors.onPrimary}
+              style={{ marginRight: 8 }}
+            />
+            <Text
+              style={[styles.logoutText, { color: theme.colors.onPrimary }]}
+            >
+              Logout
+            </Text>
+          </Pressable>
+        </View>
+      </ScrollView>
     </View>
   );
 }
@@ -186,9 +229,23 @@ const styles = StyleSheet.create({
   settingLabel: {
     fontSize: 15,
   },
-  logoutContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 32,
-    backgroundColor: "transparent",
+  logoutWrapper: {
+    alignItems: "center",
+    marginTop: 24,
+    marginBottom: 40,
+  },
+  logoutButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 24,
+    backgroundColor: "#fee2e2", // fallback for light mode
+    elevation: 2,
+  },
+  logoutText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    letterSpacing: 0.5,
   },
 });

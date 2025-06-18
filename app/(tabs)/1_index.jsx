@@ -8,6 +8,7 @@ import {
   BackHandler,
   Alert,
   Animated,
+  Image,
 } from "react-native";
 import {
   Avatar,
@@ -18,6 +19,7 @@ import {
   Portal,
   RadioButton,
   useTheme,
+  IconButton,
 } from "react-native-paper";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "expo-router";
@@ -200,329 +202,339 @@ export default function Index() {
   };
 
   return (
-    <>
-      <View style={[globalStyles.container, themed.containerBg]}>
-        <FlatList
-          data={vehicles}
-          keyExtractor={(item) => item.id}
-          style={globalStyles.list}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor="#fff"
-            />
+    <View
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+    >
+      <View style={[styles.topBar, { backgroundColor: theme.colors.primary }]}>
+        <Image
+          source={require("../../assets/images/logo-light-transparent.png")}
+          style={{ height: 36, width: 140, resizeMode: "contain" }}
+        />
+        <Pressable
+          onPress={() =>
+            router.push("/notificationsManage/NotificationInboxScreen")
           }
-          contentContainerStyle={{
-            paddingHorizontal: 16,
-            paddingTop: 50,
-            paddingBottom: 120,
-            ...themed.containerBg,
-          }}
-          ListHeaderComponent={
-            <>
-              {/* 1. Greeting */}
-              <Text style={[styles.greeting, themed.label]}>
-                {greeting}, {userName}!
-              </Text>
+          style={{ marginRight: 4, padding: 4 }}
+          android_ripple={{ color: "#ddd", borderless: true }}
+        >
+          <Ionicons
+            name="notifications-outline"
+            size={26}
+            color={theme.colors.onPrimary}
+          />
+        </Pressable>
+      </View>
 
-              {/* 2. Default Vehicle */}
-              {vehicles.find((v) => v.isDefault) ? (
-                <Pressable
-                  onPress={() =>
-                    router.push({
-                      pathname: "vehicleManage/VehicleDetailScreen",
-                      params: vehicles.find((v) => v.isDefault),
-                    })
-                  }
-                >
-                  <Card style={[globalStyles.card, themed.card]}>
-                    <Card.Title
-                      title="Default Vehicle"
-                      subtitle="Primary vehicle details"
-                      titleStyle={[
-                        globalStyles.cardHeaderTitle,
-                        themed.cardHeaderTitle,
-                      ]}
-                      subtitleStyle={[
-                        globalStyles.cardHeaderSubtitle,
-                        themed.cardHeaderSubtitle,
-                      ]}
-                      right={() => (
-                        <View
-                          style={{
-                            width: 64,
-                            height: 64,
-                            justifyContent: "center",
-                            alignItems: "center",
-                            right: 50,
-                          }}
-                        >
-                          <VehicleCategoryIcon
-                            category={
-                              vehicles.find((v) => v.isDefault).vehicleCategory
-                            }
-                            color={vehicles.find((v) => v.isDefault).color}
-                          />
-                        </View>
-                      )}
-                    />
+      <FlatList
+        data={vehicles}
+        keyExtractor={(item) => item.id}
+        style={globalStyles.list}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#fff"
+          />
+        }
+        contentContainerStyle={{
+          paddingHorizontal: 16,
+          paddingTop: 16,
+          paddingBottom: 120,
+          ...themed.containerBg,
+        }}
+        ListHeaderComponent={
+          <>
+            {/* 1. Greeting */}
+            <Text style={[styles.greeting, themed.label]}>
+              {greeting}, {userName}!
+            </Text>
 
-                    <Card.Content>
-                      <Text
+            {/* 2. Default Vehicle */}
+            {vehicles.find((v) => v.isDefault) ? (
+              <Pressable
+                onPress={() =>
+                  router.push({
+                    pathname: "vehicleManage/VehicleDetailScreen",
+                    params: vehicles.find((v) => v.isDefault),
+                  })
+                }
+              >
+                <Card style={[globalStyles.card, themed.card]}>
+                  <Card.Title
+                    title="Default Vehicle"
+                    subtitle="Primary vehicle details"
+                    titleStyle={[
+                      globalStyles.cardHeaderTitle,
+                      themed.cardHeaderTitle,
+                    ]}
+                    subtitleStyle={[
+                      globalStyles.cardHeaderSubtitle,
+                      themed.cardHeaderSubtitle,
+                    ]}
+                    right={() => (
+                      <View
                         style={{
-                          fontSize: 16,
-                          fontWeight: "bold",
-                          color: "#1e293b",
-                          marginBottom: 6,
-                          ...themed.textDetail,
+                          width: 64,
+                          height: 64,
+                          justifyContent: "center",
+                          alignItems: "center",
+                          right: 50,
                         }}
                       >
-                        {vehicles.find((v) => v.isDefault).plate} •{" "}
-                        {vehicles.find((v) => v.isDefault).brand}{" "}
-                        {vehicles.find((v) => v.isDefault).model}
-                      </Text>
+                        <VehicleCategoryIcon
+                          category={
+                            vehicles.find((v) => v.isDefault).vehicleCategory
+                          }
+                          color={vehicles.find((v) => v.isDefault).color}
+                        />
+                      </View>
+                    )}
+                  />
 
-                      <View
+                  <Card.Content>
+                    <Text
+                      style={{
+                        fontSize: 16,
+                        fontWeight: "bold",
+                        color: "#1e293b",
+                        marginBottom: 6,
+                        ...themed.textDetail,
+                      }}
+                    >
+                      {vehicles.find((v) => v.isDefault).plate} •{" "}
+                      {vehicles.find((v) => v.isDefault).brand}{" "}
+                      {vehicles.find((v) => v.isDefault).model}
+                    </Text>
+
+                    <View
+                      style={{
+                        marginTop: 6,
+                        gap: 6,
+                        ...globalStyles.label,
+                        ...themed.label,
+                      }}
+                    >
+                      <InfoRow
+                        icon="calendar-outline"
+                        label="Year"
+                        value={vehicles.find((v) => v.isDefault).year}
                         style={{
                           marginTop: 6,
                           gap: 6,
                           ...globalStyles.label,
                           ...themed.label,
                         }}
-                      >
-                        <InfoRow
-                          icon="calendar-outline"
-                          label="Year"
-                          value={vehicles.find((v) => v.isDefault).year}
-                          style={{
-                            marginTop: 6,
-                            gap: 6,
-                            ...globalStyles.label,
-                            ...themed.label,
-                          }}
-                        />
-                        <InfoRow
-                          icon="speedometer-outline"
-                          label="Mileage"
-                          value={`${
-                            vehicles.find((v) => v.isDefault).Mileage ?? 0
-                          } km`}
-                        />
-                      </View>
+                      />
+                      <InfoRow
+                        icon="speedometer-outline"
+                        label="Mileage"
+                        value={`${
+                          vehicles.find((v) => v.isDefault).Mileage ?? 0
+                        } km`}
+                      />
+                    </View>
 
-                      {/* Upcoming Maintenance Info */}
-                      {vehicles.find((v) => v.isDefault)
-                        ?.nextServiceDateFormatted && (
-                        <View style={{ marginTop: 10 }}>
-                          <Text
-                            style={{
-                              fontSize: 14,
-                              color: "#ff0000",
-                              fontWeight: "bold",
-                            }}
-                          >
-                            Upcoming Maintenance:
-                          </Text>
-                          <Text
-                            style={{
-                              fontSize: 14,
-                              color: "#ca8a04",
-                              fontWeight: "bold",
-                            }}
-                          >
-                            {(() => {
-                              const type =
-                                vehicles.find((v) => v.isDefault)
-                                  ?.nextServiceType ?? "Maintenance";
-                              const shortType =
-                                type.length > 40
-                                  ? type.slice(0, 40) + "..."
-                                  : type;
-                              return shortType;
-                            })()}
-                          </Text>
+                    {/* Upcoming Maintenance Info */}
+                    {vehicles.find((v) => v.isDefault)
+                      ?.nextServiceDateFormatted && (
+                      <View style={{ marginTop: 10 }}>
+                        <Text
+                          style={{
+                            fontSize: 14,
+                            color: "#ff0000",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          Upcoming Maintenance:
+                        </Text>
+                        <Text
+                          style={{
+                            fontSize: 14,
+                            color: "#ca8a04",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          {(() => {
+                            const type =
+                              vehicles.find((v) => v.isDefault)
+                                ?.nextServiceType ?? "Maintenance";
+                            const shortType =
+                              type.length > 40
+                                ? type.slice(0, 40) + "..."
+                                : type;
+                            return shortType;
+                          })()}
+                        </Text>
+                        <Text style={{ fontSize: 14, color: "#ca8a04" }}>
+                          Next Service:{" "}
+                          {
+                            vehicles.find((v) => v.isDefault)
+                              .nextServiceDateFormatted
+                          }
+                        </Text>
+                        {vehicles.find((v) => v.isDefault)
+                          ?.nextServiceMileage && (
                           <Text style={{ fontSize: 14, color: "#ca8a04" }}>
-                            Next Service:{" "}
+                            Next Service Mileage:{" "}
                             {
                               vehicles.find((v) => v.isDefault)
-                                .nextServiceDateFormatted
-                            }
+                                .nextServiceMileage
+                            }{" "}
+                            km
                           </Text>
-                          {vehicles.find((v) => v.isDefault)
-                            ?.nextServiceMileage && (
-                            <Text style={{ fontSize: 14, color: "#ca8a04" }}>
-                              Next Service Mileage:{" "}
-                              {
-                                vehicles.find((v) => v.isDefault)
-                                  .nextServiceMileage
-                              }{" "}
-                              km
-                            </Text>
-                          )}
-                        </View>
-                      )}
-                    </Card.Content>
-                  </Card>
-                </Pressable>
-              ) : (
-                <Pressable onPress={() => setShowDialog(true)}>
-                  <Card style={(globalStyles.card, themed.card)}>
-                    <Card.Title
-                      title="No Default Vehicle"
-                      subtitle="Tap to select one"
-                      titleStyle={[
-                        globalStyles.cardHeaderTitle,
-                        themed.cardHeaderTitle,
-                      ]}
-                      subtitleStyle={[
-                        globalStyles.cardHeaderSubtitle,
-                        themed.cardHeaderSubtitle,
-                      ]}
-                      left={() => (
-                        <Avatar.Icon
-                          icon="alert-circle"
-                          size={48}
-                          style={{ backgroundColor: "#f87171" }}
-                        />
-                      )}
-                    />
-                    <Card.Content>
-                      <Text
-                        style={[globalStyles.textDetail, themed.textDetail]}
-                      >
-                        You currently have no default vehicle selected.
-                      </Text>
-                      <Text
-                        style={[globalStyles.textDetail, themed.textDetail]}
-                      >
-                        Tap here to add or select a default vehicle.
-                      </Text>
-                    </Card.Content>
-                  </Card>
-                </Pressable>
-              )}
-
-              {/* 3. Quick Actions */}
-              <Text style={styles.sectionTitle}>Quick Actions</Text>
-              <View style={styles.quickActionsContainer}>
-                <QuickActionCard
-                  icon="car-outline"
-                  label="Add Vehicle"
-                  color="#0284c7"
-                  bgColor="#e0f2fe"
-                  onPress={() => router.push("/vehicleManage/add-new-vehicle")}
-                />
-                <QuickActionCard
-                  icon="construct-outline"
-                  label="Add Maintenance"
-                  color="#dc2626"
-                  bgColor="#ffe4e6"
-                  onPress={() => router.push("/maintenance/add")}
-                />
-                <QuickActionCard
-                  icon="person-outline"
-                  label="Inbox"
-                  color="#16a34a"
-                  bgColor="#dcfce7"
-                  onPress={() =>
-                    router.push("/directlyNotify/DirectlyNotifyProfileScreen")
-                  }
-                />
-                <QuickActionCard
-                  icon="notifications-outline"
-                  label="Reminders"
-                  color="#ca8a04"
-                  bgColor="#fef3c7"
-                  onPress={() =>
-                    Alert.alert("Reminder", "This is a quick reminder!")
-                  }
-                />
-              </View>
-
-              {/* 4. Plate Search */}
-              <Text style={styles.sectionTitle}>Direct Notifications</Text>
-              <PlateSearch />
-              <Pressable
-                onPress={() =>
-                  router.push("/directlyNotify/DirectlyNotifyInboxScreen")
-                }
-              >
-                <Text style={{ color: "#3b82f6", fontWeight: "bold" }}>
-                  View my Notifications →
-                </Text>
+                        )}
+                      </View>
+                    )}
+                  </Card.Content>
+                </Card>
               </Pressable>
+            ) : (
+              <Pressable onPress={() => setShowDialog(true)}>
+                <Card style={(globalStyles.card, themed.card)}>
+                  <Card.Title
+                    title="No Default Vehicle"
+                    subtitle="Tap to select one"
+                    titleStyle={[
+                      globalStyles.cardHeaderTitle,
+                      themed.cardHeaderTitle,
+                    ]}
+                    subtitleStyle={[
+                      globalStyles.cardHeaderSubtitle,
+                      themed.cardHeaderSubtitle,
+                    ]}
+                    left={() => (
+                      <Avatar.Icon
+                        icon="alert-circle"
+                        size={48}
+                        style={{ backgroundColor: "#f87171" }}
+                      />
+                    )}
+                  />
+                  <Card.Content>
+                    <Text style={[globalStyles.textDetail, themed.textDetail]}>
+                      You currently have no default vehicle selected.
+                    </Text>
+                    <Text style={[globalStyles.textDetail, themed.textDetail]}>
+                      Tap here to add or select a default vehicle.
+                    </Text>
+                  </Card.Content>
+                </Card>
+              </Pressable>
+            )}
 
-              {/* 5. Other Vehicles */}
-              <Text style={styles.sectionTitle}>My Vehicles</Text>
-              {vehicles
-                .filter((v) => !v.isDefault)
-                .slice(0, 5)
-                .map((v) => (
-                  <Pressable
-                    key={v.id}
-                    onPress={() =>
-                      router.push({
-                        pathname: "vehicleManage/VehicleDetailScreen",
-                        params: v,
-                      })
-                    }
-                  >
-                    <Card style={[globalStyles.card, themed.card]}>
-                      <Text
-                        style={[globalStyles.vehicleName, themed.vehicleName]}
-                      >
-                        {v.plate} - {v.brand} {v.model}
-                      </Text>
-                      <Text
-                        style={[globalStyles.textDetail, themed.textDetail]}
-                      >
-                        Vehicle Color: {v.color ?? "N/A"}
-                      </Text>
-                      <Text
-                        style={[globalStyles.textDetail, themed.textDetail]}
-                      >
-                        Year: {v.year}
-                      </Text>
-                      <Text
-                        style={[globalStyles.textDetail, themed.textDetail]}
-                      >
-                        Vehicle Type: {v.vehicleType}
-                      </Text>
-                    </Card>
-                  </Pressable>
-                ))}
-              {vehicles.filter((v) => !v.isDefault).length > 5 && (
+            {/* 3. Quick Actions */}
+            <Text style={styles.sectionTitle}>Quick Actions</Text>
+            <View style={styles.quickActionsContainer}>
+              <QuickActionCard
+                icon="car-outline"
+                label="Add Vehicle"
+                color="#0284c7"
+                bgColor="#e0f2fe"
+                onPress={() => router.push("/vehicleManage/add-new-vehicle")}
+              />
+              <QuickActionCard
+                icon="construct-outline"
+                label="Add Maintenance"
+                color="#dc2626"
+                bgColor="#ffe4e6"
+                onPress={() => router.push("/maintenance/add")}
+              />
+              <QuickActionCard
+                icon="person-outline"
+                label="Inbox"
+                color="#16a34a"
+                bgColor="#dcfce7"
+                onPress={() =>
+                  router.push("/directlyNotify/DirectlyNotifyProfileScreen")
+                }
+              />
+              <QuickActionCard
+                icon="notifications-outline"
+                label="Reminders"
+                color="#ca8a04"
+                bgColor="#fef3c7"
+                onPress={() =>
+                  Alert.alert("Reminder", "This is a quick reminder!")
+                }
+              />
+            </View>
+
+            {/* 4. Plate Search */}
+            <Text style={styles.sectionTitle}>Direct Notifications</Text>
+            <PlateSearch />
+            <Pressable
+              onPress={() =>
+                router.push("/directlyNotify/DirectlyNotifyInboxScreen")
+              }
+            >
+              <Text style={{ color: "#3b82f6", fontWeight: "bold" }}>
+                View my Notifications →
+              </Text>
+            </Pressable>
+
+            {/* 5. Other Vehicles */}
+            <Text style={styles.sectionTitle}>My Vehicles</Text>
+            {vehicles
+              .filter((v) => !v.isDefault)
+              .slice(0, 5)
+              .map((v) => (
                 <Pressable
-                  onPress={() => {
-                    console.log("Pressed View All Vehicles");
-                    router.push("2_VehicleManagementScreen");
+                  key={v.id}
+                  onPress={() =>
+                    router.push({
+                      pathname: "vehicleManage/VehicleDetailScreen",
+                      params: v,
+                    })
+                  }
+                >
+                  <Card style={[globalStyles.card, themed.card]}>
+                    <Text
+                      style={[globalStyles.vehicleName, themed.vehicleName]}
+                    >
+                      {v.plate} - {v.brand} {v.model}
+                    </Text>
+                    <Text style={[globalStyles.textDetail, themed.textDetail]}>
+                      Vehicle Color: {v.color ?? "N/A"}
+                    </Text>
+                    <Text style={[globalStyles.textDetail, themed.textDetail]}>
+                      Year: {v.year}
+                    </Text>
+                    <Text style={[globalStyles.textDetail, themed.textDetail]}>
+                      Vehicle Type: {v.vehicleType}
+                    </Text>
+                  </Card>
+                </Pressable>
+              ))}
+            {vehicles.filter((v) => !v.isDefault).length > 5 && (
+              <Pressable
+                onPress={() => {
+                  console.log("Pressed View All Vehicles");
+                  router.push("2_VehicleManagementScreen");
+                }}
+              >
+                <Text
+                  style={{
+                    color: "#3b82f6",
+                    marginTop: 8,
+                    fontWeight: "bold",
                   }}
                 >
-                  <Text
-                    style={{
-                      color: "#3b82f6",
-                      marginTop: 8,
-                      fontWeight: "bold",
-                    }}
-                  >
-                    View All Vehicles →
-                  </Text>
-                </Pressable>
-              )}
-            </>
-          }
-          ListEmptyComponent={
-            <View style={globalStyles.emptyState}>
-              <Ionicons name="car-outline" size={64} color="#777" />
-              <Text style={globalStyles.emptyTitle}>No vehicles added yet</Text>
-              <Text style={globalStyles.emptyMessage}>
-                Tap the button below to add your first vehicle
-              </Text>
-            </View>
-          }
-        />
-      </View>
+                  View All Vehicles →
+                </Text>
+              </Pressable>
+            )}
+          </>
+        }
+        ListEmptyComponent={
+          <View style={globalStyles.emptyState}>
+            <Ionicons name="car-outline" size={64} color="#777" />
+            <Text style={globalStyles.emptyTitle}>No vehicles added yet</Text>
+            <Text style={globalStyles.emptyMessage}>
+              Tap the button below to add your first vehicle
+            </Text>
+          </View>
+        }
+      />
       <Pressable
         style={[globalStyles.addButton, themed.addButton]}
         onPress={() => router.push("/vehicleManage/add-new-vehicle")}
@@ -562,7 +574,7 @@ export default function Index() {
           </Dialog.Actions>
         </Dialog>
       </Portal>
-    </>
+    </View>
   );
 }
 
@@ -648,6 +660,18 @@ const InfoRow = ({ icon, label, value }) => {
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  topBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingTop: 30,
+    paddingBottom: 10,
+    backgroundColor: "transparent",
+  },
   greeting: {
     fontSize: 22,
     fontWeight: "bold",

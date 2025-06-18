@@ -63,81 +63,183 @@ const MaintenanceScreen = () => {
   }, []);
 
   const renderRecord = ({ item }) => {
-    console.log("Maintenance Record Item:", item); // <-- Add this line for debugging
-
     return (
-      <View style={[globalStyles.card, themed.card]}>
-        <View style={styles.recordInfo}>
-          <Text style={[styles.recordType, { color: theme.colors.onSurface }]}>
-            {item.type}
+      <View
+        style={[
+          globalStyles.card,
+          themed.card,
+          {
+            flexDirection: "row",
+            alignItems: "center",
+            marginBottom: 14,
+            padding: 0,
+            overflow: "hidden",
+          },
+        ]}
+      >
+        <View
+          style={{
+            width: 6,
+            height: "100%",
+            backgroundColor: item.statusDone
+              ? theme.colors.surfaceVariant
+              : theme.colors.primary,
+          }}
+        />
+        <View style={{ flex: 1, padding: 16 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              marginBottom: 4,
+            }}
+          >
+            <Text
+              style={[
+                styles.recordTitle,
+                { color: theme.colors.primary, fontSize: 18, flex: 1 },
+              ]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {item.maintenanceCategory || "Maintenance"}
+            </Text>
+            <Text
+              style={{
+                color: item.statusDone
+                  ? theme.colors.secondary
+                  : theme.colors.primary,
+                fontWeight: "bold",
+                fontSize: 13,
+                marginLeft: 8,
+              }}
+            >
+              {item.statusDone ? "Completed" : "Upcoming"}
+            </Text>
+          </View>
+          <Text
+            style={[
+              styles.recordTitle,
+              { color: theme.colors.onSurface, fontSize: 16, marginBottom: 2 },
+            ]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {item.plate}
           </Text>
           <Text
             style={[
               styles.recordVehicle,
-              { color: theme.colors.onSurfaceVariant },
+              { color: theme.colors.onSurfaceVariant, marginBottom: 2 },
             ]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
           >
-            {item.vehicleName}
+            {item.type}
           </Text>
-          <Text style={[styles.recordDate, { color: theme.colors.outline }]}>
-            Due on: {item.plateNumber}
-          </Text>
-          <Text style={[styles.recordDate, { color: theme.colors.outline }]}>
-            Due on: {item.nextServiceDate} ({item.nextServiceMileage} km)
-          </Text>
-        </View>
-        <View style={styles.recordActions}>
-          <TouchableOpacity
-            style={[
-              styles.detailsButton,
-              { backgroundColor: theme.colors.primary },
-            ]}
-            onPress={() =>
-              router.push({
-                pathname: "/maintenanceManage/MaintenanceDetailScreen",
-                params: {
-                  ...item,
-                  services: JSON.stringify(item.services || []),
-                },
-              })
-            }
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              marginBottom: 2,
+            }}
           >
-            <Text
-              style={[
-                styles.detailsButtonText,
-                { color: theme.colors.onPrimary },
-              ]}
-            >
-              View Details
+            <Ionicons
+              name="calendar-outline"
+              size={16}
+              color={theme.colors.outline}
+              style={{ marginRight: 4 }}
+            />
+            <Text style={[styles.recordDate, { color: theme.colors.outline }]}>
+              {item.statusDone ? "Serviced on" : "Due on"}: {item.serviceDate} (
+              {item.currentServiceMileage} km)
             </Text>
-          </TouchableOpacity>
-
-          {!item.statusDone && (
+          </View>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              marginBottom: 2,
+            }}
+          >
+            <Ionicons
+              name="cash-outline"
+              size={16}
+              color={theme.colors.outline}
+              style={{ marginRight: 4 }}
+            />
+            <Text style={[styles.recordDate, { color: theme.colors.outline }]}>
+              Total cost: RM{item.cost}
+            </Text>
+          </View>
+          {/* Action Buttons */}
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "flex-end",
+              marginTop: 10,
+              gap: 8,
+            }}
+          >
             <TouchableOpacity
               style={[
-                styles.completeButton,
-                { backgroundColor: theme.colors.surfaceVariant },
+                styles.detailsButton,
+                {
+                  backgroundColor: theme.colors.primary,
+                  minWidth: 110,
+                  alignItems: "center",
+                },
               ]}
               onPress={() =>
                 router.push({
-                  pathname: "/maintenanceManage/maintenanceUpdateForm",
+                  pathname: "/maintenanceManage/MaintenanceDetailScreen",
                   params: {
                     ...item,
-                    services: JSON.stringify(item.services),
+                    services: JSON.stringify(item.services || []),
                   },
                 })
               }
             >
               <Text
                 style={[
-                  styles.completeButtonText,
-                  { color: theme.colors.Primary },
+                  styles.detailsButtonText,
+                  { color: theme.colors.onPrimary },
                 ]}
               >
-                Mark as Done
+                View Details
               </Text>
             </TouchableOpacity>
-          )}
+            {!item.statusDone && (
+              <TouchableOpacity
+                style={[
+                  styles.completeButton,
+                  {
+                    backgroundColor: theme.colors.secondary,
+                    minWidth: 110,
+                    alignItems: "center",
+                  },
+                ]}
+                onPress={() =>
+                  router.push({
+                    pathname: "/maintenanceManage/maintenanceUpdateForm",
+                    params: {
+                      ...item,
+                      services: JSON.stringify(item.services),
+                    },
+                  })
+                }
+              >
+                <Text
+                  style={[
+                    styles.completeButtonText,
+                    { color: theme.colors.onSecondary },
+                  ]}
+                >
+                  Mark as Done
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       </View>
     );
@@ -238,6 +340,7 @@ const styles = StyleSheet.create({
   },
   list: {
     marginTop: 10,
+    width: "100%",
   },
   recordCard: {
     borderRadius: 12,
@@ -251,11 +354,12 @@ const styles = StyleSheet.create({
   recordInfo: {
     marginBottom: 8,
   },
-  recordType: {
+  recordTitle: {
     fontSize: 18,
     fontWeight: "bold",
   },
   recordVehicle: {
+    paddingTop: 8,
     fontSize: 16,
   },
   recordDate: {

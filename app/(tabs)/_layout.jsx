@@ -39,7 +39,23 @@ export default function TabLayout() {
 
   return (
     <NotificationProvider>
-      <Tabs screenOptions={{ headerShown: false }}>
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarActiveTintColor: "#7c3aed",
+          tabBarInactiveTintColor: "#a1a1aa",
+          tabBarStyle: {
+            backgroundColor: "#fff",
+            borderTopWidth: 0.5,
+            borderTopColor: "#e5e7eb",
+            height: 60,
+          },
+          tabBarLabelStyle: {
+            fontSize: 12,
+            fontWeight: "bold",
+          },
+        }}
+      >
         <Tabs.Screen
           name="1_index"
           options={{

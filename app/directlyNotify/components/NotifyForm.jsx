@@ -5,13 +5,13 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
 } from "react-native";
 import {
   Card,
   Text,
   Button,
   TextInput,
-  RadioButton,
   Dialog,
   Portal,
   Snackbar,
@@ -22,13 +22,42 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { doc, getDoc, collection, addDoc, Timestamp } from "firebase/firestore";
 import { db, auth } from "../../../config/FirebaseConfig";
 import axios from "axios";
+import { Ionicons } from "@expo/vector-icons";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 const GENERAL_MESSAGES = [
-  { label: "Car alarm is going off", value: "alarm" },
-  { label: "Car lights are on", value: "lights" },
-  { label: "Blocking my vehicle", value: "blocking" },
-  { label: "Door/trunk is open", value: "open" },
-  { label: "Custom message", value: "custom" },
+  {
+    label: "vehicle alarm is going off",
+    value: "alarm",
+    icon: "alarm-light",
+  },
+  {
+    label: "vehicle lights are on",
+    value: "lights",
+    icon: "car-light-alert",
+  },
+  {
+    label: "Blocking my vehicle",
+    value: "blocking",
+    icon: "block-helper",
+  },
+  { label: "Door/trunk is open", value: "open", icon: "car-door" },
+  {
+    label: "Vehicle is damaged",
+    value: "damaged",
+    icon: "alert-circle-outline",
+  },
+  {
+    label: "Vehicle fuel tank cap is open",
+    value: "fuel_cap_open",
+    icon: "gas-station",
+  },
+  { label: "Vehicle tire is flat", value: "flat", icon: "car-tire-alert" },
+  {
+    label: "Custom message",
+    value: "custom",
+    icon: "message-alert",
+  },
 ];
 
 export default function NotifyForm() {
@@ -130,43 +159,100 @@ export default function NotifyForm() {
           >
             <Card.Title
               title="Notify Vehicle Owner"
-              titleStyle={{ color: theme.colors.primary }}
+              titleStyle={{
+                fontSize: 20,
+                color: theme.colors.primary,
+                fontWeight: "bold",
+              }}
+              subtitle="Select the reason for notification"
             />
             <Card.Content>
               <Text
                 style={[styles.vehicleTitle, { color: theme.colors.primary }]}
               >
-                {parsedVehicle.brand} {parsedVehicle.model} (
-                {parsedVehicle.year})
+                {parsedVehicle.plateNumber ?? parsedVehicle.plate}
               </Text>
               <Text style={{ color: theme.colors.onSurface }}>
-                Plate: {parsedVehicle.plateNumber ?? parsedVehicle.plate}
+                Model: {parsedVehicle.brand} {parsedVehicle.model} (
+                {parsedVehicle.year})
               </Text>
               <Text style={{ color: theme.colors.onSurface }}>
                 Color: {parsedVehicle.color}
               </Text>
 
-              <Text
-                style={[styles.subheading, { color: theme.colors.primary }]}
+              <Card
+                style={[
+                  styles.reasonCard,
+                  { backgroundColor: theme.colors.surface },
+                ]}
               >
-                Reason for notification:
-              </Text>
-              <RadioButton.Group
-                onValueChange={(value) => setSelectedReason(value)}
-                value={selectedReason}
-              >
-                {GENERAL_MESSAGES.map((item) => (
-                  <RadioButton.Item
-                    key={item.value}
-                    label={item.label}
-                    value={item.value}
-                    mode="android"
-                    color={theme.colors.primary}
-                    labelStyle={{ color: theme.colors.onSurface }}
-                    style={{ backgroundColor: theme.colors.surface }}
-                  />
-                ))}
-              </RadioButton.Group>
+                <Text
+                  style={[
+                    styles.subheading,
+                    { color: theme.colors.primary, marginTop: 0 },
+                  ]}
+                >
+                  Reason for notification:
+                </Text>
+                <View style={{ gap: 8 }}>
+                  {GENERAL_MESSAGES.map((item) => {
+                    const selected = selectedReason === item.value;
+                    return (
+                      <Pressable
+                        key={item.value}
+                        onPress={() => setSelectedReason(item.value)}
+                        style={[
+                          styles.reasonItem,
+                          {
+                            borderColor: selected
+                              ? theme.colors.primary
+                              : theme.colors.outlineVariant,
+                            backgroundColor: selected
+                              ? theme.colors.primary + "15"
+                              : theme.colors.surface,
+                          },
+                        ]}
+                      >
+                        <Ionicons
+                          name={
+                            selected ? "radio-button-on" : "radio-button-off"
+                          }
+                          size={20}
+                          color={
+                            selected
+                              ? theme.colors.primary
+                              : theme.colors.outlineVariant
+                          }
+                          style={{ marginRight: 12 }}
+                        />
+                        <MaterialCommunityIcons
+                          name={item.icon}
+                          size={22}
+                          color={
+                            selected
+                              ? theme.colors.primary
+                              : theme.colors.outlineVariant
+                          }
+                          style={{ marginRight: 10 }}
+                        />
+
+                        <Text
+                          style={{
+                            color: selected
+                              ? theme.colors.primary
+                              : theme.colors.onSurface,
+                            fontWeight: selected ? "bold" : "normal",
+                            fontSize: 15,
+                            flex: 1,
+                          }}
+                        >
+                          {item.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </Card>
 
               {selectedReason === "custom" && (
                 <TextInput
@@ -268,7 +354,7 @@ const styles = StyleSheet.create({
   },
   vehicleTitle: {
     fontWeight: "bold",
-    fontSize: 18,
+    fontSize: 20,
     marginBottom: 4,
   },
   subheading: {
@@ -285,5 +371,22 @@ const styles = StyleSheet.create({
   button: {
     marginTop: 20,
     borderRadius: 8,
+  },
+  reasonCard: {
+    borderRadius: 12,
+    padding: 12,
+    elevation: 0,
+    marginBottom: 18,
+    marginTop: 10,
+  },
+  reasonItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginBottom: 0,
+    backgroundColor: "#fff",
   },
 });

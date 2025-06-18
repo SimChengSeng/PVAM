@@ -345,13 +345,11 @@ export default function VehicleDetailScreen() {
     }, [router])
   );
 
-  // Find the color code for the current color string
   const colorObj = vehicleColour.find(
     (c) => c.label.toLowerCase() === color?.toLowerCase()
   );
   const svgColor = colorObj ? colorObj.colorCode : "#000";
 
-  // Sort pending records by closest date, then mileage
   const getSortedUpcoming = (records) => {
     const pending = records.filter((rec) => !rec.statusDone);
     return pending.sort((a, b) => {
@@ -362,34 +360,19 @@ export default function VehicleDetailScreen() {
     });
   };
 
-  // Only show the 3 closest upcoming maintenance records
   const previewMaintenanceRecords = getSortedUpcoming(maintenanceRecords).slice(
     0,
     3
   );
 
-  // Find the closest upcoming maintenance by date, then by mileage if dates are equal
-  const getClosestUpcoming = (records) => {
-    // Only pending records
-    const pending = records.filter((rec) => !rec.statusDone);
-    if (pending.length === 0) return null;
-
-    // Parse date and sort by nextServiceDate (assume format: YYYY-MM-DD or similar)
-    pending.sort((a, b) => {
-      const dateA = new Date(a.nextServiceDate);
-      const dateB = new Date(b.nextServiceDate);
-      if (dateA - dateB !== 0) return dateA - dateB;
-      // If same date, sort by mileage
-      return (a.nextServiceMileage || 0) - (b.nextServiceMileage || 0);
-    });
-
-    return pending[0];
-  };
-
-  const closestMaintenance = getClosestUpcoming(maintenanceRecords);
-
   return (
-    <View style={{ flex: 1 }}>
+    <View
+      style={{
+        flex: 1,
+        height: "100%",
+        backgroundColor: theme.colors.background,
+      }}
+    >
       <FlatList
         data={previewMaintenanceRecords}
         keyExtractor={(item) => item.id}
