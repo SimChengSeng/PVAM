@@ -14,18 +14,12 @@ import {
   RadioButton,
   Dialog,
   Portal,
-  Paragraph,
-  Snackbar, // <-- Add this import
+  Snackbar,
+  useTheme,
+  Provider,
 } from "react-native-paper";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import {
-  doc,
-  getDoc,
-  collection,
-  addDoc,
-  serverTimestamp,
-  Timestamp,
-} from "firebase/firestore";
+import { doc, getDoc, collection, addDoc, Timestamp } from "firebase/firestore";
 import { db, auth } from "../../../config/FirebaseConfig";
 import axios from "axios";
 
@@ -41,6 +35,7 @@ export default function NotifyForm() {
   const { vehicle } = useLocalSearchParams();
   const parsedVehicle = JSON.parse(vehicle);
   const router = useRouter();
+  const theme = useTheme();
 
   const [selectedReason, setSelectedReason] = useState("alarm");
   const [customMessage, setCustomMessage] = useState("");
@@ -119,106 +114,176 @@ export default function NotifyForm() {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      style={{ flex: 1 }}
-    >
-      <ScrollView contentContainerStyle={styles.container}>
-        <Card style={styles.card}>
-          <Card.Title title="Notify Vehicle Owner" />
-          <Card.Content>
-            <Text variant="titleMedium">
-              {parsedVehicle.brand} {parsedVehicle.model} ({parsedVehicle.year})
-            </Text>
-            <Text>Plate: {parsedVehicle.plate}</Text>
-            <Text>Color: {parsedVehicle.color}</Text>
-
-            <Text style={styles.subheading}>Reason for notification:</Text>
-            <RadioButton.Group
-              onValueChange={(value) => setSelectedReason(value)}
-              value={selectedReason}
-            >
-              {GENERAL_MESSAGES.map((item) => (
-                <RadioButton.Item
-                  key={item.value}
-                  label={item.label}
-                  value={item.value}
-                  mode="android"
-                />
-              ))}
-            </RadioButton.Group>
-
-            {selectedReason === "custom" && (
-              <TextInput
-                label="Your Message"
-                value={customMessage}
-                onChangeText={setCustomMessage}
-                mode="outlined"
-                multiline
-                numberOfLines={4}
-                style={styles.input}
-              />
-            )}
-
-            <Button
-              mode="contained"
-              onPress={handleConfirmSend}
-              loading={sending}
-              disabled={
-                sending ||
-                (selectedReason === "custom" && !customMessage.trim())
-              }
-              style={styles.button}
-            >
-              Confirm & Send
-            </Button>
-          </Card.Content>
-        </Card>
-
-        <Portal>
-          <Dialog visible={confirmVisible} onDismiss={handleCancel}>
-            <Dialog.Title>Confirm Notification</Dialog.Title>
-            <Dialog.Content>
-              <Paragraph>{getMessageText()}</Paragraph>
-            </Dialog.Content>
-            <Dialog.Actions>
-              <Button onPress={handleCancel}>Cancel</Button>
-              <Button onPress={handleSend}>Send</Button>
-            </Dialog.Actions>
-          </Dialog>
-        </Portal>
-      </ScrollView>
-      <Snackbar
-        visible={snackVisible}
-        onDismiss={() => setSnackVisible(false)}
-        duration={3000}
-        action={{
-          label: "Close",
-          onPress: () => setSnackVisible(false),
-        }}
+    <Provider>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={{ flex: 1 }}
       >
-        {snackMessage}
-      </Snackbar>
-    </KeyboardAvoidingView>
+        <ScrollView
+          contentContainerStyle={[
+            styles.container,
+            { backgroundColor: theme.colors.background },
+          ]}
+        >
+          <Card
+            style={[styles.card, { backgroundColor: theme.colors.surface }]}
+          >
+            <Card.Title
+              title="Notify Vehicle Owner"
+              titleStyle={{ color: theme.colors.primary }}
+            />
+            <Card.Content>
+              <Text
+                style={[styles.vehicleTitle, { color: theme.colors.primary }]}
+              >
+                {parsedVehicle.brand} {parsedVehicle.model} (
+                {parsedVehicle.year})
+              </Text>
+              <Text style={{ color: theme.colors.onSurface }}>
+                Plate: {parsedVehicle.plateNumber ?? parsedVehicle.plate}
+              </Text>
+              <Text style={{ color: theme.colors.onSurface }}>
+                Color: {parsedVehicle.color}
+              </Text>
+
+              <Text
+                style={[styles.subheading, { color: theme.colors.primary }]}
+              >
+                Reason for notification:
+              </Text>
+              <RadioButton.Group
+                onValueChange={(value) => setSelectedReason(value)}
+                value={selectedReason}
+              >
+                {GENERAL_MESSAGES.map((item) => (
+                  <RadioButton.Item
+                    key={item.value}
+                    label={item.label}
+                    value={item.value}
+                    mode="android"
+                    color={theme.colors.primary}
+                    labelStyle={{ color: theme.colors.onSurface }}
+                    style={{ backgroundColor: theme.colors.surface }}
+                  />
+                ))}
+              </RadioButton.Group>
+
+              {selectedReason === "custom" && (
+                <TextInput
+                  label="Your Message"
+                  value={customMessage}
+                  onChangeText={setCustomMessage}
+                  mode="outlined"
+                  multiline
+                  numberOfLines={4}
+                  style={[
+                    styles.input,
+                    { backgroundColor: theme.colors.surface },
+                  ]}
+                  theme={{
+                    colors: {
+                      primary: theme.colors.primary,
+                      text: theme.colors.onSurface,
+                      placeholder: theme.colors.onSurfaceVariant,
+                      background: theme.colors.surface,
+                    },
+                  }}
+                  textColor={theme.colors.onSurface}
+                  placeholderTextColor={theme.colors.onSurfaceVariant}
+                />
+              )}
+
+              <Button
+                mode="contained"
+                onPress={handleConfirmSend}
+                loading={sending}
+                disabled={
+                  sending ||
+                  (selectedReason === "custom" && !customMessage.trim())
+                }
+                style={[
+                  styles.button,
+                  { backgroundColor: theme.colors.primary },
+                ]}
+                textColor={theme.colors.onPrimary}
+              >
+                Confirm & Send
+              </Button>
+            </Card.Content>
+          </Card>
+
+          <Portal>
+            <Dialog
+              visible={confirmVisible}
+              onDismiss={handleCancel}
+              style={{ backgroundColor: theme.colors.surface }}
+            >
+              <Dialog.Title style={{ color: theme.colors.primary }}>
+                Confirm Notification
+              </Dialog.Title>
+              <Dialog.Content>
+                <Text style={{ color: theme.colors.onSurface }}>
+                  {getMessageText()}
+                </Text>
+              </Dialog.Content>
+              <Dialog.Actions>
+                <Button onPress={handleCancel} textColor={theme.colors.primary}>
+                  Cancel
+                </Button>
+                <Button onPress={handleSend} textColor={theme.colors.primary}>
+                  Send
+                </Button>
+              </Dialog.Actions>
+            </Dialog>
+          </Portal>
+        </ScrollView>
+        <Snackbar
+          visible={snackVisible}
+          onDismiss={() => setSnackVisible(false)}
+          duration={3000}
+          style={{ backgroundColor: theme.colors.surface }}
+          action={{
+            label: "Close",
+            onPress: () => setSnackVisible(false),
+            textColor: theme.colors.primary,
+          }}
+        >
+          <Text style={{ color: theme.colors.onSurface }}>{snackMessage}</Text>
+        </Snackbar>
+      </KeyboardAvoidingView>
+    </Provider>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     padding: 20,
+    flexGrow: 1,
+    justifyContent: "center",
   },
   card: {
     marginBottom: 20,
+    borderRadius: 12,
+    elevation: 2,
+  },
+  vehicleTitle: {
+    fontWeight: "bold",
+    fontSize: 18,
+    marginBottom: 4,
   },
   subheading: {
     marginTop: 20,
     fontWeight: "bold",
+    fontSize: 15,
+    marginBottom: 8,
   },
   input: {
     marginTop: 10,
     marginBottom: 20,
+    borderRadius: 8,
   },
   button: {
     marginTop: 20,
+    borderRadius: 8,
   },
 });

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import {
   View,
   Text,
@@ -6,26 +6,48 @@ import {
   StyleSheet,
   ScrollView,
 } from "react-native";
+import { useTheme } from "react-native-paper";
 
-const BrandSelectionScreen = ({ onSelectBrand, brands = [], vehicleType }) => (
-  <ScrollView contentContainerStyle={styles.container}>
-    <Text style={styles.title}>Choose Brand</Text>
-    <Text style={styles.subtitle}>
-      Select the brand of {vehicleType} you want to add
-    </Text>
-    <View style={styles.grid}>
-      {brands.map(({ brand, models }) => (
-        <TouchableOpacity
-          key={brand}
-          style={styles.card}
-          onPress={() => onSelectBrand(brand, models)}
-        >
-          <Text style={styles.label}>{brand}</Text>
-        </TouchableOpacity>
-      ))}
-    </View>
-  </ScrollView>
-);
+const BrandSelectionScreen = ({ onSelectBrand, brands = [], vehicleType }) => {
+  const theme = useTheme();
+
+  return (
+    <ScrollView
+      style={{ backgroundColor: theme.colors.background }}
+      contentContainerStyle={styles.container}
+    >
+      <Text style={[styles.title, { color: theme.colors.primary }]}>
+        Choose Brand
+      </Text>
+      <Text style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>
+        Select the brand of {vehicleType} you want to add
+      </Text>
+      <View style={styles.grid}>
+        {brands.map(({ brand, models }) => (
+          <TouchableOpacity
+            key={brand}
+            style={[
+              styles.card,
+              {
+                backgroundColor: theme.colors.surface,
+                borderColor: theme.colors.outlineVariant || "#e0e0e0",
+                shadowColor: theme.dark
+                  ? theme.colors.shadow || "#000"
+                  : "#000",
+              },
+            ]}
+            activeOpacity={0.8}
+            onPress={() => onSelectBrand(brand, models)}
+          >
+            <Text style={[styles.label, { color: theme.colors.onSurface }]}>
+              {brand}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </ScrollView>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -39,8 +61,8 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
-    color: "gray",
     marginBottom: 20,
+    textAlign: "center",
   },
   grid: {
     flexDirection: "row",
@@ -52,13 +74,12 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 16,
-    backgroundColor: "#fff",
     alignItems: "center",
     justifyContent: "center",
     padding: 10,
     elevation: 4,
     margin: 8,
-    shadowColor: "#000",
+    borderWidth: 1,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,

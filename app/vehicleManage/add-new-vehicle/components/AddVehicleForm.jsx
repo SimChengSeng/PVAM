@@ -20,6 +20,8 @@ import {
   Divider,
   List,
   Snackbar,
+  useTheme,
+  Provider,
 } from "react-native-paper";
 import { Dropdown } from "react-native-paper-dropdown";
 import { useForm, Controller } from "react-hook-form";
@@ -123,6 +125,7 @@ export default function AddNewVehicleForm({
   vehicleBrand,
   vehicleModel,
 }) {
+  const theme = useTheme();
   const {
     control,
     handleSubmit,
@@ -353,156 +356,199 @@ export default function AddNewVehicleForm({
   };
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
-    >
-      <SafeAreaView style={{ flex: 1 }}>
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={[
-            styles.container,
-            { flexGrow: 1, paddingBottom: 100 },
-          ]}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          <Text style={styles.title}>Vehicle Information</Text>
-          <Text style={styles.subtitle}>Enter the details of your vehicle</Text>
+    <Provider>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
+      >
+        <SafeAreaView style={{ flex: 1 }}>
+          <ScrollView
+            style={{ flex: 1, backgroundColor: theme.colors.background }}
+            contentContainerStyle={[
+              styles.container,
+              { flexGrow: 1, paddingBottom: 100 },
+            ]}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <Text style={[styles.title, { color: theme.colors.primary }]}>
+              Vehicle Information
+            </Text>
+            <Text
+              style={[
+                styles.subtitle,
+                { color: theme.colors.onSurfaceVariant },
+              ]}
+            >
+              Enter the details of your vehicle
+            </Text>
 
-          <Card style={[styles.card, { marginBottom: 16 }]}>
-            <Card.Content>
-              <Text
-                style={{ fontWeight: "700", fontSize: 16, marginBottom: 4 }}
-              >
-                Brand:{" "}
-                <Text style={{ fontWeight: "400" }}>{vehicleBrand || "-"}</Text>
-              </Text>
-              <Text
-                style={{ fontWeight: "700", fontSize: 16, marginBottom: 4 }}
-              >
-                Model:{" "}
-                <Text style={{ fontWeight: "400" }}>{vehicleModel || "-"}</Text>
-              </Text>
-              <Text style={{ fontWeight: "700", fontSize: 16 }}>
-                Color:{" "}
-                <Text style={{ fontWeight: "400" }}>{vehicleColor || "-"}</Text>
-              </Text>
-            </Card.Content>
-          </Card>
+            <Card
+              style={[
+                styles.card,
+                { backgroundColor: theme.colors.surface, marginBottom: 16 },
+              ]}
+            >
+              <Card.Content>
+                <Text
+                  style={{
+                    fontWeight: "700",
+                    fontSize: 16,
+                    marginBottom: 4,
+                    color: theme.colors.primary,
+                  }}
+                >
+                  Brand:{" "}
+                  <Text
+                    style={{
+                      fontWeight: "400",
+                      color: theme.colors.onSurface,
+                    }}
+                  >
+                    {vehicleBrand || "-"}
+                  </Text>
+                </Text>
+                <Text
+                  style={{
+                    fontWeight: "700",
+                    fontSize: 16,
+                    marginBottom: 4,
+                    color: theme.colors.primary,
+                  }}
+                >
+                  Model:{" "}
+                  <Text
+                    style={{
+                      fontWeight: "400",
+                      color: theme.colors.onSurface,
+                    }}
+                  >
+                    {vehicleModel || "-"}
+                  </Text>
+                </Text>
+                <Text
+                  style={{
+                    fontWeight: "700",
+                    fontSize: 16,
+                    color: theme.colors.primary,
+                  }}
+                >
+                  Color:{" "}
+                  <Text
+                    style={{
+                      fontWeight: "400",
+                      color: theme.colors.onSurface,
+                    }}
+                  >
+                    {vehicleColor || "-"}
+                  </Text>
+                </Text>
+              </Card.Content>
+            </Card>
 
-          <Controller
-            control={control}
-            name="plate"
-            render={({ field: { onChange, value } }) => (
-              <>
-                <TextInput
-                  label="License Plate"
-                  value={value}
-                  onChangeText={onChange}
-                  mode="outlined"
-                  autoCapitalize="characters" // This will auto-uppercase input
-                />
-                <HelperText type="error" visible={!!errors.plate}>
-                  {errors.plate?.message}
-                </HelperText>
-              </>
-            )}
-          />
-
-          {/* <Controller
-            control={control}
-            name="brand"
-            render={({ field: { onChange, value } }) => (
-              <>
-                <TextInput
-                  label="Brand"
-                  value={value}
-                  onChangeText={onChange}
-                  mode="outlined"
-                />
-                <HelperText type="error" visible={!!errors.brand}>
-                  {errors.brand?.message}
-                </HelperText>
-              </>
-            )}
-          />
-
-          <Controller
-            control={control}
-            name="model"
-            render={({ field: { onChange, value } }) => (
-              <>
-                <TextInput
-                  label="Model"
-                  value={value}
-                  onChangeText={onChange}
-                  mode="outlined"
-                  editable={false}
-                />
-                <HelperText type="error" visible={!!errors.model}>
-                  {errors.model?.message}
-                </HelperText>
-              </>
-            )}
-          /> */}
-
-          <Controller
-            control={control}
-            name="year"
-            render={({ field: { onChange, value } }) => (
-              <>
-                <Dropdown
-                  label="Year of Manufacture"
-                  placeholder="Select Year"
-                  mode="outlined"
-                  options={Array.from({ length: 2025 - 1989 + 1 }, (_, i) => {
-                    const year = 2025 - i; // 👈 reverse order
-                    return { label: year.toString(), value: year.toString() };
-                  })}
-                  value={value}
-                  onSelect={onChange}
-                />
-                <HelperText type="error" visible={!!errors.year}>
-                  {errors.year?.message}
-                </HelperText>
-              </>
-            )}
-          />
-
-          <Controller
-            control={control}
-            name="Mileage"
-            render={({ field: { onChange, value } }) => {
-              // Format the mileage with commas for display
-              const formatMileage = (num) => {
-                if (!num) return "";
-                return num.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-              };
-
-              // Remove commas for the actual value
-              const unformatMileage = (num) => {
-                return num.replace(/,/g, "");
-              };
-
-              return (
+            <Controller
+              control={control}
+              name="plate"
+              render={({ field: { onChange, value } }) => (
                 <>
                   <TextInput
-                    label="Mileage (km)"
-                    value={formatMileage(value)}
-                    onChangeText={(val) => onChange(unformatMileage(val))}
+                    label="License Plate"
+                    value={value}
+                    onChangeText={onChange}
                     mode="outlined"
-                    keyboardType="numeric"
+                    autoCapitalize="characters"
+                    style={[
+                      styles.input,
+                      { backgroundColor: theme.colors.surface },
+                    ]}
+                    theme={{
+                      colors: {
+                        primary: theme.colors.primary,
+                        text: theme.colors.onSurface,
+                        placeholder: theme.colors.onSurfaceVariant,
+                        background: theme.colors.surface,
+                      },
+                    }}
+                    textColor={theme.colors.onSurface}
                   />
-                  <HelperText type="error" visible={!!errors.Mileage}>
-                    {errors.Mileage?.message}
+                  <HelperText type="error" visible={!!errors.plate}>
+                    {errors.plate?.message}
                   </HelperText>
                 </>
-              );
-            }}
-          />
-          {/* <Controller
+              )}
+            />
+
+            <Controller
+              control={control}
+              name="year"
+              render={({ field: { onChange, value } }) => (
+                <>
+                  <Dropdown
+                    label="Year of Manufacture"
+                    placeholder="Select Year"
+                    mode="outlined"
+                    options={Array.from({ length: 2025 - 1989 + 1 }, (_, i) => {
+                      const year = 2025 - i; // 👈 reverse order
+                      return { label: year.toString(), value: year.toString() };
+                    })}
+                    value={value}
+                    onSelect={onChange}
+                    style={[
+                      styles.input,
+                      { backgroundColor: theme.colors.surface },
+                    ]}
+                  />
+                  <HelperText type="error" visible={!!errors.year}>
+                    {errors.year?.message}
+                  </HelperText>
+                </>
+              )}
+            />
+
+            <Controller
+              control={control}
+              name="Mileage"
+              render={({ field: { onChange, value } }) => {
+                // Format the mileage with commas for display
+                const formatMileage = (num) => {
+                  if (!num) return "";
+                  return num.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                };
+
+                // Remove commas for the actual value
+                const unformatMileage = (num) => num.replace(/,/g, "");
+
+                return (
+                  <>
+                    <TextInput
+                      label="Mileage (km)"
+                      value={formatMileage(value)}
+                      onChangeText={(val) => onChange(unformatMileage(val))}
+                      mode="outlined"
+                      keyboardType="numeric"
+                      style={[
+                        styles.input,
+                        { backgroundColor: theme.colors.surface },
+                      ]}
+                      theme={{
+                        colors: {
+                          primary: theme.colors.primary,
+                          text: theme.colors.onSurface,
+                          placeholder: theme.colors.onSurfaceVariant,
+                          background: theme.colors.surface,
+                        },
+                      }}
+                      textColor={theme.colors.onSurface}
+                    />
+                    <HelperText type="error" visible={!!errors.Mileage}>
+                      {errors.Mileage?.message}
+                    </HelperText>
+                  </>
+                );
+              }}
+            />
+            {/* <Controller
         control={control}
         name="NextServiceDate"
         render={({ field: { onChange, value } }) => (
@@ -538,7 +584,7 @@ export default function AddNewVehicleForm({
           </>
         )}
       /> */}
-          {/* <Controller
+            {/* <Controller
         control={control}
         name="fuel"
         render={({ field: { onChange, value } }) => (
@@ -562,196 +608,296 @@ export default function AddNewVehicleForm({
         )}
       /> */}
 
-          <Controller
-            control={control}
-            name="isDefault"
-            render={({ field: { onChange, value } }) => (
-              <View style={styles.switchContainer}>
-                <Text>Set as Default Vehicle</Text>
-                <Switch value={value} onValueChange={onChange} />
-              </View>
-            )}
-          />
-          <View style={styles.switchContainer}>
-            <Text>Enable Weekly Inspection Reminder</Text>
-            <Switch
-              value={inspectionReminderEnabled}
-              onValueChange={(value) => setInspectionReminderEnabled(value)}
-            />
-          </View>
-
-          {inspectionReminderEnabled && (
-            <Dropdown
-              label="Select Weekly Inspection Day"
-              placeholder="Choose a day"
-              mode="outlined"
-              options={[
-                { label: "Monday", value: "Monday" },
-                { label: "Tuesday", value: "Tuesday" },
-                { label: "Wednesday", value: "Wednesday" },
-                { label: "Thursday", value: "Thursday" },
-                { label: "Friday", value: "Friday" },
-                { label: "Saturday", value: "Saturday" },
-                { label: "Sunday", value: "Sunday" },
-              ]}
-              value={weeklyInspectionDay}
-              onSelect={setWeeklyInspectionDay}
-              style={styles.input}
-            />
-          )}
-
-          {/* Advanced Options */}
-          <Card style={styles.card}>
-            <Card.Title title="Advanced Options" />
-            <Card.Content>
-              <List.Accordion
-                title="Vehicle Specific Details"
-                titleStyle={{ fontWeight: "600", color: "#6b21a8" }}
-                left={(props) => <List.Icon {...props} icon="car-cog" />}
-                style={styles.accordion}
-                theme={{ colors: { background: "transparent" } }}
-              >
-                <View style={styles.accordionContent}>
-                  {vehicleType === "motorcycle" && (
-                    <Controller
-                      control={control}
-                      name="engineSize"
-                      render={({ field: { onChange, value } }) => (
-                        <>
-                          <TextInput
-                            label="Engine Size (cc)"
-                            value={value}
-                            onChangeText={onChange}
-                            mode="outlined"
-                            keyboardType="numeric"
-                            style={styles.inputRounded}
-                          />
-                          <HelperText
-                            type="error"
-                            visible={!!errors.engineSize}
-                          >
-                            {errors.engineSize?.message}
-                          </HelperText>
-                        </>
-                      )}
-                    />
-                  )}
-
-                  {vehicleType === "truck" && (
-                    <Controller
-                      control={control}
-                      name="cargoCapacity"
-                      render={({ field: { onChange, value } }) => (
-                        <>
-                          <TextInput
-                            label="Cargo Capacity (kg)"
-                            value={value}
-                            onChangeText={onChange}
-                            mode="outlined"
-                            keyboardType="numeric"
-                            style={styles.inputRounded}
-                          />
-                          <HelperText
-                            type="error"
-                            visible={!!errors.cargoCapacity}
-                          >
-                            {errors.cargoCapacity?.message}
-                          </HelperText>
-                        </>
-                      )}
-                    />
-                  )}
+            <Controller
+              control={control}
+              name="isDefault"
+              render={({ field: { onChange, value } }) => (
+                <View style={styles.switchContainer}>
+                  <Text style={{ color: theme.colors.onSurface }}>
+                    Set as Default Vehicle
+                  </Text>
+                  <Switch
+                    value={value}
+                    onValueChange={onChange}
+                    color={theme.colors.primary}
+                  />
                 </View>
-              </List.Accordion>
-            </Card.Content>
-          </Card>
-
-          <Card style={styles.card}>
-            <Card.Title title="Mileage Auto-Estimation" />
-            <Card.Content>
-              <Text style={{ fontSize: 14, color: "#555", marginBottom: 12 }}>
-                Fill in your average vehicle usage so the app can automatically
-                estimate daily mileage and reduce manual updates.
-              </Text>
-
-              <Controller
-                control={control}
-                name="averageUsageDays"
-                render={({ field: { onChange, value } }) => (
-                  <>
-                    <TextInput
-                      label="Average Days Used per Week"
-                      value={value}
-                      onChangeText={onChange}
-                      mode="outlined"
-                      keyboardType="numeric"
-                      style={styles.inputRounded}
-                    />
-                    <HelperText
-                      type="error"
-                      visible={!!errors.averageUsageDays}
-                    >
-                      {errors.averageUsageDays?.message}
-                    </HelperText>
-                  </>
-                )}
-              />
-
-              <Controller
-                control={control}
-                name="averageDailyDistance"
-                render={({ field: { onChange, value } }) => (
-                  <>
-                    <TextInput
-                      label="Average Distance per Day (km)"
-                      value={value}
-                      onChangeText={onChange}
-                      mode="outlined"
-                      keyboardType="numeric"
-                      style={styles.inputRounded}
-                    />
-                    <HelperText
-                      type="error"
-                      visible={!!errors.averageDailyDistance}
-                    >
-                      {errors.averageDailyDistance?.message}
-                    </HelperText>
-                  </>
-                )}
-              />
-            </Card.Content>
-          </Card>
-
-          {loading ? (
-            <ActivityIndicator
-              animating={true}
-              size="large"
-              style={styles.button}
+              )}
             />
-          ) : (
-            <Button
-              mode="contained"
-              onPress={handleSubmit(onSubmit)}
-              style={styles.button}
-            >
-              Add Vehicle
-            </Button>
-          )}
+            <View style={styles.switchContainer}>
+              <Text style={{ color: theme.colors.onSurface }}>
+                Enable Weekly Inspection Reminder
+              </Text>
+              <Switch
+                value={inspectionReminderEnabled}
+                onValueChange={(value) => setInspectionReminderEnabled(value)}
+                color={theme.colors.primary}
+              />
+            </View>
 
-          <Snackbar
-            visible={snackbarVisible}
-            onDismiss={() => setSnackbarVisible(false)}
-            duration={3000}
-            action={{
-              label: "OK",
-              onPress: () => setSnackbarVisible(false),
-            }}
-          >
-            {snackbarMsg}
-          </Snackbar>
-        </ScrollView>
-      </SafeAreaView>
-    </KeyboardAvoidingView>
+            {inspectionReminderEnabled && (
+              <Dropdown
+                label="Select Weekly Inspection Day"
+                placeholder="Choose a day"
+                mode="outlined"
+                options={[
+                  { label: "Monday", value: "Monday" },
+                  { label: "Tuesday", value: "Tuesday" },
+                  { label: "Wednesday", value: "Wednesday" },
+                  { label: "Thursday", value: "Thursday" },
+                  { label: "Friday", value: "Friday" },
+                  { label: "Saturday", value: "Saturday" },
+                  { label: "Sunday", value: "Sunday" },
+                ]}
+                value={weeklyInspectionDay}
+                onSelect={setWeeklyInspectionDay}
+                style={[
+                  styles.input,
+                  { backgroundColor: theme.colors.surface },
+                ]}
+              />
+            )}
+
+            {/* Advanced Options */}
+            <Card
+              style={[styles.card, { backgroundColor: theme.colors.surface }]}
+            >
+              <Card.Title
+                title="Advanced Options"
+                titleStyle={{ color: theme.colors.primary }}
+              />
+              <Card.Content>
+                <List.Accordion
+                  title="Vehicle Specific Details"
+                  titleStyle={{
+                    fontWeight: "600",
+                    color: theme.colors.primary,
+                  }}
+                  left={(props) => (
+                    <List.Icon
+                      {...props}
+                      icon="car-cog"
+                      color={theme.colors.primary}
+                    />
+                  )}
+                  style={styles.accordion}
+                  theme={{ colors: { background: "transparent" } }}
+                >
+                  <View style={styles.accordionContent}>
+                    {vehicleType === "motorcycle" && (
+                      <Controller
+                        control={control}
+                        name="engineSize"
+                        render={({ field: { onChange, value } }) => (
+                          <>
+                            <TextInput
+                              label="Engine Size (cc)"
+                              value={value}
+                              onChangeText={onChange}
+                              mode="outlined"
+                              keyboardType="numeric"
+                              style={[
+                                styles.inputRounded,
+                                { backgroundColor: theme.colors.surface },
+                              ]}
+                              theme={{
+                                colors: {
+                                  primary: theme.colors.primary,
+                                  text: theme.colors.onSurface,
+                                  placeholder: theme.colors.onSurfaceVariant,
+                                  background: theme.colors.surface,
+                                },
+                              }}
+                              textColor={theme.colors.onSurface}
+                            />
+                            <HelperText
+                              type="error"
+                              visible={!!errors.engineSize}
+                            >
+                              {errors.engineSize?.message}
+                            </HelperText>
+                          </>
+                        )}
+                      />
+                    )}
+
+                    {vehicleType === "truck" && (
+                      <Controller
+                        control={control}
+                        name="cargoCapacity"
+                        render={({ field: { onChange, value } }) => (
+                          <>
+                            <TextInput
+                              label="Cargo Capacity (kg)"
+                              value={value}
+                              onChangeText={onChange}
+                              mode="outlined"
+                              keyboardType="numeric"
+                              style={[
+                                styles.inputRounded,
+                                { backgroundColor: theme.colors.surface },
+                              ]}
+                              theme={{
+                                colors: {
+                                  primary: theme.colors.primary,
+                                  text: theme.colors.onSurface,
+                                  placeholder: theme.colors.onSurfaceVariant,
+                                  background: theme.colors.surface,
+                                },
+                              }}
+                              textColor={theme.colors.onSurface}
+                            />
+                            <HelperText
+                              type="error"
+                              visible={!!errors.cargoCapacity}
+                            >
+                              {errors.cargoCapacity?.message}
+                            </HelperText>
+                          </>
+                        )}
+                      />
+                    )}
+                  </View>
+                </List.Accordion>
+              </Card.Content>
+            </Card>
+
+            <Card
+              style={[styles.card, { backgroundColor: theme.colors.surface }]}
+            >
+              <Card.Title
+                title="Mileage Auto-Estimation"
+                titleStyle={{ color: theme.colors.primary }}
+              />
+              <Card.Content>
+                <Text
+                  style={{
+                    fontSize: 14,
+                    color: theme.colors.onSurfaceVariant,
+                    marginBottom: 12,
+                  }}
+                >
+                  Fill in your average vehicle usage so the app can
+                  automatically estimate daily mileage and reduce manual
+                  updates.
+                </Text>
+
+                <Controller
+                  control={control}
+                  name="averageUsageDays"
+                  render={({ field: { onChange, value } }) => (
+                    <>
+                      <TextInput
+                        label="Average Days Used per Week"
+                        value={value}
+                        onChangeText={onChange}
+                        mode="outlined"
+                        keyboardType="numeric"
+                        style={[
+                          styles.inputRounded,
+                          { backgroundColor: theme.colors.surface },
+                        ]}
+                        theme={{
+                          colors: {
+                            primary: theme.colors.primary,
+                            text: theme.colors.onSurface,
+                            placeholder: theme.colors.onSurfaceVariant,
+                            background: theme.colors.surface,
+                          },
+                        }}
+                        textColor={theme.colors.onSurface}
+                      />
+                      <HelperText
+                        type="error"
+                        visible={!!errors.averageUsageDays}
+                      >
+                        {errors.averageUsageDays?.message}
+                      </HelperText>
+                    </>
+                  )}
+                />
+
+                <Controller
+                  control={control}
+                  name="averageDailyDistance"
+                  render={({ field: { onChange, value } }) => (
+                    <>
+                      <TextInput
+                        label="Average Distance per Day (km)"
+                        value={value}
+                        onChangeText={onChange}
+                        mode="outlined"
+                        keyboardType="numeric"
+                        style={[
+                          styles.inputRounded,
+                          { backgroundColor: theme.colors.surface },
+                        ]}
+                        theme={{
+                          colors: {
+                            primary: theme.colors.primary,
+                            text: theme.colors.onSurface,
+                            placeholder: theme.colors.onSurfaceVariant,
+                            background: theme.colors.surface,
+                          },
+                        }}
+                        textColor={theme.colors.onSurface}
+                      />
+                      <HelperText
+                        type="error"
+                        visible={!!errors.averageDailyDistance}
+                      >
+                        {errors.averageDailyDistance?.message}
+                      </HelperText>
+                    </>
+                  )}
+                />
+              </Card.Content>
+            </Card>
+
+            {loading ? (
+              <ActivityIndicator
+                animating={true}
+                size="large"
+                style={styles.button}
+                color={theme.colors.primary}
+              />
+            ) : (
+              <Button
+                mode="contained"
+                onPress={handleSubmit(onSubmit)}
+                style={[
+                  styles.button,
+                  { backgroundColor: theme.colors.primary },
+                ]}
+                textColor={theme.colors.onPrimary}
+                loading={loading}
+                disabled={loading}
+              >
+                Add Vehicle
+              </Button>
+            )}
+
+            <Snackbar
+              visible={snackbarVisible}
+              onDismiss={() => setSnackbarVisible(false)}
+              duration={3000}
+              action={{
+                label: "OK",
+                onPress: () => setSnackbarVisible(false),
+              }}
+              style={{
+                backgroundColor: theme.colors.surface,
+                borderRadius: 8,
+              }}
+            >
+              <Text style={{ color: theme.colors.onSurface }}>
+                {snackbarMsg}
+              </Text>
+            </Snackbar>
+          </ScrollView>
+        </SafeAreaView>
+      </KeyboardAvoidingView>
+    </Provider>
   );
 }
 
@@ -769,7 +915,6 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     textAlign: "center",
-    color: "#666",
     marginBottom: 24,
   },
   switchContainer: {
@@ -780,12 +925,12 @@ const styles = StyleSheet.create({
   },
   button: {
     marginTop: 20,
+    borderRadius: 8,
   },
   card: {
     marginTop: 20,
     borderRadius: 16,
     elevation: 2,
-    backgroundColor: "#f8f4fc", // soft lavender / light pastel
   },
   accordion: {
     backgroundColor: "transparent",
@@ -793,14 +938,15 @@ const styles = StyleSheet.create({
   accordionContent: {
     paddingTop: 12,
     paddingBottom: 16,
-    backgroundColor: "#fdfcff",
     borderRadius: 12,
     paddingHorizontal: 12,
+  },
+  input: {
+    marginBottom: 16,
   },
   inputRounded: {
     marginBottom: 12,
     borderRadius: 12,
-    backgroundColor: "#fff",
     elevation: 1,
   },
 });

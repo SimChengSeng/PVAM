@@ -1,6 +1,7 @@
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import React from "react";
 import FastImage from "react-native-fast-image";
+import { useTheme } from "react-native-paper";
 
 // Firebase image URLs
 const vehicleTypes = [
@@ -27,17 +28,36 @@ const vehicleTypes = [
 ];
 
 export default function VehicleTypeSelection({ onSelectType }) {
+  const theme = useTheme();
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Choose Vehicle Type</Text>
-      <Text style={styles.subtitle}>
+    <View
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+    >
+      <Text style={[styles.title, { color: theme.colors.primary }]}>
+        Choose Vehicle Type
+      </Text>
+      <Text style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>
         Select the type of vehicle you want to add
       </Text>
       <View style={styles.grid}>
         {vehicleTypes.map((type) => (
           <Pressable
             key={type.label}
-            style={styles.card}
+            style={[
+              styles.card,
+              {
+                backgroundColor: theme.colors.surface,
+                shadowColor: theme.dark
+                  ? theme.colors.shadow || "#000"
+                  : "#000",
+                borderColor: theme.colors.outlineVariant || "#e0e0e0",
+              },
+            ]}
+            android_ripple={{
+              color: theme.colors.primary + "22",
+              borderless: false,
+            }}
             onPress={() => onSelectType(type.label.toLowerCase())}
           >
             <FastImage
@@ -54,8 +74,9 @@ export default function VehicleTypeSelection({ onSelectType }) {
                 );
               }}
             />
-
-            <Text style={styles.label}>{type.label}</Text>
+            <Text style={[styles.label, { color: theme.colors.onSurface }]}>
+              {type.label}
+            </Text>
           </Pressable>
         ))}
       </View>
@@ -67,6 +88,7 @@ const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 16,
     paddingVertical: 32,
+    flex: 1,
   },
   title: {
     fontSize: 24,
@@ -77,7 +99,6 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     textAlign: "center",
-    color: "#666",
     marginBottom: 24,
   },
   grid: {
@@ -89,16 +110,15 @@ const styles = StyleSheet.create({
   card: {
     width: "47%",
     aspectRatio: 1,
-    backgroundColor: "#fff",
     borderRadius: 12,
     padding: 16,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
     shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 6,
     elevation: 4,
+    borderWidth: 1,
   },
   image: {
     width: 120,
@@ -108,6 +128,5 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 16,
     fontWeight: "600",
-    color: "#333",
   },
 });

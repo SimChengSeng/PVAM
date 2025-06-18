@@ -1,7 +1,9 @@
 import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
 import React from "react";
+import { useTheme } from "react-native-paper";
 
 export default function VehicleColourSelection({ onSelectType }) {
+  const theme = useTheme();
   const vehicleColour = [
     { label: "Black", colorCode: "#000000" },
     { label: "White", colorCode: "#FFFFFF" },
@@ -18,22 +20,51 @@ export default function VehicleColourSelection({ onSelectType }) {
   ];
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Choose Vehicle Colour</Text>
-      <Text style={styles.subtitle}>
+    <ScrollView
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      contentContainerStyle={{ flexGrow: 1 }}
+    >
+      <Text style={[styles.title, { color: theme.colors.primary }]}>
+        Choose Vehicle Colour
+      </Text>
+      <Text style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>
         Select the color of the vehicle you're adding
       </Text>
       <View style={styles.grid}>
         {vehicleColour.map((type) => (
           <Pressable
             key={type.label}
-            style={styles.card}
+            style={[
+              styles.card,
+              {
+                backgroundColor: theme.colors.surface,
+                shadowColor: theme.dark
+                  ? theme.colors.shadow || "#000"
+                  : "#000",
+                borderColor: theme.colors.outlineVariant || "#e0e0e0",
+              },
+            ]}
+            android_ripple={{
+              color: theme.colors.primary + "22",
+              borderless: false,
+            }}
             onPress={() => onSelectType(type.label)}
           >
             <View
-              style={[styles.colorCircle, { backgroundColor: type.colorCode }]}
+              style={[
+                styles.colorCircle,
+                {
+                  backgroundColor: type.colorCode,
+                  borderColor:
+                    type.label.toLowerCase() === "white"
+                      ? theme.colors.outline
+                      : "transparent",
+                },
+              ]}
             />
-            <Text style={styles.label}>{type.label}</Text>
+            <Text style={[styles.label, { color: theme.colors.onSurface }]}>
+              {type.label}
+            </Text>
           </Pressable>
         ))}
       </View>
@@ -55,7 +86,6 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     textAlign: "center",
-    color: "#666",
     marginBottom: 24,
   },
   grid: {
@@ -67,29 +97,26 @@ const styles = StyleSheet.create({
   card: {
     width: "47%",
     aspectRatio: 1,
-    backgroundColor: "#fff",
     borderRadius: 12,
     padding: 16,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
     shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 6,
     elevation: 4,
+    borderWidth: 1,
   },
   colorCircle: {
     width: 40,
     height: 40,
     borderRadius: 20,
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#ddd",
+    borderWidth: 2,
   },
   label: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#333",
     textTransform: "capitalize",
   },
 });

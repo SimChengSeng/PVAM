@@ -8,14 +8,13 @@ import {
   ScrollView,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
-import { Provider as PaperProvider } from "react-native-paper";
+import { Provider as PaperProvider, useTheme } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../../../config/FirebaseConfig";
 import VehicleTypeSelection from "./components/VehicleTypeSelection";
 import VehicleColourSelection from "./components/VehicleColourSelection";
 import AddVehicleForm from "./components/AddVehicleForm";
-import VehicleCategorySelection from "./components/VehicleCategorySelection";
 import VehicleBrandSelection from "./components/VehicleBrandSelection";
 
 export default function AddNewVehicle() {
@@ -24,9 +23,11 @@ export default function AddNewVehicle() {
   const [selectedBrand, setSelectedBrand] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedModel, setSelectedModel] = useState(null);
-  const [brandModels, setBrandModels] = useState([]); // loaded from BrandSelection
+  const [brandModels, setBrandModels] = useState([]);
   const [brandList, setBrandList] = useState([]);
   const [brandListCache, setBrandListCache] = useState({});
+
+  const theme = useTheme();
 
   const currentStep = !selectedType
     ? 1
@@ -91,9 +92,11 @@ export default function AddNewVehicle() {
 
   return (
     <PaperProvider>
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView
+        style={[styles.safeArea, { backgroundColor: theme.colors.background }]}
+      >
         <View style={styles.container}>
-          <StepIndicator currentStep={currentStep} />
+          <StepIndicator currentStep={currentStep} theme={theme} />
 
           {currentStep === 1 && (
             <VehicleTypeSelection onSelectType={setSelectedType} />
@@ -114,20 +117,36 @@ export default function AddNewVehicle() {
           {currentStep === 4 && (
             <ScrollView contentContainerStyle={{ padding: 16 }}>
               <Text
-                style={{ fontSize: 20, fontWeight: "600", marginBottom: 16 }}
+                style={{
+                  fontSize: 20,
+                  fontWeight: "600",
+                  marginBottom: 16,
+                  color: theme.colors.primary,
+                }}
               >
                 Select Model
               </Text>
               {brandModels.map((model) => (
                 <Pressable
                   key={model.name}
-                  style={styles.card}
+                  style={[
+                    styles.card,
+                    {
+                      backgroundColor: theme.colors.surface,
+                      shadowColor: theme.dark
+                        ? theme.colors.shadow || "#000"
+                        : "#000",
+                      borderColor: theme.colors.outlineVariant || "#e0e0e0",
+                    },
+                  ]}
                   onPress={() => {
                     setSelectedModel(model.name);
                     setSelectedCategory(model.category);
                   }}
                 >
-                  <Text style={{ fontSize: 16 }}>{model.name}</Text>
+                  <Text style={{ fontSize: 16, color: theme.colors.onSurface }}>
+                    {model.name}
+                  </Text>
                 </Pressable>
               ))}
             </ScrollView>
@@ -148,7 +167,7 @@ export default function AddNewVehicle() {
   );
 }
 
-function StepIndicator({ currentStep }) {
+function StepIndicator({ currentStep, theme }) {
   const steps = ["Type", "Colour", "Brand", "Model", "Details"];
 
   return (
@@ -163,16 +182,42 @@ function StepIndicator({ currentStep }) {
             <View
               style={[
                 styles.circle,
-                isActive && styles.activeCircle,
-                isCompleted && styles.completedCircle,
+                {
+                  borderColor:
+                    isActive || isCompleted
+                      ? theme.colors.primary
+                      : theme.colors.outlineVariant || "#ccc",
+                  backgroundColor: isCompleted
+                    ? theme.colors.primary
+                    : theme.colors.background,
+                },
               ]}
             >
-              <Text style={styles.circleText}>{stepNum}</Text>
+              <Text
+                style={[
+                  styles.circleText,
+                  {
+                    color: isCompleted
+                      ? theme.colors.onPrimary
+                      : isActive
+                      ? theme.colors.primary
+                      : theme.colors.onSurfaceVariant,
+                  },
+                ]}
+              >
+                {stepNum}
+              </Text>
             </View>
             <Text
               style={[
                 styles.stepLabel,
-                (isActive || isCompleted) && styles.activeLabel,
+                {
+                  color:
+                    isActive || isCompleted
+                      ? theme.colors.primary
+                      : theme.colors.onSurfaceVariant,
+                  fontWeight: isActive || isCompleted ? "600" : "400",
+                },
               ]}
             >
               {label}
@@ -187,7 +232,6 @@ function StepIndicator({ currentStep }) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#fff",
   },
   container: {
     flex: 1,
@@ -208,41 +252,27 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 16,
     borderWidth: 2,
-    borderColor: "#ccc",
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#fff",
-  },
-  activeCircle: {
-    borderColor: "#4a90e2",
-  },
-  completedCircle: {
-    backgroundColor: "#4a90e2",
-    borderColor: "#4a90e2",
+    marginBottom: 2,
   },
   circleText: {
     fontWeight: "bold",
-    color: "#333",
+    fontSize: 15,
   },
   stepLabel: {
     marginTop: 6,
     fontSize: 12,
-    color: "#999",
-  },
-  activeLabel: {
-    color: "#4a90e2",
-    fontWeight: "600",
   },
   card: {
     width: "100%",
     padding: 16,
     marginVertical: 8,
-    backgroundColor: "#fff",
     borderRadius: 12,
-    shadowColor: "#000",
     shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 6,
     elevation: 4,
+    borderWidth: 1,
   },
 });
