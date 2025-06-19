@@ -1,8 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { FlatList, View } from "react-native";
 import { Text, Card, useTheme, Divider } from "react-native-paper";
-import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
-import { db } from "../../config/FirebaseConfig";
+import {
+  collection,
+  query,
+  where,
+  orderBy,
+  onSnapshot,
+} from "firebase/firestore";
+import { db, auth } from "../../config/FirebaseConfig";
 import DirectlyNotifyInboxScreen from "../directlyNotify/DirectlyNotifyInboxScreen";
 
 export default function NotificationInboxScreen() {
@@ -10,9 +16,13 @@ export default function NotificationInboxScreen() {
   const theme = useTheme();
 
   useEffect(() => {
+    const userId = auth.currentUser?.uid;
+    if (!userId) return;
+
     const q = query(
       collection(db, "appNotifications"),
-      orderBy("createdAt", "desc")
+      where("userId", "==", userId),
+      orderBy("timestamp", "desc")
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -54,12 +64,16 @@ export default function NotificationInboxScreen() {
         >
           <Card.Title
             title={item.title}
-            subtitle={new Date(item.createdAt?.toDate()).toLocaleString()}
+            subtitle={
+              item.timestamp?.toDate
+                ? new Date(item.timestamp.toDate()).toLocaleString()
+                : ""
+            }
             subtitleStyle={{ color: theme.colors.onSurfaceVariant }}
           />
           <Card.Content>
             <Text style={{ color: theme.colors.onSurface }}>
-              {item.body || "No content"}
+              {item.message || item.body || "No content"}
             </Text>
           </Card.Content>
         </Card>

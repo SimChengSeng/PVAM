@@ -25,7 +25,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { getLocalStorage } from "../../service/Storage";
-import { db } from "../../config/FirebaseConfig";
+import { db, auth } from "../../config/FirebaseConfig";
 import {
   collection,
   query,
@@ -33,6 +33,7 @@ import {
   getDocs,
   updateDoc,
   doc,
+  onSnapshot,
 } from "firebase/firestore";
 import { useFocusEffect } from "@react-navigation/native";
 import { globalStyles, getThemedStyles } from "../../styles/globalStyles";
@@ -52,6 +53,8 @@ export default function Index() {
   const [userEmail, setUserEmail] = useState("");
   const [showDialog, setShowDialog] = useState(false);
   const [selectedVehicleId, setSelectedVehicleId] = useState(null);
+  const [unreadApp, setUnreadApp] = useState(0);
+  const [unreadDirect, setUnreadDirect] = useState(0);
 
   const greeting = useMemo(() => {
     const now = new Date();
@@ -166,6 +169,42 @@ export default function Index() {
     }
   }, [userEmail]);
 
+  useEffect(() => {
+    const userId = auth.currentUser?.uid;
+    if (!userId) return;
+
+    // App notifications
+    const unsubApp = onSnapshot(
+      query(
+        collection(db, "appNotifications"),
+        where("userId", "==", userId),
+        where("read", "==", false)
+      ),
+      (snap) => setUnreadApp(snap.size)
+    );
+
+    // Direct messages
+    const unsubDirect = onSnapshot(
+      query(
+        collection(db, "vehicleMessages"),
+        where("participants", "array-contains", userId)
+      ),
+      (snap) => {
+        let count = 0;
+        snap.forEach((doc) => {
+          const data = doc.data();
+          if (!data.readStatus?.[userId]) count += 1;
+        });
+        setUnreadDirect(count);
+      }
+    );
+
+    return () => {
+      unsubApp();
+      unsubDirect();
+    };
+  }, []);
+
   if (loading) {
     return (
       <View style={[globalStyles.container, { justifyContent: "center" }]}>
@@ -217,11 +256,38 @@ export default function Index() {
           style={{ marginRight: 4, padding: 4 }}
           android_ripple={{ color: "#ddd", borderless: true }}
         >
-          <Ionicons
-            name="notifications-outline"
-            size={26}
-            color={theme.colors.onPrimary}
-          />
+          <View>
+            <Ionicons
+              name="notifications-outline"
+              size={26}
+              color={theme.colors.onPrimary}
+            />
+            {unreadApp + unreadDirect > 0 && (
+              <View
+                style={{
+                  position: "absolute",
+                  top: -2,
+                  right: -2,
+                  backgroundColor: "#dc2626",
+                  borderRadius: 8,
+                  width: 14,
+                  height: 14,
+                  justifyContent: "center",
+                  alignItems: "center",
+                  borderWidth: 2,
+                  borderColor: theme.colors.primary,
+                }}
+              >
+                <Text
+                  style={{ color: "#fff", fontSize: 10, fontWeight: "bold" }}
+                >
+                  {unreadApp + unreadDirect > 9
+                    ? "9+"
+                    : unreadApp + unreadDirect}
+                </Text>
+              </View>
+            )}
+          </View>
         </Pressable>
       </View>
 
