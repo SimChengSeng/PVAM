@@ -46,7 +46,7 @@ export default function UnifiedMaintenanceForm() {
   const theme = useTheme();
   const [mode, setMode] = useState("future");
   const [services, setServices] = useState([
-    { selectedService: null, cost: "", menuVisible: false },
+    { selectedService: null, cost: "0", menuVisible: false },
   ]);
   const [mileage, setMileage] = useState("");
   const [availableParts, setAvailableParts] = useState([]);
@@ -67,12 +67,15 @@ export default function UnifiedMaintenanceForm() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const [customServices, setCustomServices] = useState({});
+  const [vehicleMileage, setVehicleMileage] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
       const vehicleDoc = await getDoc(doc(db, "vehicles", vehicleId));
-      if (vehicleDoc.exists())
+      if (vehicleDoc.exists()) {
         setAvailableParts(vehicleDoc.data().partCondition || []);
+        setVehicleMileage(vehicleDoc.data().Mileage || "");
+      }
     };
     fetchData();
   }, []);
@@ -273,8 +276,10 @@ export default function UnifiedMaintenanceForm() {
       <ScrollView
         contentContainerStyle={[
           styles.container,
-          { backgroundColor: themedPaper.colors.background },
+          { backgroundColor: themedPaper.colors.background, flexGrow: 1 },
         ]}
+        style={{ flex: 1 }}
+        keyboardShouldPersistTaps="handled"
       >
         <Text style={[styles.title, { color: themedPaper.colors.primary }]}>
           Maintenance Form
@@ -503,6 +508,8 @@ export default function UnifiedMaintenanceForm() {
                   titleStyle={{ color: themedPaper.colors.primary }}
                 />
                 <Card.Content>
+                  <Text>Last Updated Mileage: {vehicleMileage}km</Text>
+
                   <TextInput
                     label="Current Mileage (km)"
                     mode="outlined"
@@ -593,7 +600,7 @@ export default function UnifiedMaintenanceForm() {
                       color: themedPaper.colors.onSurfaceVariant,
                     }}
                   >
-                    {vehicleDoc.mileage}
+                    Last Updated Mileage: {vehicleMileage}km
                   </Text>
                   <TextInput
                     label="Service Mileage (km)"
@@ -1109,7 +1116,8 @@ const styles = StyleSheet.create({
   container: {
     padding: 16,
     backgroundColor: "transparent",
-    height: "100%",
+    flexGrow: 1,
+    paddingTop: 40,
   },
   title: {
     fontSize: 24,

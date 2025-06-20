@@ -641,34 +641,32 @@ export default function VehicleDetailScreen() {
         ListFooterComponent={
           <View>
             <View style={{ flexDirection: "row", gap: 8, marginVertical: 6 }}>
-              {getSortedUpcoming(maintenanceRecords).length > 3 && (
-                <Pressable
-                  style={[
-                    styles.addButton,
-                    {
-                      backgroundColor: theme.colors.primary,
-                      flex: 1,
-                      marginVertical: 0,
+              <Pressable
+                style={[
+                  styles.addButton,
+                  {
+                    backgroundColor: theme.colors.primary,
+                    flex: 1,
+                    marginVertical: 0,
+                  },
+                ]}
+                onPress={() =>
+                  router.push({
+                    pathname: "/maintenanceManage/MaintenanceListScreen",
+                    params: {
+                      vehicleId: params.id,
+                      plateNumber: plate,
+                      brand,
+                      model,
+                      category: vehicleCategory,
                     },
-                  ]}
-                  onPress={() =>
-                    router.push({
-                      pathname: "/maintenanceManage/MaintenanceListScreen",
-                      params: {
-                        vehicleId: params.id,
-                        plateNumber: plate,
-                        brand,
-                        model,
-                        category: vehicleCategory,
-                      },
-                    })
-                  }
-                >
-                  <Text style={[styles.addButtonText, { color: "#fff" }]}>
-                    View All Maintenance
-                  </Text>
-                </Pressable>
-              )}
+                  })
+                }
+              >
+                <Text style={[styles.addButtonText, { color: "#fff" }]}>
+                  View All Maintenance
+                </Text>
+              </Pressable>
 
               <Pressable
                 style={[styles.addButton, { flex: 1, marginVertical: 0 }]}

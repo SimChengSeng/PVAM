@@ -24,6 +24,7 @@ import {
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { getLocalStorage } from "../../service/Storage";
 import { db, auth } from "../../config/FirebaseConfig";
 import {
@@ -488,44 +489,7 @@ export default function Index() {
               </Pressable>
             )}
 
-            {/* 3. Quick Actions */}
-            <Text style={styles.sectionTitle}>Quick Actions</Text>
-            <View style={styles.quickActionsContainer}>
-              <QuickActionCard
-                icon="car-outline"
-                label="Add Vehicle"
-                color="#0284c7"
-                bgColor="#e0f2fe"
-                onPress={() => router.push("/vehicleManage/add-new-vehicle")}
-              />
-              <QuickActionCard
-                icon="construct-outline"
-                label="Add Maintenance"
-                color="#dc2626"
-                bgColor="#ffe4e6"
-                onPress={() => router.push("/maintenance/add")}
-              />
-              <QuickActionCard
-                icon="person-outline"
-                label="Inbox"
-                color="#16a34a"
-                bgColor="#dcfce7"
-                onPress={() =>
-                  router.push("/directlyNotify/DirectlyNotifyProfileScreen")
-                }
-              />
-              <QuickActionCard
-                icon="notifications-outline"
-                label="Reminders"
-                color="#ca8a04"
-                bgColor="#fef3c7"
-                onPress={() =>
-                  Alert.alert("Reminder", "This is a quick reminder!")
-                }
-              />
-            </View>
-
-            {/* 4. Plate Search */}
+            {/* 3. Plate Search */}
             <Text style={styles.sectionTitle}>Direct Notifications</Text>
             <PlateSearch />
             <Pressable
@@ -537,6 +501,26 @@ export default function Index() {
                 View my Notifications →
               </Text>
             </Pressable>
+
+            {/* 4. Quick Actions */}
+            <Text style={styles.sectionTitle}>Quick Actions</Text>
+            <View style={styles.quickActionsContainer}>
+              <QuickActionCard
+                icon="car-emergency"
+                label="Emergency Guides"
+                color="#dc2626"
+                bgColor="#ffe4e6"
+                onPress={() => router.push("/tipsManage/EmergencyGuidesScreen")}
+              />
+              <QuickActionCard
+                icon="lightbulb-on-outline" // Changed icon here
+                label="Tips"
+                color="#ca8a04"
+                bgColor="#fef3c7"
+                onPress={() => router.push("/tipsManage/TipViewerScreen")}
+                useMaterialCommunity // Pass a prop to force MaterialCommunityIcons
+              />
+            </View>
 
             {/* 5. Other Vehicles */}
             <Text style={styles.sectionTitle}>My Vehicles</Text>
@@ -644,7 +628,14 @@ export default function Index() {
   );
 }
 
-const QuickActionCard = ({ icon, label, color, bgColor, onPress }) => {
+const QuickActionCard = ({
+  icon,
+  label,
+  color,
+  bgColor,
+  onPress,
+  useMaterialCommunity,
+}) => {
   const scale = new Animated.Value(1);
 
   const handlePressIn = () => {
@@ -663,6 +654,14 @@ const QuickActionCard = ({ icon, label, color, bgColor, onPress }) => {
     }).start();
   };
 
+  // Use MaterialCommunityIcons for "car-emergency" and "lightbulb-on-outline", Ionicons otherwise
+  const IconComponent =
+    icon === "car-emergency" ||
+    icon === "lightbulb-on-outline" ||
+    useMaterialCommunity
+      ? MaterialCommunityIcons
+      : Ionicons;
+
   return (
     <Pressable
       onPressIn={handlePressIn}
@@ -677,7 +676,7 @@ const QuickActionCard = ({ icon, label, color, bgColor, onPress }) => {
           { transform: [{ scale }] },
         ]}
       >
-        <Ionicons name={icon} size={32} color={color} />
+        <IconComponent name={icon} size={32} color={color} />
         <Text style={styles.quickActionText}>{label}</Text>
       </Animated.View>
     </Pressable>
@@ -748,7 +747,6 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     justifyContent: "space-between",
     gap: 8,
-    marginBottom: 16,
     paddingTop: 10,
   },
   quickActionCard: {
