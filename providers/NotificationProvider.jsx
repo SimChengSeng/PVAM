@@ -7,6 +7,10 @@ import { auth, db } from "../config/FirebaseConfig";
 import { doc, setDoc } from "firebase/firestore";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { scheduleLocalReminder } from "../utils/notifications/scheduleReminder";
+import {
+  rescheduleWeeklyRemindersOnLogin,
+  rescheduleRemindersOnLogin,
+} from "../utils/notifications/rescheduleRemindersOnLogin";
 import { Snackbar } from "react-native-paper";
 
 Notifications.setNotificationHandler({
@@ -44,14 +48,16 @@ export default function NotificationProvider({ children }) {
     };
   }, []);
 
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (user && expoPushToken) {
-        saveUserPushToken(user);
-      }
-    });
-    return unsubscribe;
-  }, [expoPushToken]);
+  // useEffect(() => {
+  //   const unsubscribe = auth.onAuthStateChanged((user) => {
+  //     if (user && expoPushToken) {
+  //       saveUserPushToken(user);
+  //       rescheduleRemindersOnLogin(user.email);
+  //       rescheduleWeeklyRemindersOnLogin(user.uid);
+  //     }
+  //   });
+  //   return unsubscribe;
+  // }, [expoPushToken]);
 
   const saveUserPushToken = async (user) => {
     if (!user?.uid || !expoPushToken) return;

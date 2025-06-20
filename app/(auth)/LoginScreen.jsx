@@ -5,6 +5,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ToastAndroid,
+  Image,
 } from "react-native";
 import { Text, TextInput, Button, useTheme, Card } from "react-native-paper";
 import { useRouter } from "expo-router";
@@ -12,6 +13,10 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../../config/FirebaseConfig";
 import { setLocalStorage } from "../../service/Storage";
 import { globalStyles, getThemedStyles } from "../../styles/globalStyles";
+import {
+  rescheduleRemindersOnLogin,
+  rescheduleWeeklyRemindersOnLogin,
+} from "../../utils/notifications/rescheduleRemindersOnLogin";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -31,6 +36,10 @@ export default function LoginScreen() {
         await setLocalStorage("userDetail", user);
         ToastAndroid.show("Welcome back!", ToastAndroid.SHORT);
         router.replace("/");
+
+        // Reschedule reminders after login
+        await rescheduleRemindersOnLogin(auth.currentUser.email);
+        await rescheduleWeeklyRemindersOnLogin(auth.currentUser.uid);
       })
       .catch((error) => {
         const msg =
@@ -53,7 +62,11 @@ export default function LoginScreen() {
       <Card style={[globalStyles.card, getThemedStyles.card]}>
         <Card.Content>
           <View style={styles.iconCircle}>
-            <Text style={styles.carIcon}>🚗</Text>
+            <Image
+              source={require("../../assets/images/splash-icon.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
           </View>
           <Text
             variant="titleLarge"
@@ -128,7 +141,10 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     marginBottom: 16,
   },
-  carIcon: { fontSize: 28 },
+  logo: {
+    width: 48,
+    height: 48,
+  },
   title: {
     textAlign: "center",
     fontWeight: "bold",

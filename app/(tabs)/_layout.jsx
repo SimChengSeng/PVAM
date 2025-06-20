@@ -20,20 +20,23 @@ export default function TabLayout() {
       }
     };
     checkUser();
+  }, []);
 
-    const sub = Notifications.addNotificationResponseReceivedListener(
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener(
       (response) => {
         const data = response.notification.request.content.data;
-        if (data?.screen === "VehicleDetailScreen") {
+        // For notifications with a screen param
+        if (data?.screen === "VehicleDetailScreen" && data.vehicle?.id) {
           router.push({
             pathname: "/vehicleManage/VehicleDetailScreen",
-            params: data.vehicle,
+            params: { id: data.vehicle.id.toString() },
           });
         }
       }
     );
-    return () => sub.remove();
-  }, []);
+    return () => subscription.remove();
+  }, [router]);
 
   if (loading) return null;
 

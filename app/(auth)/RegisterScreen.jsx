@@ -5,6 +5,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
+  Image,
 } from "react-native";
 import { useRouter } from "expo-router";
 import {
@@ -58,6 +59,7 @@ export default function RegisterScreen() {
             name,
             email,
             phone: "",
+            emergencyContact: "",
             profileImage: "",
             role: "owner",
             createdAt: serverTimestamp(),
@@ -108,7 +110,11 @@ export default function RegisterScreen() {
           </Text>
         </TouchableOpacity>
         <View style={styles.iconCircle}>
-          <Text style={styles.carIcon}>🚗</Text>
+          <Image
+            source={require("../../assets/images/splash-icon.png")}
+            style={styles.logo}
+            resizeMode="contain"
+          />
         </View>
         <Text
           variant="titleLarge"
@@ -209,7 +215,10 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     marginBottom: 16,
   },
-  carIcon: { fontSize: 28 },
+  logo: {
+    width: 48,
+    height: 48,
+  },
   title: {
     textAlign: "center",
     fontSize: 22,

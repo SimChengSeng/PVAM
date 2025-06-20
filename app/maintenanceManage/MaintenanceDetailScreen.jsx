@@ -7,11 +7,12 @@ import {
   Pressable,
   Alert,
 } from "react-native";
-import { doc, deleteDoc } from "firebase/firestore";
+import { doc, deleteDoc, getDoc } from "firebase/firestore";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Card, Divider, useTheme } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import { db } from "../../config/FirebaseConfig";
+import { cancelReminder } from "../../utils/notifications/cancelReminder";
 
 export default function MaintenanceDetailScreen() {
   const params = useLocalSearchParams();
@@ -239,7 +240,18 @@ export default function MaintenanceDetailScreen() {
                 style: "destructive",
                 onPress: async () => {
                   try {
+                    // 1. Cancel all reminders for this maintenance record
                     const recordRef = doc(db, "maintenanceRecords", params.id);
+                    const recordSnap = await getDoc(recordRef);
+                    const recordData = recordSnap.data();
+                    if (Array.isArray(recordData?.reminders)) {
+                      for (const reminder of recordData.reminders) {
+                        if (reminder.reminderId) {
+                          await cancelReminder(reminder.reminderId);
+                        }
+                      }
+                    }
+                    // 2. Delete the maintenance record
                     await deleteDoc(recordRef);
                     if (router.canGoBack()) {
                       router.back();

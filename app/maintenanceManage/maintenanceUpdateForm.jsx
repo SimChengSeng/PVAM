@@ -30,6 +30,7 @@ import {
 } from "firebase/firestore";
 import { Ionicons } from "@expo/vector-icons";
 import { globalStyles, getThemedStyles } from "../../styles/globalStyles";
+import { autoScheduleAllReminders } from "../../utils/notifications/autoScheduleAllReminders";
 
 if (
   Platform.OS === "android" &&
@@ -109,6 +110,21 @@ export default function MaintenanceUpdateForm() {
         nextServiceDate: nextServiceDate.toISOString().split("T")[0],
         updatedAt: serverTimestamp(),
       });
+
+      // --- Auto schedule reminders if not set before ---
+      const updatedSnap = await getDoc(recordRef);
+      const updatedData = updatedSnap.data();
+      if (!updatedData?.reminders || updatedData.reminders.length === 0) {
+        await autoScheduleAllReminders(
+          updatedData.nextServiceDate,
+          params.id,
+          updatedData.vehiclePlate || updatedData.plate,
+          updatedData.brand,
+          updatedData.model
+        );
+      }
+      // -------------------------------------------------
+
       Alert.alert("Success", "Your updates have been saved.");
     } catch (error) {
       Alert.alert(

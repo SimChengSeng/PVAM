@@ -150,7 +150,7 @@ export default function UnifiedMaintenanceForm() {
             return {
               name: customName,
               partId: "custom",
-              cost: cost ? parseFloat(cost) : undefined,
+              cost: cost && !isNaN(Number(cost)) ? parseFloat(cost) : 0,
             };
           }
           const part = availableParts.find((p) => p.partId === selectedService);
@@ -158,7 +158,7 @@ export default function UnifiedMaintenanceForm() {
             ? {
                 name: part.name,
                 partId: part.partId,
-                cost: cost ? parseFloat(cost) : undefined,
+                cost: cost && !isNaN(Number(cost)) ? parseFloat(cost) : 0,
               }
             : null;
         })
@@ -188,9 +188,11 @@ export default function UnifiedMaintenanceForm() {
         mechanic: mechanic.trim() || null,
         notes: notes.trim() || null,
         maintenanceCategory: "General Maintenance",
-        laborCost: parseFloat(laborCost) || 0,
-        serviceTax: parseFloat(serviceTax) || 0,
-        cost: totalCost,
+        laborCost:
+          laborCost && !isNaN(Number(laborCost)) ? parseFloat(laborCost) : 0, // <-- default to 0
+        serviceTax:
+          serviceTax && !isNaN(Number(serviceTax)) ? parseFloat(serviceTax) : 0, // <-- default to 0
+        cost: totalCost && !isNaN(Number(totalCost)) ? totalCost : 0, // <-- default to 0
         statusDone: mode === "past",
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -585,6 +587,14 @@ export default function UnifiedMaintenanceForm() {
                   titleStyle={{ color: themedPaper.colors.primary }}
                 />
                 <Card.Content>
+                  <Text
+                    style={{
+                      marginBottom: 4,
+                      color: themedPaper.colors.onSurfaceVariant,
+                    }}
+                  >
+                    {vehicleDoc.mileage}
+                  </Text>
                   <TextInput
                     label="Service Mileage (km)"
                     mode="outlined"

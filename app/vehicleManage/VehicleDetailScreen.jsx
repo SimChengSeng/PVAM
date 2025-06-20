@@ -33,6 +33,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { globalStyles, getThemedStyles } from "../../styles/globalStyles";
 import VehicleCategoryIcon from "./components/VehicleCategoryIcon";
 import Cabriolet from "../../assets/svg/Van-Icon";
+import { cancelReminder } from "../../utils/notifications/cancelReminder";
 
 export default function VehicleDetailScreen() {
   const theme = useTheme();
@@ -89,9 +90,9 @@ export default function VehicleDetailScreen() {
   };
 
   const getColor = (score) => {
-    if (score >= 85) return "#28a745"; // Green
-    if (score >= 60) return "#ffc107"; // Yellow
-    return "#dc3545"; // Red
+    if (score >= 85) return "#28a745";
+    if (score >= 60) return "#ffc107";
+    return "#dc3545";
   };
 
   useEffect(() => {
@@ -297,14 +298,48 @@ export default function VehicleDetailScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              await deleteDoc(doc(db, "vehicles", params.id));
+              // 1. Delete all maintenanceRecords for this vehicle and cancel their reminders
+              const q = query(
+                collection(db, "maintenanceRecords"),
+                where("vehicleId", "==", params.id)
+              );
+              const snapshot = await getDocs(q);
+              for (const docSnap of snapshot.docs) {
+                const data = docSnap.data();
+                if (Array.isArray(data.reminders)) {
+                  for (const reminder of data.reminders) {
+                    if (reminder.reminderId) {
+                      await cancelReminder(reminder.reminderId);
+                    }
+                  }
+                }
+                await deleteDoc(doc(db, "maintenanceRecords", docSnap.id));
+              }
+
+              // 2. Cancel weekly reminder if exists
+              const vehicleRef = doc(db, "vehicles", params.id);
+              const vehicleSnap = await getDoc(vehicleRef);
+              const vehicleData = vehicleSnap.data();
+              if (
+                vehicleData?.weeklyReminderMeta &&
+                vehicleData.weeklyReminderMeta.reminderId
+              ) {
+                await cancelReminder(vehicleData.weeklyReminderMeta.reminderId);
+              }
+
+              // 3. Delete the vehicle itself
+              await deleteDoc(vehicleRef);
+
               if (router.canGoBack()) {
                 router.back();
               } else {
                 router.push("/(tabs)/1_index");
               }
             } catch (error) {
-              console.error("Error deleting vehicle:", error);
+              console.error(
+                "Error deleting vehicle and related records:",
+                error
+              );
             }
           },
         },
