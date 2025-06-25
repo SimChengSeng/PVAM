@@ -452,6 +452,19 @@ export default function Index() {
                         )}
                       </View>
                     )}
+                    {/* Add this link below the maintenance info */}
+                    <Pressable onPress={() => setShowDialog(true)}>
+                      <Text
+                        style={{
+                          color: "#3b82f6",
+                          fontWeight: "bold",
+                          marginTop: 14,
+                          textAlign: "right",
+                        }}
+                      >
+                        Change Default Vehicle →
+                      </Text>
+                    </Pressable>
                   </Card.Content>
                 </Card>
               </Pressable>

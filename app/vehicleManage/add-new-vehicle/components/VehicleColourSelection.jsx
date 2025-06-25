@@ -25,7 +25,7 @@ export default function VehicleColourSelection({ onSelectType }) {
       contentContainerStyle={{ flexGrow: 1 }}
     >
       <Text style={[styles.title, { color: theme.colors.primary }]}>
-        Choose Vehicle Colour
+        Choose Vehicle Color
       </Text>
       <Text style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>
         Select the color of the vehicle you're adding
