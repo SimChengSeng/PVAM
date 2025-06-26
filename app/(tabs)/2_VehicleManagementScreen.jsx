@@ -15,6 +15,7 @@ import { getLocalStorage } from "../../service/Storage";
 import { useRouter } from "expo-router";
 import { globalStyles, getThemedStyles } from "../../styles/globalStyles";
 import { useTheme, Card, Chip, Searchbar } from "react-native-paper";
+import VehicleCategoryIcon from "../vehicleManage/components/VehicleCategoryIcon";
 
 const VehicleManagementScreen = () => {
   const [vehicles, setVehicles] = useState([]);
@@ -132,20 +133,13 @@ const VehicleManagementScreen = () => {
           {item.year}
         </Text>
       </View>
-      <View style={styles.vehicleStatus}>
-        {item.status === "good" ? (
-          <Ionicons
-            name="checkmark-circle"
-            size={24}
-            color={theme.colors.success || "#4caf50"}
-          />
-        ) : (
-          <Ionicons
-            name="time"
-            size={24}
-            color={theme.colors.warning || "#ff9800"}
-          />
-        )}
+      <View style={styles.vehicleIcon}>
+        <VehicleCategoryIcon
+          category={item.vehicleCategory || item.vehicleType}
+          color={item.color}
+          width={100}
+          height={100}
+        />
       </View>
       <TouchableOpacity
         style={[
@@ -365,10 +359,10 @@ const styles = StyleSheet.create({
   vehicleName: {
     fontSize: 14,
   },
-  vehicleStatus: {
+  vehicleIcon: {
     position: "absolute",
-    top: 16,
-    right: 16,
+    bottom: 20,
+    right: -50,
   },
   detailsButton: {
     marginTop: 8,
