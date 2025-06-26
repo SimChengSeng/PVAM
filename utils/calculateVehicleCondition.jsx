@@ -46,7 +46,7 @@ export function calculateVehicleConditionExtended(vehicle) {
     }
 
     const parsedLastMileage = parseInt(lastServiceMileage);
-    const mileageSince = mileage - parsedLastMileage;
+    const mileageSince = Math.max(0, mileage - parsedLastMileage);
     const mileageRatio = mileageSince / defaultLifespanKm;
     const mileageScore = 1 - Math.min(mileageRatio, 1);
 

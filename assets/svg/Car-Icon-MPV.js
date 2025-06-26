@@ -2,7 +2,8 @@ import * as React from "react";
 import Svg, { Path } from "react-native-svg";
 const SVGComponent = (props) => (
   <Svg
-    viewBox="0 0 1000 700"
+    viewBox="0 0 800 500"
+    right="20%"
     width={props.width || 100}
     height={props.height || 50}
     fill={props.fill || "#000"}
