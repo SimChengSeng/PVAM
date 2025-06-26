@@ -127,6 +127,16 @@ export default function VehicleDetailScreen() {
   const handleUpdate = async () => {
     setUpdating(true);
     try {
+      // Prevent updating to a lower mileage
+      if (parseInt(Mileage) < parseInt(params.Mileage)) {
+        Alert.alert(
+          "Invalid Mileage",
+          "Mileage cannot be lower than the current mileage."
+        );
+        setUpdating(false);
+        return;
+      }
+
       const ref = doc(db, "vehicles", params.id);
       await updateDoc(ref, {
         plate,
@@ -636,6 +646,25 @@ export default function VehicleDetailScreen() {
             >
               Upcoming Maintenance
             </Text>
+            {previewMaintenanceRecords.length === 0 && (
+              <View style={{ padding: 16, alignItems: "center" }}>
+                <Ionicons
+                  name="checkmark-done-circle-outline"
+                  size={40}
+                  color={theme.colors.primary}
+                />
+                <Text
+                  style={{
+                    color: theme.colors.onSurfaceVariant,
+                    marginTop: 8,
+                    fontSize: 16,
+                    textAlign: "center",
+                  }}
+                >
+                  No upcoming maintenance scheduled for this vehicle.
+                </Text>
+              </View>
+            )}
           </>
         }
         ListFooterComponent={
