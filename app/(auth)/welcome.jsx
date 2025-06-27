@@ -12,7 +12,7 @@ export default function Welcome() {
   const router = useRouter();
 
   const handleContinue = async () => {
-    await setLocalStorage("firstTime", true);
+    await setLocalStorage("hasSeenWelcome", "true"); // <-- use the same key and value as in index.js
     router.push("/(auth)/LoginScreen");
   };
 
