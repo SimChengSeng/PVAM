@@ -1,6 +1,8 @@
+import React from "react";
 import { useThemeToggle } from "../../../context/ThemeContext";
 import { useTheme, Button, Text } from "react-native-paper";
 import { View } from "react-native";
+import { scheduleTestReminder } from "../../../utils/notifications/scheduleTestReminder"; // Adjust path
 
 export default function SettingsScreen() {
   const { isDark, toggleTheme } = useThemeToggle();
@@ -20,6 +22,17 @@ export default function SettingsScreen() {
       </Text>
       <Button mode="contained-tonal" onPress={toggleTheme}>
         Switch to {isDark ? "Light" : "Dark"} Mode
+      </Button>
+
+      <Button
+        mode="contained"
+        onPress={async () => {
+          const id = await scheduleTestReminder();
+          console.log("✅ Scheduled test reminder with ID:", id);
+        }}
+        style={{ marginTop: 16 }}
+      >
+        Test 1-Min Reminder
       </Button>
     </View>
   );

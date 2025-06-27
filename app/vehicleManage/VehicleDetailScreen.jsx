@@ -455,7 +455,12 @@ export default function VehicleDetailScreen() {
                     {brand} {model} • {year}
                   </Text>
                 </View>
-                <VehicleCategoryIcon category={vehicleCategory} color={color} />
+                <View style={{ marginRight: 100 }}>
+                  <VehicleCategoryIcon
+                    category={vehicleCategory}
+                    color={color}
+                  />
+                </View>
               </View>
               <Text
                 style={[styles.sectionTitle, { color: theme.colors.primary }]}

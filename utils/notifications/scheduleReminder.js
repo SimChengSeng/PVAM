@@ -8,13 +8,13 @@ import * as Notifications from "expo-notifications";
  * @returns {Promise<{ reminderId: string, scheduledFor: string } | null>}
  */
 export const scheduleReminder = async (nextServiceDate, option, data = {}) => {
-  const offset = { "1d": 1, "3d": 3, "7d": 7 }[option];
-  if (!offset) return null;
+  const offsetDays = { "1d": 1, "3d": 3, "7d": 7 }[option];
+  if (!offsetDays) return null;
 
   const serviceDate = new Date(nextServiceDate);
   const reminderDate = new Date(serviceDate);
-  reminderDate.setDate(reminderDate.getDate() - offset);
-  reminderDate.setHours(9, 0, 0, 0); // Schedule at 9AM
+  reminderDate.setDate(reminderDate.getDate() - offsetDays);
+  reminderDate.setHours(11, 0, 0, 0); // Reminder at 11:00 AM
 
   const now = new Date();
   if (reminderDate <= now) {
@@ -35,7 +35,10 @@ export const scheduleReminder = async (nextServiceDate, option, data = {}) => {
         ...data,
       },
     },
-    trigger: reminderDate, // ✅ Use date directly
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.DATE,
+      date: reminderDate,
+    },
   });
 
   console.log(

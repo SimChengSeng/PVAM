@@ -304,6 +304,29 @@ const MaintenanceScreen = () => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
         style={styles.list}
+        ListEmptyComponent={
+          <View style={{ alignItems: "center", marginTop: 40 }}>
+            <Ionicons
+              name="file-tray-outline"
+              size={48}
+              color={theme.colors.outline}
+              style={{ marginBottom: 12 }}
+            />
+            <Text
+              style={{
+                color: theme.colors.onSurfaceVariant,
+                fontSize: 16,
+                textAlign: "center",
+              }}
+            >
+              {activeTab === "completed"
+                ? "No completed maintenance records."
+                : activeTab === "upcoming"
+                ? "No upcoming maintenance records."
+                : "No maintenance records found."}
+            </Text>
+          </View>
+        }
       />
     </View>
   );

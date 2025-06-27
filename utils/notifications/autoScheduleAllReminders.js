@@ -3,7 +3,8 @@ import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../../config/FirebaseConfig";
 
 /**
- * Schedule 1d, 3d, 7d reminders for upcoming maintenance.
+ * Automatically schedule 1d, 3d, and 7d reminders before next service date.
+ * Stores reminder info in Firestore under the maintenance record.
  */
 export const autoScheduleAllReminders = async (
   nextServiceDate,
@@ -12,10 +13,10 @@ export const autoScheduleAllReminders = async (
   brand,
   model
 ) => {
-  const reminderOptions = ["1d", "3d", "7d"];
+  const options = ["1d", "3d", "7d"];
   const reminders = [];
 
-  for (const option of reminderOptions) {
+  for (const option of options) {
     const reminder = await scheduleReminder(nextServiceDate, option, {
       id: recordId,
       plate,
@@ -26,6 +27,8 @@ export const autoScheduleAllReminders = async (
   }
 
   if (reminders.length > 0) {
-    await updateDoc(doc(db, "maintenanceRecords", recordId), { reminders });
+    await updateDoc(doc(db, "maintenanceRecords", recordId), {
+      reminders,
+    });
   }
 };

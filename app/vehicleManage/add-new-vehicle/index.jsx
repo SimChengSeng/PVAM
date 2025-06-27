@@ -6,6 +6,7 @@ import {
   Pressable,
   BackHandler,
   ScrollView,
+  TextInput,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { Provider as PaperProvider, useTheme } from "react-native-paper";
@@ -26,6 +27,9 @@ export default function AddNewVehicle() {
   const [brandModels, setBrandModels] = useState([]);
   const [brandList, setBrandList] = useState([]);
   const [brandListCache, setBrandListCache] = useState({});
+  const [modelModalVisible, setModelModalVisible] = useState(false);
+  const [customModelName, setCustomModelName] = useState("");
+  const [isCustomModel, setIsCustomModel] = useState(false);
 
   const theme = useTheme();
 
@@ -110,6 +114,18 @@ export default function AddNewVehicle() {
               onSelectBrand={(brand, models) => {
                 setSelectedBrand(brand);
                 setBrandModels(models);
+                // If models is a single custom model, skip to step 5
+                if (
+                  Array.isArray(models) &&
+                  models.length === 1 &&
+                  models[0]?.isCustom
+                ) {
+                  setSelectedModel(models[0].name);
+                  setSelectedCategory(models[0].category || null);
+                  setIsCustomModel(true); // <-- set the flag here
+                } else {
+                  setIsCustomModel(false);
+                }
               }}
               vehicleType={selectedType}
             />
@@ -149,6 +165,121 @@ export default function AddNewVehicle() {
                   </Text>
                 </Pressable>
               ))}
+              <Pressable
+                style={[
+                  styles.card,
+                  {
+                    backgroundColor: theme.colors.primary,
+                    borderColor: theme.colors.primary,
+                    alignItems: "center",
+                    marginTop: 16,
+                  },
+                ]}
+                onPress={() => setModelModalVisible(true)}
+              >
+                <Text
+                  style={{ color: theme.colors.onPrimary, fontWeight: "bold" }}
+                >
+                  Can't find your model? Add custom
+                </Text>
+              </Pressable>
+              {/* Modal for custom model */}
+              {modelModalVisible && (
+                <View
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    right: 0,
+                    top: 0,
+                    bottom: 0,
+                    backgroundColor: "rgba(0,0,0,0.3)",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  <View
+                    style={{
+                      backgroundColor: theme.colors.surface,
+                      padding: 24,
+                      borderRadius: 16,
+                      width: "85%",
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontWeight: "bold",
+                        fontSize: 18,
+                        marginBottom: 12,
+                        color: theme.colors.primary,
+                      }}
+                    >
+                      Add Custom Model
+                    </Text>
+                    <TextInput
+                      placeholder="Model"
+                      value={customModelName}
+                      onChangeText={setCustomModelName}
+                      style={{
+                        borderWidth: 1,
+                        borderColor: theme.colors.outline,
+                        borderRadius: 8,
+                        padding: 10,
+                        marginBottom: 12,
+                        fontSize: 16,
+                        color: theme.colors.onSurface,
+                        backgroundColor: theme.colors.background,
+                      }}
+                      placeholderTextColor={theme.colors.outline}
+                    />
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        justifyContent: "flex-end",
+                        marginTop: 16,
+                      }}
+                    >
+                      <Pressable
+                        style={{
+                          paddingVertical: 10,
+                          paddingHorizontal: 24,
+                          borderRadius: 8,
+                          backgroundColor: theme.colors.secondary,
+                        }}
+                        onPress={() => {
+                          setModelModalVisible(false);
+                          setCustomModelName("");
+                        }}
+                      >
+                        <Text style={{ color: theme.colors.onSecondary }}>
+                          Cancel
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        style={{
+                          paddingVertical: 10,
+                          paddingHorizontal: 24,
+                          borderRadius: 8,
+                          backgroundColor: theme.colors.primary,
+                          marginLeft: 12,
+                          opacity: customModelName.trim() ? 1 : 0.5,
+                        }}
+                        disabled={!customModelName.trim()}
+                        onPress={() => {
+                          setSelectedModel(customModelName.trim());
+                          setSelectedCategory(null);
+                          setIsCustomModel(true);
+                          setModelModalVisible(false);
+                          setCustomModelName("");
+                        }}
+                      >
+                        <Text style={{ color: theme.colors.onPrimary }}>
+                          Add
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                </View>
+              )}
             </ScrollView>
           )}
 

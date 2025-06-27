@@ -3,12 +3,12 @@ import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../../config/FirebaseConfig";
 
 /**
- * Schedule a weekly local reminder and store metadata in Firestore.
+ * Schedule a weekly local notification reminder and store it in Firestore.
  * @param {string} weekday - "Monday" to "Sunday"
- * @param {string} plate - vehicle plate
- * @param {string} brand - vehicle brand
- * @param {string} model - vehicle model
- * @param {string} vehicleId - Firestore document ID for the vehicle
+ * @param {string} plate - Vehicle plate number
+ * @param {string} brand - Vehicle brand
+ * @param {string} model - Vehicle model
+ * @param {string} vehicleId - Firestore vehicle document ID
  */
 export const scheduleWeeklyReminder = async (
   weekday,
@@ -17,41 +17,45 @@ export const scheduleWeeklyReminder = async (
   model,
   vehicleId
 ) => {
-  const weekdays = {
-    Sunday: 0,
-    Monday: 1,
-    Tuesday: 2,
-    Wednesday: 3,
-    Thursday: 4,
-    Friday: 5,
-    Saturday: 6,
+  const weekdayMap = {
+    Sunday: 1, // ✅ Sunday = 1 in Expo
+    Monday: 2,
+    Tuesday: 3,
+    Wednesday: 4,
+    Thursday: 5,
+    Friday: 6,
+    Saturday: 7,
   };
-  const weekdayNum = weekdays[weekday];
-  if (weekdayNum === undefined) return;
 
-  const now = new Date();
-  const triggerDate = new Date();
-  triggerDate.setDate(
-    now.getDate() + ((7 + weekdayNum - now.getDay()) % 7 || 7)
-  );
-  triggerDate.setHours(9, 0, 0, 0);
-
-  const trigger = {
-    weekday: weekdayNum + 1,
-    hour: 9,
-    minute: 0,
-    repeats: true,
-  };
+  const weekdayNumber = weekdayMap[weekday];
+  if (!weekdayNumber) {
+    console.warn("❌ Invalid weekday:", weekday);
+    return;
+  }
 
   const reminderId = await Notifications.scheduleNotificationAsync({
     content: {
-      title: `🔧 Weekly Vehicle Check`,
-      body: `Inspect your ${brand} ${model} (${plate}) today.`,
-      data: { type: "weeklyInspection", vehicleId },
+      title: "🔧 Weekly Vehicle Check",
+      body: `Please inspect your ${brand} ${model} (${plate}) today.`,
+      data: {
+        type: "weeklyInspection",
+        screen: "VehicleDetailScreen",
+        vehicleId,
+        plate,
+        brand,
+        model,
+      },
     },
-    trigger,
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.DAILY,
+      weekday: weekdayNumber,
+      hour: 11,
+      minute: 0,
+      repeats: true,
+    },
   });
 
+  // Save reminder metadata
   await updateDoc(doc(db, "vehicles", vehicleId), {
     weeklyReminderMeta: {
       reminderId,
@@ -60,5 +64,7 @@ export const scheduleWeeklyReminder = async (
     },
   });
 
-  console.log(`📅 Weekly reminder set for ${weekday} (ID: ${reminderId})`);
+  console.log(
+    `📅 Weekly reminder set for ${weekday} at 09:00 (ID: ${reminderId})`
+  );
 };

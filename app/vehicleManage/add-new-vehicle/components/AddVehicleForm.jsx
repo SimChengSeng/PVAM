@@ -224,8 +224,11 @@ export default function AddNewVehicleForm({
       let nextService = null;
       let partCondition = [];
 
+      const isCustom =
+        data.isCustomModel || data.isCustomCategory || data.isCustom;
+
       // Only fetch maintenance details for car and truck (not motorcycle/van)
-      if (vehicleType !== "motorcycle" && vehicleType !== "van") {
+      if (vehicleType !== "motorcycle" && vehicleType !== "van" && !isCustom) {
         const selectedCollection = typeToCollection[vehicleType.toLowerCase()];
         const maintenanceDetailsRef = doc(
           db,

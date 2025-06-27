@@ -20,6 +20,7 @@ export default {
       },
       package: "com.josephsim501.PVAM",
       googleServicesFile: "./google-services.json",
+      permissions: ["android.permission.SCHEDULE_EXACT_ALARM"],
     },
     web: {
       bundler: "metro",
@@ -43,6 +44,7 @@ export default {
     ],
     experiments: {
       typedRoutes: true,
+      router: true,
     },
     extra: {
       router: {
