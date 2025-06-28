@@ -223,20 +223,36 @@ export default function UnifiedMaintenanceForm() {
                 .toISOString()
                 .split("T")[0];
 
+              // Add history record
+              const newHistory = {
+                serviceDate: lastDate,
+                serviceMileage: lastMileage,
+                cost: serviced.cost || 0,
+                mechanic: mechanic.trim() || null,
+                notes: notes.trim() || null,
+              };
+
               return {
                 ...part,
                 lastServiceDate: lastDate,
                 lastServiceMileage: lastMileage,
                 nextServiceDate: nextDate,
                 nextServiceMileage: nextMileage,
+                history: [...(part.history || []), newHistory],
               };
             }
             return part;
           });
 
+          const newMileage = parseInt(mileage);
+          const currentMileage = parseInt(vehicleData.Mileage || "0");
+          const mileageUpdate =
+            newMileage > currentMileage ? { Mileage: newMileage } : {};
+
           await updateDoc(vehicleDocRef, {
             partCondition: updatedParts,
             updatedAt: new Date(),
+            ...mileageUpdate,
           });
         }
       }

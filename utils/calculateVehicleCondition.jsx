@@ -16,7 +16,7 @@ import { differenceInMonths } from "date-fns";
  * }}
  */
 export function calculateVehicleConditionExtended(vehicle) {
-  const mileage = parseInt(vehicle.mileage || "0");
+  const mileage = parseInt(vehicle.Mileage || "0");
   const drivingStyle = vehicle.drivingStyle || "normal";
   const parts = vehicle.partCondition || [];
 

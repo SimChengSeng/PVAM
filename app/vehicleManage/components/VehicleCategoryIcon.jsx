@@ -70,6 +70,9 @@ const categoryNameMap = {
   heavyTruck: "truck",
   lightTruck: "truck",
   mediumTruck: "truck",
+  heavyTruck: "truck",
+  lightTruck: "truck",
+  mediumTruck: "truck",
   minivan: "van",
   commercialVan: "van",
 };

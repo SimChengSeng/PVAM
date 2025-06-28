@@ -32,7 +32,6 @@ import { calculateVehicleConditionExtended } from "../../utils/calculateVehicleC
 import { Ionicons } from "@expo/vector-icons";
 import { globalStyles, getThemedStyles } from "../../styles/globalStyles";
 import VehicleCategoryIcon from "./components/VehicleCategoryIcon";
-import Cabriolet from "../../assets/svg/Van-Icon";
 import { cancelReminder } from "../../utils/notifications/cancelReminder";
 
 export default function VehicleDetailScreen() {
@@ -99,30 +98,28 @@ export default function VehicleDetailScreen() {
     fetchMaintenanceRecords();
   }, []);
 
-  useEffect(() => {
-    const loadHealthScore = async () => {
-      try {
-        const vehicleData = await fetchVehicleWithParts(params.id);
-        console.log("📦 vehicleData:", vehicleData);
+  useFocusEffect(
+    React.useCallback(() => {
+      const loadHealthScore = async () => {
+        try {
+          const vehicleData = await fetchVehicleWithParts(params.id);
 
-        // Set updated mileage if needed
-        setMileage(vehicleData.Mileage.toString());
+          // ✅ Always set updated mileage when refocused
+          setMileage(vehicleData.Mileage.toString());
 
-        const { totalScore, partScores } =
-          calculateVehicleConditionExtended(vehicleData);
+          const { totalScore, partScores } =
+            calculateVehicleConditionExtended(vehicleData);
 
-        console.log("🧠 Health Score:", totalScore);
-        console.log("📊 Part Scores:", partScores);
+          setHealthScore(totalScore);
+          setPartScores(partScores);
+        } catch (error) {
+          console.error("Failed to calculate health score:", error);
+        }
+      };
 
-        setHealthScore(totalScore);
-        setPartScores(partScores);
-      } catch (error) {
-        console.error("Failed to calculate health score:", error);
-      }
-    };
-
-    loadHealthScore();
-  }, [params.id]);
+      loadHealthScore();
+    }, [params.id])
+  );
 
   const handleUpdate = async () => {
     setUpdating(true);

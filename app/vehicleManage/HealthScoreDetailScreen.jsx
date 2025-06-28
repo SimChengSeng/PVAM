@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, StyleSheet, ScrollView, Modal, Pressable } from "react-native";
 import {
   Text,
@@ -10,7 +10,15 @@ import {
 } from "react-native-paper";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { db } from "../../config/FirebaseConfig";
-import { collection, query, where, orderBy, getDocs } from "firebase/firestore";
+import {
+  collection,
+  query,
+  where,
+  orderBy,
+  getDocs,
+  doc,
+  getDoc,
+} from "firebase/firestore";
 
 const getColor = (score, theme) => {
   if (score >= 85) return theme.colors.success || "#22c55e";
@@ -30,23 +38,39 @@ export default function HealthScoreDetailScreen() {
   const [historyLogs, setHistoryLogs] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [selectedPart, setSelectedPart] = useState(null);
+  const [vehicle, setVehicle] = useState(null);
+  const [showInfoModal, setShowInfoModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+
+  // Fetch vehicle data
+  const fetchVehicle = async () => {
+    const vehicleDocRef = doc(db, "vehicles", vehicleId);
+    const vehicleSnap = await getDoc(vehicleDocRef);
+    if (vehicleSnap.exists()) {
+      setVehicle(vehicleSnap.data());
+    }
+  };
+
+  useEffect(() => {
+    fetchVehicle();
+  }, [vehicleId]);
 
   // Fetch part history
-  const fetchPartHistory = async (partId, partName) => {
+  const fetchPartHistory = (partId, partName) => {
     setLoadingHistory(true);
     setSelectedPart(partName);
     setModalVisible(true);
 
-    try {
-      const q = query(
-        collection(db, "vehicles", vehicleId, "partHistory"),
-        where("partId", "==", partId),
-        orderBy("serviceDate", "desc")
+    // Find the part in partCondition
+    const part = vehicle.partCondition.find((p) => p.partId === partId);
+
+    if (part && Array.isArray(part.history)) {
+      // Sort by serviceDate descending if needed
+      const logs = [...part.history].sort(
+        (a, b) => new Date(b.serviceDate) - new Date(a.serviceDate)
       );
-      const querySnapshot = await getDocs(q);
-      const logs = querySnapshot.docs.map((doc) => doc.data());
       setHistoryLogs(logs);
-    } catch (e) {
+    } else {
       setHistoryLogs([]);
     }
 
@@ -61,9 +85,24 @@ export default function HealthScoreDetailScreen() {
           { backgroundColor: theme.colors.background },
         ]}
       >
-        <Text style={[styles.header, { color: theme.colors.primary }]}>
-          Health Score Details
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <Text style={[styles.header, { color: theme.colors.primary }]}>
+            Health Score Details
+          </Text>
+          <Pressable onPress={() => setShowInfoModal(true)}>
+            <Text
+              style={{
+                fontSize: 20,
+                marginLeft: 8,
+                paddingBottom: 8,
+                color: theme.colors.primary,
+              }}
+            >
+              ℹ️
+            </Text>
+          </Pressable>
+        </View>
+
         <Text
           style={[styles.subheader, { color: theme.colors.onSurfaceVariant }]}
         >
@@ -82,13 +121,48 @@ export default function HealthScoreDetailScreen() {
                 { backgroundColor: theme.colors.surface },
               ]}
             >
-              <Card.Title
-                title={part.name}
-                subtitle={`Score: ${part.score}%`}
-                titleStyle={{ color: theme.colors.primary }}
-                subtitleStyle={{ color: theme.colors.onSurfaceVariant }}
-              />
               <Card.Content>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 18,
+                      fontWeight: "bold",
+                      color: theme.colors.primary,
+                      flex: 1,
+                      marginBottom: 8,
+                    }}
+                  >
+                    {part.name}{" "}
+                    <Text style={{ color: theme.colors.onSurfaceVariant }}>
+                      {part.score} %
+                    </Text>
+                  </Text>
+                  <Pressable
+                    onPress={() => {
+                      const selected = vehicle.partCondition.find(
+                        (p) => p.partId === part.partId
+                      );
+                      setSelectedPart(selected);
+                      setShowDetailsModal(true);
+                    }}
+                    style={{ marginLeft: 8 }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 20,
+                        color: theme.colors.primary,
+                      }}
+                    >
+                      ℹ️
+                    </Text>
+                  </Pressable>
+                </View>
                 <View
                   style={[
                     styles.progressWrapper,
@@ -164,18 +238,33 @@ export default function HealthScoreDetailScreen() {
                         { color: theme.colors.onSurface },
                       ]}
                     >
-                      {log.serviceDate} • {log.mileage} km
+                      Service on Date: {log.serviceDate} • {log.serviceMileage}{" "}
+                      km
                     </Text>
-                    {log.note ? (
-                      <Text
-                        style={[
-                          styles.historyText,
-                          { color: theme.colors.onSurfaceVariant },
-                        ]}
-                      >
-                        Note: {log.note}
-                      </Text>
-                    ) : null}
+                    <Text
+                      style={[
+                        styles.historyText,
+                        { color: theme.colors.onSurface },
+                      ]}
+                    >
+                      Cost: {log.cost != null ? `RM ${log.cost}` : "N/A"}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.historyText,
+                        { color: theme.colors.onSurface },
+                      ]}
+                    >
+                      Mechanic: {log.mechanic || "N/A"}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.historyText,
+                        { color: theme.colors.onSurfaceVariant },
+                      ]}
+                    >
+                      Notes: {log.notes || "N/A"}
+                    </Text>
                   </View>
                 ))
               ) : (
@@ -189,6 +278,149 @@ export default function HealthScoreDetailScreen() {
                   { backgroundColor: theme.colors.primary },
                 ]}
                 onPress={() => setModalVisible(false)}
+              >
+                <Text
+                  style={{ color: theme.colors.onPrimary, textAlign: "center" }}
+                >
+                  Close
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </Modal>
+
+        <Modal
+          visible={showInfoModal}
+          animationType="fade"
+          transparent
+          onRequestClose={() => setShowInfoModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View
+              style={[
+                styles.modalContent,
+                { backgroundColor: theme.colors.surface },
+              ]}
+            >
+              <Text
+                style={[styles.modalTitle, { color: theme.colors.primary }]}
+              >
+                How is the Health Score Calculated?
+              </Text>
+              <Text
+                style={
+                  (styles.modalText,
+                  { color: theme.colors.onSurface, marginBottom: 10 })
+                }
+              >
+                Vehicle Health Score is calculated from three weighted
+                components:
+              </Text>
+              <Text
+                style={(styles.bulletText, { color: theme.colors.onSurface })}
+              >
+                •{" "}
+                <Text style={(styles.bold, { color: theme.colors.primary })}>
+                  Mileage Score (60%)
+                </Text>
+                : Based on how far the part has run since its last service.
+              </Text>
+              <Text
+                style={(styles.bulletText, { color: theme.colors.onSurface })}
+              >
+                •{" "}
+                <Text style={(styles.bold, { color: theme.colors.primary })}>
+                  Time Score (40%)
+                </Text>
+                : Based on the time since last service.
+              </Text>
+              <Text style={styles.bulletText}>
+                •{" "}
+                <Text style={(styles.bold, { color: theme.colors.primary })}>
+                  Penalty
+                </Text>
+                : Deducted for inspection issues (e.g., Warning/Critical).
+              </Text>
+              <Pressable
+                style={[
+                  styles.closeBtn,
+                  { backgroundColor: theme.colors.primary, marginTop: 12 },
+                ]}
+                onPress={() => setShowInfoModal(false)}
+              >
+                <Text
+                  style={{ color: theme.colors.onPrimary, textAlign: "center" }}
+                >
+                  Close
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </Modal>
+
+        <Modal
+          visible={showDetailsModal}
+          animationType="fade"
+          transparent
+          onRequestClose={() => setShowDetailsModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View
+              style={[
+                styles.modalContent,
+                { backgroundColor: theme.colors.surface },
+              ]}
+            >
+              <Text
+                style={[styles.modalTitle, { color: theme.colors.primary }]}
+              >
+                Condition Breakdown
+              </Text>
+
+              {selectedPart ? (
+                <>
+                  <Text style={styles.detailRow}>
+                    <Text style={styles.label}>Part Name: </Text>
+                    {selectedPart.name}
+                  </Text>
+                  <Text />
+                  <Text style={styles.label}>Last Service :</Text>
+                  <Text style={styles.detailRow}>
+                    Date: {selectedPart.lastServiceDate || "N/A"}
+                  </Text>
+                  <Text style={styles.detailRow}>
+                    Mileage: {selectedPart.lastServiceMileage || "N/A"} km
+                  </Text>
+                  <Text />
+                  <Text style={styles.label}>Next Service :</Text>
+                  <Text style={styles.detailRow}>
+                    Date: {selectedPart.nextServiceDate || "N/A"}
+                  </Text>
+                  <Text style={styles.detailRow}>
+                    Mileage: {selectedPart.nextServiceMileage || "N/A"} km
+                  </Text>
+                  <Text />
+                  <Text style={styles.label}>Estimated lifespan :</Text>
+                  <Text style={styles.detailRow}>
+                    Lifespan (Km): {selectedPart.defaultLifespanKm || "N/A"} km
+                  </Text>
+                  <Text style={styles.detailRow}>
+                    Lifespan (Months):{" "}
+                    {selectedPart.defaultLifespanMonth || "N/A"} months
+                  </Text>
+                </>
+              ) : (
+                <Text style={{ color: theme.colors.onSurfaceVariant }}>
+                  No data available.
+                </Text>
+              )}
+
+              <Pressable
+                style={[
+                  styles.closeBtn,
+                  { backgroundColor: theme.colors.primary, marginTop: 12 },
+                ]}
+                onPress={() => setShowDetailsModal(false)}
               >
                 <Text
                   style={{ color: theme.colors.onPrimary, textAlign: "center" }}
@@ -259,6 +491,10 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 12,
   },
+  bulletText: {
+    fontSize: 14,
+    marginBottom: 5,
+  },
   historyRow: {
     marginBottom: 10,
     borderBottomWidth: 1,
@@ -273,5 +509,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 16,
+  },
+  detailRow: {
+    fontSize: 14,
+
+    color: "#333",
+  },
+  label: {
+    fontWeight: "bold",
+    color: "#555",
+    marginTop: 6,
   },
 });
