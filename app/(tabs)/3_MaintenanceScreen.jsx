@@ -47,9 +47,28 @@ const MaintenanceScreen = () => {
   };
 
   const filterRecords = () => {
-    if (activeTab === "upcoming") return records.filter((r) => !r.statusDone);
-    if (activeTab === "completed") return records.filter((r) => r.statusDone);
-    return records;
+    let filtered = [];
+
+    if (activeTab === "upcoming") {
+      filtered = records.filter((r) => !r.statusDone);
+      return filtered.sort(
+        (a, b) => new Date(a.nextServiceDate) - new Date(b.nextServiceDate)
+      );
+    }
+
+    if (activeTab === "completed") {
+      filtered = records.filter((r) => r.statusDone);
+      return filtered.sort(
+        (a, b) => new Date(b.serviceDate) - new Date(a.serviceDate)
+      );
+    }
+
+    // Sort 'all' by whichever date is relevant
+    return [...records].sort((a, b) => {
+      const dateA = new Date(a.statusDone ? a.serviceDate : a.nextServiceDate);
+      const dateB = new Date(b.statusDone ? b.serviceDate : b.nextServiceDate);
+      return dateB - dateA; // newest on top
+    });
   };
 
   const onRefresh = async () => {
@@ -151,7 +170,8 @@ const MaintenanceScreen = () => {
               style={{ marginRight: 4 }}
             />
             <Text style={[styles.recordDate, { color: theme.colors.outline }]}>
-              {item.statusDone ? "Serviced on" : "Due on"}: {item.serviceDate} (
+              {item.statusDone ? "Serviced on" : "Due on"}:{" "}
+              {item.statusDone ? item.serviceDate : item.nextServiceDate} (
               {item.currentServiceMileage} km)
             </Text>
           </View>

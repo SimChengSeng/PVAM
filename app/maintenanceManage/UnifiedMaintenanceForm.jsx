@@ -258,6 +258,25 @@ export default function UnifiedMaintenanceForm() {
       }
 
       if (mode === "future") {
+        const vehicleDocRef = doc(db, "vehicles", vehicleId);
+        const vehicleSnap = await getDoc(vehicleDocRef);
+
+        if (vehicleSnap.exists()) {
+          const vehicleData = vehicleSnap.data();
+          const newMileage = parseInt(mileage);
+          const currentMileage = parseInt(vehicleData.Mileage || "0");
+
+          const updatePayload = {
+            updatedAt: new Date(),
+          };
+
+          if (newMileage > currentMileage) {
+            updatePayload.Mileage = newMileage;
+          }
+
+          await updateDoc(vehicleDocRef, updatePayload);
+        }
+
         await autoScheduleAllReminders(
           nextServiceDate,
           docRef.id,
