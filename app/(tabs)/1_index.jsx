@@ -844,74 +844,80 @@ export default function Index() {
 
       <Modal
         visible={showWelcomeModal}
-        onDismiss={() => setShowWelcomeModal(false)}
-        contentContainerStyle={{
-          backgroundColor: theme.colors.background,
-          padding: 24,
-          margin: 24,
-          borderRadius: 12,
-          alignSelf: "center",
-          maxWidth: 400,
-          elevation: 5,
-        }}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setModalVisible(false)}
       >
-        <Text
-          style={{
-            padding: 10,
-            fontSize: 20,
-            fontWeight: "bold",
-            marginBottom: 10,
-            color: theme.colors.primary,
-          }}
-        >
-          👋 Welcome to PVAM
-        </Text>
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.modalContent,
+              { backgroundColor: theme.colors.surface },
+            ]}
+          >
+            <Text
+              style={{
+                padding: 10,
+                fontSize: 20,
+                fontWeight: "bold",
+                marginBottom: 10,
+                color: theme.colors.primary,
+              }}
+            >
+              👋 Welcome to PVAM
+            </Text>
 
-        <Text style={{ padding: 10, fontSize: 16, fontWeight: "bold" }}>
-          🚗 PVAM (Personal Vehicle Asset Management)
-        </Text>
-        <Text style={{ padding: 10 }}>
-          is your all-in-one mobile solution to track vehicle maintenance,
-          monitor health scores, receive service reminders, access emergency
-          tips, and directly notify other drivers using license plate search.
-          {"\n"}
-          Stay on top of your vehicle care—anytime, anywhere.
-        </Text>
+            <Text style={{ padding: 10, fontSize: 16, fontWeight: "bold" }}>
+              🚗 PVAM (Personal Vehicle Asset Management)
+            </Text>
+            <Text style={{ padding: 10 }}>
+              is your all-in-one mobile solution to track vehicle maintenance,
+              monitor health scores, receive service reminders, access emergency
+              tips, and directly notify other drivers using license plate
+              search.
+              {"\n"}
+              Stay on top of your vehicle care—anytime, anywhere.
+            </Text>
 
-        <Paragraph style={{ padding: 10 }}>
-          Here's how to get started:
-        </Paragraph>
+            <Paragraph
+              style={{ padding: 10, fontSize: 16, fontWeight: "bold" }}
+            >
+              Here's how to get started:
+            </Paragraph>
 
-        <Paragraph style={{ paddingHorizontal: 10 }}>
-          • Add your vehicle to begin tracking.
-        </Paragraph>
-        <Paragraph style={{ paddingHorizontal: 10 }}>
-          • Log maintenance tasks (past/future).
-        </Paragraph>
-        <Paragraph style={{ paddingHorizontal: 10 }}>
-          • Set reminders to never miss a service.
-        </Paragraph>
-        <Paragraph style={{ paddingHorizontal: 10 }}>
-          • Monitor vehicle health scores.
-        </Paragraph>
-        <Paragraph style={{ paddingHorizontal: 10 }}>
-          • Use emergency tips and routine care guides.
-        </Paragraph>
-        <Paragraph style={{ paddingHorizontal: 10 }}>
-          • Need to contact another driver? Use license plate search and notify!
-        </Paragraph>
+            <Paragraph style={{ paddingHorizontal: 10 }}>
+              • Add your vehicle to begin tracking.
+            </Paragraph>
+            <Paragraph style={{ paddingHorizontal: 10 }}>
+              • Log maintenance tasks (past/future).
+            </Paragraph>
+            <Paragraph style={{ paddingHorizontal: 10 }}>
+              • Set reminders to never miss a service.
+            </Paragraph>
+            <Paragraph style={{ paddingHorizontal: 10 }}>
+              • Monitor vehicle health scores.
+            </Paragraph>
+            <Paragraph style={{ paddingHorizontal: 10 }}>
+              • Use emergency tips and routine care guides.
+            </Paragraph>
+            <Paragraph style={{ paddingHorizontal: 10 }}>
+              • Need to contact another driver? Use license plate search and
+              notify!
+            </Paragraph>
 
-        <Button
-          mode="contained"
-          onPress={() => setShowWelcomeModal(false)}
-          style={{
-            marginTop: 20,
-            margin: 10,
-            backgroundColor: theme.colors.primary,
-          }}
-        >
-          Got It
-        </Button>
+            <Button
+              mode="contained"
+              onPress={() => setShowWelcomeModal(false)}
+              style={{
+                marginTop: 20,
+                margin: 10,
+                backgroundColor: theme.colors.primary,
+              }}
+            >
+              Got It
+            </Button>
+          </View>
+        </View>
       </Modal>
     </View>
   );
@@ -1060,5 +1066,22 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 8,
     marginTop: 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    borderRadius: 12,
+    padding: 20,
+    width: "85%",
+    maxHeight: "70%",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 12,
   },
 });

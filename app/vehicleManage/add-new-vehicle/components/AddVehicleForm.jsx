@@ -8,7 +8,14 @@ import {
   getDoc,
   getDocs,
 } from "firebase/firestore";
-import { View, ScrollView, StyleSheet, Alert } from "react-native";
+import {
+  View,
+  ScrollView,
+  StyleSheet,
+  Alert,
+  Modal,
+  Pressable,
+} from "react-native";
 import {
   TextInput,
   Button,
@@ -71,51 +78,6 @@ const vehicleSchema = z.object({
     .or(z.literal("")),
 });
 
-const fixedPartList = [
-  {
-    partId: "battery",
-    name: "Battery",
-    defaultLifespanKm: 40000,
-    defaultLifespanMonth: 24,
-  },
-  {
-    partId: "tire_front_left",
-    name: "Front Tires Left",
-    defaultLifespanKm: 40000,
-    defaultLifespanMonth: 24,
-  },
-  {
-    partId: "tire_front_right",
-    name: "Front Tires Right",
-    defaultLifespanKm: 40000,
-    defaultLifespanMonth: 24,
-  },
-  {
-    partId: "tire_rear_left",
-    name: "Rear Tires Left",
-    defaultLifespanKm: 40000,
-    defaultLifespanMonth: 24,
-  },
-  {
-    partId: "tire_rear_right",
-    name: "Rear Tires Right",
-    defaultLifespanKm: 40000,
-    defaultLifespanMonth: 24,
-  },
-  {
-    partId: "wiper",
-    name: "Wiper Blades",
-    defaultLifespanKm: 10000,
-    defaultLifespanMonth: 12,
-  },
-  {
-    partId: "car_bulb",
-    name: "Car Bulbs",
-    defaultLifespanKm: 100000,
-    defaultLifespanMonth: 36,
-  },
-];
-
 const typeToCollection = {
   car: "maintenanceDetailsCar",
   truck: "maintenanceDetailsTruck",
@@ -168,6 +130,8 @@ export default function AddNewVehicleForm({
   const [showEstimation, setShowEstimation] = useState(false);
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackbarMsg, setSnackbarMsg] = useState("");
+  const [showDefaultModal, setShowDefaultModal] = useState(false);
+  const [showWeeklyModal, setShowWeeklyModal] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -631,10 +595,27 @@ export default function AddNewVehicleForm({
               control={control}
               name="isDefault"
               render={({ field: { onChange, value } }) => (
-                <View style={styles.switchContainer}>
-                  <Text style={{ color: theme.colors.onSurface }}>
-                    Set as Default Vehicle
-                  </Text>
+                <View
+                  style={[
+                    styles.switchContainer,
+                    {
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      marginBottom: 8,
+                    },
+                  ]}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <Text
+                      style={{ color: theme.colors.onSurface, fontSize: 16 }}
+                    >
+                      Set as Default Vehicle
+                    </Text>
+                    <Pressable onPress={() => setShowDefaultModal(true)}>
+                      <Text style={{ fontSize: 16, marginLeft: 6 }}>ℹ️</Text>
+                    </Pressable>
+                  </View>
                   <Switch
                     value={value}
                     onValueChange={onChange}
@@ -643,10 +624,74 @@ export default function AddNewVehicleForm({
                 </View>
               )}
             />
-            <View style={styles.switchContainer}>
-              <Text style={{ color: theme.colors.onSurface }}>
-                Enable Weekly Inspection Reminder
-              </Text>
+
+            <Modal
+              visible={showDefaultModal}
+              animationType="fade"
+              transparent
+              onRequestClose={() => setShowDefaultModal(false)}
+            >
+              <View style={styles.modalOverlay}>
+                <View
+                  style={[
+                    styles.modalContent,
+                    { backgroundColor: theme.colors.surface },
+                  ]}
+                >
+                  <Text
+                    style={[styles.modalTitle, { color: theme.colors.primary }]}
+                  >
+                    What is Default Vehicle?
+                  </Text>
+                  <Text
+                    style={
+                      (styles.modalText,
+                      { color: theme.colors.onSurface, marginBottom: 10 })
+                    }
+                  >
+                    This option will make this vehicle your default for quick
+                    access and display on the top of home screen.
+                  </Text>
+
+                  <Pressable
+                    style={[
+                      styles.closeBtn,
+                      { backgroundColor: theme.colors.primary, marginTop: 12 },
+                    ]}
+                    onPress={() => setShowDefaultModal(false)}
+                  >
+                    <Text
+                      style={{
+                        color: theme.colors.onPrimary,
+                        textAlign: "center",
+                      }}
+                    >
+                      Close
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+            </Modal>
+
+            <View
+              style={[
+                styles.switchContainer,
+                {
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginBottom: 8,
+                },
+              ]}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <Text style={{ color: theme.colors.onSurface }}>
+                  Enable Weekly Inspection Reminder
+                </Text>
+                <Pressable onPress={() => setShowWeeklyModal(true)}>
+                  <Text style={{ fontSize: 16, marginLeft: 6 }}>ℹ️</Text>
+                </Pressable>
+              </View>
               <Switch
                 value={inspectionReminderEnabled}
                 onValueChange={(value) => setInspectionReminderEnabled(value)}
@@ -677,6 +722,54 @@ export default function AddNewVehicleForm({
               />
             )}
 
+            <Modal
+              visible={showWeeklyModal}
+              animationType="fade"
+              transparent
+              onRequestClose={() => setShowWeeklyModal(false)}
+            >
+              <View style={styles.modalOverlay}>
+                <View
+                  style={[
+                    styles.modalContent,
+                    { backgroundColor: theme.colors.surface },
+                  ]}
+                >
+                  <Text
+                    style={[styles.modalTitle, { color: theme.colors.primary }]}
+                  >
+                    What is Weekly Inspection Reminder?
+                  </Text>
+                  <Text
+                    style={
+                      (styles.modalText,
+                      { color: theme.colors.onSurface, marginBottom: 10 })
+                    }
+                  >
+                    Turn this on to receive a reminder each week to inspect your
+                    vehicle and keep it in optimal condition.
+                  </Text>
+
+                  <Pressable
+                    style={[
+                      styles.closeBtn,
+                      { backgroundColor: theme.colors.primary, marginTop: 12 },
+                    ]}
+                    onPress={() => setShowWeeklyModal(false)}
+                  >
+                    <Text
+                      style={{
+                        color: theme.colors.onPrimary,
+                        textAlign: "center",
+                      }}
+                    >
+                      Close
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+            </Modal>
+
             <Divider style={{ marginVertical: 16 }} />
             {/* Advanced Options */}
             <Card
@@ -699,7 +792,7 @@ export default function AddNewVehicleForm({
                     color: theme.colors.primary,
                   }}
                 >
-                  Advanced Options
+                  Advanced Information
                 </Text>
                 <AntDesign
                   name={showAdvanced ? "up" : "down"}
@@ -709,6 +802,42 @@ export default function AddNewVehicleForm({
               </TouchableOpacity>
               {showAdvanced && (
                 <Card.Content>
+                  {vehicleType === "car" && (
+                    <Controller
+                      control={control}
+                      name="engineSize"
+                      render={({ field: { onChange, value } }) => (
+                        <>
+                          <TextInput
+                            label="Engine Size (cc)"
+                            value={value}
+                            onChangeText={onChange}
+                            mode="outlined"
+                            keyboardType="numeric"
+                            style={[
+                              styles.inputRounded,
+                              { backgroundColor: theme.colors.surface },
+                            ]}
+                            theme={{
+                              colors: {
+                                primary: theme.colors.primary,
+                                text: theme.colors.onSurface,
+                                placeholder: theme.colors.onSurfaceVariant,
+                                background: theme.colors.surface,
+                              },
+                            }}
+                            textColor={theme.colors.onSurface}
+                          />
+                          <HelperText
+                            type="error"
+                            visible={!!errors.engineSize}
+                          >
+                            {errors.engineSize?.message}
+                          </HelperText>
+                        </>
+                      )}
+                    />
+                  )}
                   {vehicleType === "motorcycle" && (
                     <Controller
                       control={control}
@@ -996,5 +1125,22 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderRadius: 12,
     elevation: 1,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    borderRadius: 12,
+    padding: 20,
+    width: "85%",
+    maxHeight: "70%",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 12,
   },
 });
