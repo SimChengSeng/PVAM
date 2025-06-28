@@ -228,14 +228,11 @@ export default function AddNewVehicleForm({
         data.isCustomModel || data.isCustomCategory || data.isCustom;
 
       // Only fetch maintenance details for car and truck (not motorcycle/van)
-      if (vehicleType !== "motorcycle" && vehicleType !== "van" && !isCustom) {
-        const selectedCollection = typeToCollection[vehicleType.toLowerCase()];
+      if (vehicleType !== "truck" && vehicleType !== "van" && !isCustom) {
         const maintenanceDetailsRef = doc(
           db,
-          selectedCollection,
-          data.brand,
-          data.vehicleCategory,
-          data.model
+          "maintenanceTemplates",
+          data.vehicleCategory
         );
         const maintenanceDetailsSnap = await getDoc(maintenanceDetailsRef);
 
@@ -251,6 +248,7 @@ export default function AddNewVehicleForm({
               lastServiceDate: "",
               defaultLifespanKm: part.defaultLifespanKm,
               defaultLifespanMonth: part.defaultLifespanMonth,
+              description: part.description,
             }));
           }
 
@@ -273,14 +271,14 @@ export default function AddNewVehicleForm({
         createdAt: serverTimestamp(),
         partCondition: [
           ...partCondition,
-          ...fixedPartList.map((part) => ({
-            partId: part.partId,
-            name: part.name,
-            lastServiceMileage: "",
-            lastServiceDate: "",
-            defaultLifespanKm: part.defaultLifespanKm,
-            defaultLifespanMonth: part.defaultLifespanMonth,
-          })),
+          // ...fixedPartList.map((part) => ({
+          //   partId: part.partId,
+          //   name: part.name,
+          //   lastServiceMileage: "",
+          //   lastServiceDate: "",
+          //   defaultLifespanKm: part.defaultLifespanKm,
+          //   defaultLifespanMonth: part.defaultLifespanMonth,
+          // })),
         ],
         inspectionReminderEnabled,
         weeklyInspectionDay: inspectionReminderEnabled

@@ -9,6 +9,7 @@ import {
   Alert,
   Animated,
   Image,
+  Modal,
 } from "react-native";
 import {
   Avatar,
@@ -20,6 +21,7 @@ import {
   RadioButton,
   useTheme,
   IconButton,
+  Paragraph,
 } from "react-native-paper";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "expo-router";
@@ -56,6 +58,10 @@ export default function Index() {
   const [selectedVehicleId, setSelectedVehicleId] = useState(null);
   const [unreadApp, setUnreadApp] = useState(0);
   const [unreadDirect, setUnreadDirect] = useState(0);
+  const [upcomingMaintenances, setUpcomingMaintenances] = useState([]);
+  const [DirectNoticeModalVisible, setDirectNoticeModalVisible] =
+    useState(false);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
 
   const greeting = useMemo(() => {
     const now = new Date();
@@ -162,6 +168,34 @@ export default function Index() {
       }
 
       setVehicles(list);
+
+      // Fetch all upcoming maintenance across all vehicles
+      const allUpcoming = [];
+      for (const v of list) {
+        const mq = query(
+          collection(db, "maintenanceRecords"),
+          where("vehicleId", "==", v.id),
+          where("statusDone", "==", false)
+        );
+        const mSnap = await getDocs(mq);
+        mSnap.forEach((m) => {
+          const data = m.data();
+          allUpcoming.push({
+            ...data,
+            vehicle: v,
+            id: m.id,
+          });
+        });
+      }
+
+      const sortedUpcoming = allUpcoming
+        .filter(
+          (item) => item.nextServiceDate && item.nextServiceDate !== "N/A"
+        )
+        .sort((a, b) => a.nextServiceDate.localeCompare(b.nextServiceDate))
+        .slice(0, 3);
+
+      setUpcomingMaintenances(sortedUpcoming);
     } catch (e) {
       console.log("Error fetching vehicles:", e);
     } finally {
@@ -315,6 +349,17 @@ export default function Index() {
             <Text style={[styles.greeting, themed.label]}>
               {greeting}, {userName}!
             </Text>
+            <Pressable
+              onPress={() => setShowWelcomeModal(true)}
+              style={{
+                borderRadius: 8,
+                alignSelf: "flex-start",
+              }}
+            >
+              <Text style={{ color: theme.colors.primary, paddingBottom: 10 }}>
+                ℹ️ About PVAM APP?
+              </Text>
+            </Pressable>
 
             {/* 2. Default Vehicle */}
             {vehicles.find((v) => v.isDefault) ? (
@@ -504,6 +549,17 @@ export default function Index() {
 
             {/* 3. Plate Search */}
             <Text style={styles.sectionTitle}>Direct Notifications</Text>
+            <Pressable
+              onPress={() => setDirectNoticeModalVisible(true)}
+              style={{
+                borderRadius: 8,
+                alignSelf: "flex-start",
+              }}
+            >
+              <Text style={{ color: theme.colors.primary }}>
+                What is Direct Notification?
+              </Text>
+            </Pressable>
             <PlateSearch />
             <Pressable
               onPress={() =>
@@ -535,7 +591,102 @@ export default function Index() {
               />
             </View>
 
-            {/* 5. Other Vehicles */}
+            {/* 5. Upcoming Maintenances */}
+            {upcomingMaintenances.length > 0 && (
+              <>
+                <Text style={styles.sectionTitle}>Upcoming Maintenances</Text>
+                {upcomingMaintenances.map((item) => {
+                  const {
+                    vehicle,
+                    nextServiceDate,
+                    nextServiceMileage,
+                    type,
+                    maintenanceCategory,
+                    services = [],
+                  } = item;
+
+                  return (
+                    <Pressable
+                      key={item.id}
+                      onPress={() =>
+                        router.push({
+                          pathname: "vehicleManage/VehicleDetailScreen",
+                          params: {
+                            ...vehicle,
+                            maintenanceId: item.id,
+                          },
+                        })
+                      }
+                    >
+                      <Card
+                        style={[
+                          globalStyles.card,
+                          themed.card,
+                          {
+                            marginBottom: 10,
+                            borderLeftWidth: 6,
+                            borderLeftColor: theme.colors.primary,
+                          },
+                        ]}
+                      >
+                        <Card.Title
+                          title={`${vehicle.plate} - ${vehicle.brand} ${vehicle.model}`}
+                          subtitle={`Maintenance Type: ${
+                            type || maintenanceCategory || "General"
+                          }`}
+                          titleStyle={[
+                            globalStyles.cardHeaderTitle,
+                            themed.cardHeaderTitle,
+                            { color: theme.colors.primary },
+                          ]}
+                          subtitleStyle={[
+                            globalStyles.cardHeaderSubtitle,
+                            themed.cardHeaderSubtitle,
+                          ]}
+                          right={() => (
+                            <Ionicons
+                              name="chevron-forward"
+                              size={20}
+                              color={theme.colors.onSurfaceVariant}
+                              style={{ marginRight: 8 }}
+                            />
+                          )}
+                        />
+                        <Card.Content>
+                          <Text
+                            style={[globalStyles.textDetail, themed.textDetail]}
+                          >
+                            📆 Service Date: {nextServiceDate}
+                          </Text>
+                          {nextServiceMileage && (
+                            <Text
+                              style={[
+                                globalStyles.textDetail,
+                                themed.textDetail,
+                              ]}
+                            >
+                              🛞 Service Mileage: {nextServiceMileage} km
+                            </Text>
+                          )}
+                          {services.length > 0 && (
+                            <Text
+                              style={[
+                                globalStyles.textDetail,
+                                themed.textDetail,
+                              ]}
+                            >
+                              🧰 Services Included: {services.length}
+                            </Text>
+                          )}
+                        </Card.Content>
+                      </Card>
+                    </Pressable>
+                  );
+                })}
+              </>
+            )}
+
+            {/* 6. Other Vehicles */}
             <Text style={styles.sectionTitle}>My Vehicles</Text>
             {vehicles
               .filter((v) => !v.isDefault)
@@ -637,6 +788,131 @@ export default function Index() {
           </Dialog.Actions>
         </Dialog>
       </Portal>
+
+      <Modal
+        visible={DirectNoticeModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDirectNoticeModalVisible(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.4)",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: "#fff",
+              padding: 24,
+              borderRadius: 16,
+              width: "80%",
+              alignItems: "center",
+            }}
+          >
+            <Text
+              style={{ fontWeight: "bold", fontSize: 18, marginBottom: 12 }}
+            >
+              Direct Notification
+            </Text>
+            <Text
+              style={{ fontSize: 16, marginBottom: 20, textAlign: "center" }}
+            >
+              Enable direct communication between vehicle users by introducing a
+              license plate–based notification system.{"\n\n"} This allows
+              anyone to send urgent or important messages to the vehicle owner
+              via the PVAM app, ensuring fast and efficient response in critical
+              situations.
+            </Text>
+            <Pressable
+              onPress={() => setDirectNoticeModalVisible(false)}
+              style={{
+                marginTop: 10,
+                paddingVertical: 8,
+                paddingHorizontal: 24,
+                backgroundColor: "#2196f3",
+                borderRadius: 8,
+              }}
+            >
+              <Text style={{ color: "#fff" }}>Close</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={showWelcomeModal}
+        onDismiss={() => setShowWelcomeModal(false)}
+        contentContainerStyle={{
+          backgroundColor: theme.colors.background,
+          padding: 24,
+          margin: 24,
+          borderRadius: 12,
+          alignSelf: "center",
+          maxWidth: 400,
+          elevation: 5,
+        }}
+      >
+        <Text
+          style={{
+            padding: 10,
+            fontSize: 20,
+            fontWeight: "bold",
+            marginBottom: 10,
+            color: theme.colors.primary,
+          }}
+        >
+          👋 Welcome to PVAM
+        </Text>
+
+        <Text style={{ padding: 10, fontSize: 16, fontWeight: "bold" }}>
+          🚗 PVAM (Personal Vehicle Asset Management)
+        </Text>
+        <Text style={{ padding: 10 }}>
+          is your all-in-one mobile solution to track vehicle maintenance,
+          monitor health scores, receive service reminders, access emergency
+          tips, and directly notify other drivers using license plate search.
+          {"\n"}
+          Stay on top of your vehicle care—anytime, anywhere.
+        </Text>
+
+        <Paragraph style={{ padding: 10 }}>
+          Here's how to get started:
+        </Paragraph>
+
+        <Paragraph style={{ paddingHorizontal: 10 }}>
+          • Add your vehicle to begin tracking.
+        </Paragraph>
+        <Paragraph style={{ paddingHorizontal: 10 }}>
+          • Log maintenance tasks (past/future).
+        </Paragraph>
+        <Paragraph style={{ paddingHorizontal: 10 }}>
+          • Set reminders to never miss a service.
+        </Paragraph>
+        <Paragraph style={{ paddingHorizontal: 10 }}>
+          • Monitor vehicle health scores.
+        </Paragraph>
+        <Paragraph style={{ paddingHorizontal: 10 }}>
+          • Use emergency tips and routine care guides.
+        </Paragraph>
+        <Paragraph style={{ paddingHorizontal: 10 }}>
+          • Need to contact another driver? Use license plate search and notify!
+        </Paragraph>
+
+        <Button
+          mode="contained"
+          onPress={() => setShowWelcomeModal(false)}
+          style={{
+            marginTop: 20,
+            margin: 10,
+            backgroundColor: theme.colors.primary,
+          }}
+        >
+          Got It
+        </Button>
+      </Modal>
     </View>
   );
 }

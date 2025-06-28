@@ -203,9 +203,26 @@ export default function HealthScoreDetailScreen() {
             </Card>
           ))
         ) : (
-          <Text style={{ marginTop: 20, color: theme.colors.onSurfaceVariant }}>
-            No part condition data available.
-          </Text>
+          <View>
+            <Text
+              style={{
+                marginTop: 20,
+                color: "red",
+                fontSize: 20,
+                fontWeight: "bold",
+              }}
+            >
+              No part condition data available.{"\n\n"}
+            </Text>
+            <Text
+              style={{ color: theme.colors.onSurfaceVariant, fontSize: 16 }}
+            >
+              Your health score is 0% because there are no maintenance records
+              for your vehicle parts.{"\n\n"}
+              Please add past maintenance records for your parts to start
+              tracking your vehicle's condition and improve the health score.
+            </Text>
+          </View>
         )}
 
         {/* Modal for part history */}
