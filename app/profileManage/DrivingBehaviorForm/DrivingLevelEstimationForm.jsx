@@ -16,6 +16,8 @@ import {
   HelperText,
   SegmentedButtons,
   ActivityIndicator,
+  useTheme,
+  Provider,
 } from "react-native-paper";
 import { db, auth } from "../../../config/FirebaseConfig";
 import {
@@ -74,6 +76,7 @@ const riskIndex = {
 };
 
 export default function DrivingProfileForm({ onSubmit }) {
+  const theme = useTheme();
   const [form, setForm] = useState({
     daysDriven: "",
     averageDistance: "",
@@ -221,136 +224,177 @@ export default function DrivingProfileForm({ onSubmit }) {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={{ flex: 1 }}
-    >
-      <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.heading}>Driving Profile & Habits</Text>
-
-        {[
-          {
-            key: "daysDriven",
-            label: "How many days did you drive in the past week?",
-          },
-          {
-            key: "averageDistance",
-            label: "What is the average daily distance (km)?",
-          },
-          {
-            key: "totalDistance",
-            label: "Total distance driven in past 7 days (km)",
-          },
-          {
-            key: "averageTime",
-            label: "Average time per trip (minutes)",
-          },
-          {
-            key: "licenseDuration",
-            label: "Years holding a license",
-          },
-        ].map(({ key, label }) => (
-          <TextInput
-            key={key}
-            label={label}
-            value={form[key]}
-            onChangeText={(val) => updateForm(key, val)}
-            keyboardType="numeric"
-            style={styles.input}
-          />
-        ))}
-
-        <Text style={styles.subheading}>Most Commonly Used Vehicle Type</Text>
-        <SegmentedButtons
-          value={form.vehicleType}
-          onValueChange={(val) => updateForm("vehicleType", val)}
-          buttons={[
-            { value: "Car", label: "Car" },
-            { value: "Motorcycle", label: "Motorcycle" },
-            { value: "Truck", label: "Truck" },
-            { value: "Van", label: "Van" },
+    <Provider>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+      >
+        <ScrollView
+          contentContainerStyle={[
+            styles.container,
+            { backgroundColor: theme.colors.background },
           ]}
-        />
+        >
+          <Text style={[styles.heading, { color: theme.colors.primary }]}>
+            Driving Profile & Habits
+          </Text>
 
-        <View style={styles.checkboxRow}>
-          <Checkbox
-            status={form.heavyTraffic ? "checked" : "unchecked"}
-            onPress={() => updateForm("heavyTraffic", !form.heavyTraffic)}
-          />
-          <Text>Usually drive in heavy traffic?</Text>
-        </View>
-
-        <View style={styles.checkboxRow}>
-          <Checkbox
-            status={form.harshEvents ? "checked" : "unchecked"}
-            onPress={() => updateForm("harshEvents", !form.harshEvents)}
-          />
-          <Text>Often experience harsh braking/acceleration?</Text>
-        </View>
-
-        <Text style={styles.subheading}>Driving Behavior</Text>
-        {dbqItems.map((q) => (
-          <View key={q.key} style={styles.questionBlock}>
-            <Text>{q.label}</Text>
-            <RadioButton.Group
-              value={dbqResponses[q.key]}
-              onValueChange={(val) => handleSelect(q.key, val)}
-            >
-              {responseOptions.map((opt) => (
-                <View key={opt.value} style={styles.radioRow}>
-                  <RadioButton value={opt.value} />
-                  <Text>{opt.label}</Text>
-                </View>
-              ))}
-            </RadioButton.Group>
-          </View>
-        ))}
-
-        <Text style={styles.subheading}>Contextual Factors</Text>
-        {["night", "longTrips", "aggressive"].map((k) => (
-          <View key={k} style={styles.checkboxRow}>
-            <Checkbox
-              status={checkboxes[k] ? "checked" : "unchecked"}
-              onPress={() =>
-                setCheckboxes({ ...checkboxes, [k]: !checkboxes[k] })
-              }
+          {[
+            {
+              key: "daysDriven",
+              label: "How many days did you drive in the past week?",
+            },
+            {
+              key: "averageDistance",
+              label: "What is the average daily distance (km)?",
+            },
+            {
+              key: "totalDistance",
+              label: "Total distance driven in past 7 days (km)",
+            },
+            {
+              key: "averageTime",
+              label: "Average time per trip (minutes)",
+            },
+            {
+              key: "licenseDuration",
+              label: "Years holding a license",
+            },
+          ].map(({ key, label }) => (
+            <TextInput
+              key={key}
+              label={label}
+              value={form[key]}
+              onChangeText={(val) => updateForm(key, val)}
+              keyboardType="numeric"
+              style={[styles.input, { backgroundColor: theme.colors.surface }]}
+              theme={{
+                colors: {
+                  primary: theme.colors.primary,
+                  text: theme.colors.onSurface,
+                  placeholder: theme.colors.onSurfaceVariant,
+                  background: theme.colors.surface,
+                },
+              }}
+              textColor={theme.colors.onSurface}
+              placeholderTextColor={theme.colors.onSurfaceVariant}
             />
-            <Text>
-              {
-                {
-                  night: "Drive frequently at night",
-                  longTrips: "Often take long trips",
-                  aggressive: "Tend to drive aggressively",
-                }[k]
-              }
+          ))}
+
+          <Text style={[styles.subheading, { color: theme.colors.primary }]}>
+            Most Commonly Used Vehicle Type
+          </Text>
+          <SegmentedButtons
+            value={form.vehicleType}
+            onValueChange={(val) => updateForm("vehicleType", val)}
+            buttons={[
+              { value: "Car", label: "Car" },
+              { value: "Motorcycle", label: "Motorcycle" },
+              { value: "Truck", label: "Truck" },
+              { value: "Van", label: "Van" },
+            ]}
+            style={{ marginBottom: 12 }}
+          />
+
+          <View style={styles.checkboxRow}>
+            <Checkbox
+              status={form.heavyTraffic ? "checked" : "unchecked"}
+              onPress={() => updateForm("heavyTraffic", !form.heavyTraffic)}
+              color={theme.colors.primary}
+            />
+            <Text style={{ color: theme.colors.onSurface }}>
+              Usually drive in heavy traffic?
             </Text>
           </View>
-        ))}
 
-        <Button
-          mode="contained"
-          onPress={handleSubmit}
-          disabled={!isComplete || loading}
-          loading={loading}
-          style={styles.submit}
-        >
-          Submit Profile
-        </Button>
+          <View style={styles.checkboxRow}>
+            <Checkbox
+              status={form.harshEvents ? "checked" : "unchecked"}
+              onPress={() => updateForm("harshEvents", !form.harshEvents)}
+              color={theme.colors.primary}
+            />
+            <Text style={{ color: theme.colors.onSurface }}>
+              Often experience harsh braking/acceleration?
+            </Text>
+          </View>
 
-        {loading && (
-          <ActivityIndicator
-            animating={true}
-            size="large"
-            style={{ marginTop: 20 }}
-          />
-        )}
-      </ScrollView>
-    </KeyboardAvoidingView>
+          <Text style={[styles.subheading, { color: theme.colors.primary }]}>
+            Driving Behavior
+          </Text>
+          {dbqItems.map((q) => (
+            <View key={q.key} style={styles.questionBlock}>
+              <Text style={{ color: theme.colors.onSurface }}>{q.label}</Text>
+              <RadioButton.Group
+                value={dbqResponses[q.key]}
+                onValueChange={(val) => handleSelect(q.key, val)}
+              >
+                {responseOptions.map((opt) => (
+                  <View key={opt.value} style={styles.radioRow}>
+                    <RadioButton
+                      value={opt.value}
+                      color={theme.colors.primary}
+                    />
+                    <Text style={{ color: theme.colors.onSurface }}>
+                      {opt.label}
+                    </Text>
+                  </View>
+                ))}
+              </RadioButton.Group>
+            </View>
+          ))}
+
+          <Text style={[styles.subheading, { color: theme.colors.primary }]}>
+            Contextual Factors
+          </Text>
+          {["night", "longTrips", "aggressive"].map((k) => (
+            <View key={k} style={styles.checkboxRow}>
+              <Checkbox
+                status={checkboxes[k] ? "checked" : "unchecked"}
+                onPress={() =>
+                  setCheckboxes({ ...checkboxes, [k]: !checkboxes[k] })
+                }
+                color={theme.colors.primary}
+              />
+              <Text style={{ color: theme.colors.onSurface }}>
+                {
+                  {
+                    night: "Drive frequently at night",
+                    longTrips: "Often take long trips",
+                    aggressive: "Tend to drive aggressively",
+                  }[k]
+                }
+              </Text>
+            </View>
+          ))}
+
+          <Button
+            mode="contained"
+            onPress={handleSubmit}
+            disabled={!isComplete || loading}
+            loading={loading}
+            style={[styles.submit, { backgroundColor: theme.colors.primary }]}
+            textColor={theme.colors.onPrimary}
+            labelStyle={{ color: theme.colors.onPrimary }}
+          >
+            Submit Profile
+          </Button>
+
+          {loading && (
+            <ActivityIndicator
+              animating={true}
+              size="large"
+              style={{ marginTop: 20 }}
+              color={theme.colors.primary}
+            />
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </Provider>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 20 },
+  container: { padding: 20, flexGrow: 1, paddingTop: 40 },
   heading: { fontSize: 24, fontWeight: "bold", marginBottom: 20 },
   subheading: {
     fontSize: 18,
@@ -360,7 +404,7 @@ const styles = StyleSheet.create({
   },
   input: {
     marginBottom: 12,
-    backgroundColor: "#fff",
+    borderRadius: 8,
   },
   checkboxRow: {
     flexDirection: "row",
@@ -376,5 +420,6 @@ const styles = StyleSheet.create({
   },
   submit: {
     marginTop: 30,
+    borderRadius: 8,
   },
 });

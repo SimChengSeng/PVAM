@@ -11,12 +11,12 @@ import {
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   Card,
-  Checkbox,
   Button,
   TextInput,
   Text,
   Provider,
   Divider,
+  useTheme,
 } from "react-native-paper";
 import { db } from "../../config/FirebaseConfig";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -28,7 +28,9 @@ import {
   collection,
   serverTimestamp,
 } from "firebase/firestore";
-import { Wrench, CalendarDays } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { globalStyles, getThemedStyles } from "../../styles/globalStyles";
+import { autoScheduleAllReminders } from "../../utils/notifications/autoScheduleAllReminders";
 
 if (
   Platform.OS === "android" &&
@@ -40,10 +42,13 @@ if (
 export default function MaintenanceUpdateForm() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const theme = useTheme();
   const { vehicleId, userEmail, mechanic } = params;
   const [showConfirm, setShowConfirm] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [lastDeleted, setLastDeleted] = useState(null);
+  const [loadingSave, setLoadingSave] = useState(false);
+  const [loadingDone, setLoadingDone] = useState(false);
 
   const [services, setServices] = useState(() => {
     try {
@@ -53,7 +58,6 @@ export default function MaintenanceUpdateForm() {
           : params.services;
       return parsed.map((s, i) => ({ ...s, id: i, checked: true }));
     } catch (e) {
-      console.warn("Failed to parse services:", e);
       return [];
     }
   });
@@ -83,20 +87,20 @@ export default function MaintenanceUpdateForm() {
   }, [services, laborCost, serviceTax]);
 
   const handleSaveUpdates = async () => {
-    console.log("Save Updates pressed");
+    setLoadingSave(true);
     if (!params.id) {
       Alert.alert("Error", "Maintenance record ID is missing.");
+      setLoadingSave(false);
       return;
     }
-
     try {
       const recordRef = doc(db, "maintenanceRecords", params.id);
       const test = await getDoc(recordRef);
       if (!test.exists()) {
         Alert.alert("Error", "Maintenance record not found.");
+        setLoadingSave(false);
         return;
       }
-
       await updateDoc(recordRef, {
         services,
         laborCost: parseFloat(laborCost),
@@ -107,14 +111,28 @@ export default function MaintenanceUpdateForm() {
         updatedAt: serverTimestamp(),
       });
 
+      // --- Auto schedule reminders if not set before ---
+      const updatedSnap = await getDoc(recordRef);
+      const updatedData = updatedSnap.data();
+      if (!updatedData?.reminders || updatedData.reminders.length === 0) {
+        await autoScheduleAllReminders(
+          updatedData.nextServiceDate,
+          params.id,
+          updatedData.vehiclePlate || updatedData.plate,
+          updatedData.brand,
+          updatedData.model
+        );
+      }
+      // -------------------------------------------------
+
       Alert.alert("Success", "Your updates have been saved.");
     } catch (error) {
-      console.error("Error saving updates:", error);
       Alert.alert(
         "Error",
         error.message || "Something went wrong while saving."
       );
     }
+    setLoadingSave(false);
   };
 
   const handleConfirm = () => {
@@ -122,26 +140,21 @@ export default function MaintenanceUpdateForm() {
     setShowConfirm(true);
   };
 
-  console.log("Services:", services); // Debugging log
-  console.log("Params:", params); // Debugging log
-
   const handleUpdate = async () => {
-    console.log("Mark as Done pressed");
-
+    setLoadingDone(true);
     if (!params.id) {
       Alert.alert("Error", "Maintenance record ID is missing.");
+      setLoadingDone(false);
       return;
     }
-
     try {
       const recordRef = doc(db, "maintenanceRecords", params.id);
       const test = await getDoc(recordRef);
       if (!test.exists()) {
         Alert.alert("Error", "Maintenance record not found.");
+        setLoadingDone(false);
         return;
       }
-
-      // Update the current record
       await updateDoc(recordRef, {
         services,
         laborCost: parseFloat(laborCost),
@@ -155,112 +168,13 @@ export default function MaintenanceUpdateForm() {
             : "",
         updatedAt: serverTimestamp(),
       });
-
-      // ✅ Fetch vehicle data
-      const vehicleDocRef = doc(db, "vehicles", vehicleId);
-      const vehicleSnap = await getDoc(vehicleDocRef);
-      if (!vehicleSnap.exists()) {
-        throw new Error("Vehicle document not found.");
-      }
-      const vehicleData = vehicleSnap.data();
-
-      // ✅ Update partCondition
-      const updatedParts = await Promise.all(
-        vehicleData.partCondition.map(async (part) => {
-          const serviced = services.find((s) => s.partId === part.partId);
-          if (serviced) {
-            const lastDate = serviceDate.toISOString().split("T")[0];
-            const lastMileage = parseInt(currentMileage);
-            const nextMileage = lastMileage + (part.defaultLifespanKm || 0);
-            const nextDate = new Date(serviceDate);
-            nextDate.setMonth(
-              nextDate.getMonth() + (part.defaultLifespanMonth || 0)
-            );
-
-            // Create partHistory document
-            await addDoc(collection(db, "vehicles", vehicleId, "partHistory"), {
-              partId: part.partId,
-              partName: part.name,
-              vehicleId,
-              userEmail,
-              serviceDate: lastDate,
-              mileage: lastMileage,
-              note: notes,
-              createdAt: serverTimestamp(),
-            });
-
-            return {
-              ...part,
-              lastServiceDate: lastDate,
-              lastServiceMileage: lastMileage,
-              nextServiceDate: nextDate.toISOString().split("T")[0],
-              nextServiceMileage: nextMileage,
-            };
-          }
-          return part;
-        })
-      );
-
-      await updateDoc(vehicleDocRef, {
-        partCondition: updatedParts,
-        updatedAt: serverTimestamp(),
-      });
-
-      // ✅ Fetch maintenance interval template
-      const maintenanceDetailsRef = doc(
-        db,
-        "maintenanceDetails",
-        params.brand,
-        params.category,
-        params.model
-      );
-
-      const maintenanceDetailsSnap = await getDoc(maintenanceDetailsRef);
-      if (!maintenanceDetailsSnap.exists()) {
-        throw new Error("Maintenance details not found for this vehicle.");
-      }
-
-      const maintenanceDetails = maintenanceDetailsSnap.data();
-      const mileage = parseInt(currentMileage);
-      const next = maintenanceDetails.serviceIntervals.find(
-        (i) => i.interval.km > mileage
-      );
-
-      if (!next || !Array.isArray(next.services)) {
-        throw new Error("Next service interval or services list is invalid.");
-      }
-
-      console.log("Next interval found:", next);
-      console.log("Next services:", next.services);
-
-      await addDoc(collection(db, "maintenanceRecords"), {
-        userEmail,
-        vehicleId,
-        type: next.services.map((s) => s.name).join(", "),
-        services: next.services,
-        mechanic: "N/A",
-        laborCost: next.laborCost,
-        serviceTax: next.serviceTax,
-        cost: next.totalCost,
-        notes: next.specialNote || "",
-        nextServiceDate: "N/A",
-        estimateNextServiceDate: next.interval.month,
-        nextServiceMileage: next.interval.km,
-        currentServiceMileage: mileage,
-        statusDone: false,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-
-      Alert.alert(
-        "Success",
-        "Record marked as done, part conditions updated, and next maintenance created.",
-        [{ text: "OK", onPress: () => router.back() }]
-      );
+      Alert.alert("Success", "Record marked as done.", [
+        { text: "OK", onPress: () => router.back() },
+      ]);
     } catch (error) {
-      console.error("Error updating record:", error);
       Alert.alert("Error", error.message || "Something went wrong");
     }
+    setLoadingDone(false);
   };
 
   const updateService = (id, key, value) => {
@@ -289,24 +203,45 @@ export default function MaintenanceUpdateForm() {
     }
   };
 
+  const formatCurrency = (val) =>
+    val !== undefined && val !== null && val !== ""
+      ? `RM ${Number(val).toFixed(2)}`
+      : "-";
+
   return (
     <Provider>
-      <ScrollView contentContainerStyle={styles.container}>
-        <Text variant="headlineMedium" style={styles.title}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.container,
+          { backgroundColor: theme.colors.background },
+        ]}
+      >
+        <Text style={[styles.title, { color: theme.colors.primary }]}>
           Update Maintenance
         </Text>
-
         {!showConfirm ? (
           <>
-            <Text variant="bodyMedium" style={styles.subtitle}>
-              Estimated — please review and finalize
+            <Text
+              style={[
+                styles.subtitle,
+                { color: theme.colors.onSurfaceVariant },
+              ]}
+            >
+              please review and finalize
             </Text>
-
-            <Text variant="titleMedium" style={styles.sectionTitle}>
+            <Text
+              style={[styles.sectionTitle, { color: theme.colors.primary }]}
+            >
               Services
             </Text>
             {services.map((service, index) => (
-              <Card key={index} style={styles.serviceCard}>
+              <Card
+                key={index}
+                style={[
+                  styles.serviceCard,
+                  { backgroundColor: theme.colors.surface },
+                ]}
+              >
                 <Card.Content>
                   <View style={styles.serviceRow}>
                     <Button
@@ -315,27 +250,46 @@ export default function MaintenanceUpdateForm() {
                       onPress={() => handleDeleteService(service.id)}
                       compact
                       style={{ marginRight: 4 }}
+                      textColor={theme.colors.error}
                     >
                       Remove
                     </Button>
                     <TextInput
                       label="Service Name"
                       mode="outlined"
-                      style={styles.serviceNameInput}
+                      style={{
+                        ...styles.serviceNameInput,
+                        backgroundColor: theme.colors.surface,
+                      }}
                       value={service.name}
                       onChangeText={(text) =>
                         updateService(service.id, "name", text)
                       }
+                      theme={{ colors: { primary: theme.colors.primary } }}
+                      textColor={theme.colors.onSurface}
                     />
                     <TextInput
                       label="Cost (RM)"
                       mode="outlined"
                       keyboardType="numeric"
-                      style={styles.costInput}
-                      value={service.cost.toString()}
+                      style={{
+                        ...styles.costInput,
+                        backgroundColor: theme.colors.surface,
+                      }}
+                      value={service.cost?.toString() || ""}
                       onChangeText={(text) =>
                         updateService(service.id, "cost", text)
                       }
+                      theme={{
+                        colors: {
+                          primary: theme.colors.primary,
+                          background: theme.colors.surface,
+                          text: theme.colors.onSurface,
+                          placeholder: theme.colors.onSurfaceVariant,
+                        },
+                      }}
+                      textColor={theme.colors.onSurface}
+                      placeholderTextColor={theme.colors.onSurfaceVariant}
                     />
                   </View>
                 </Card.Content>
@@ -347,67 +301,99 @@ export default function MaintenanceUpdateForm() {
                 icon="undo"
                 onPress={handleUndoDelete}
                 style={{ marginBottom: 12 }}
+                textColor={theme.colors.primary}
               >
                 Undo Remove
               </Button>
             )}
             <Button
               mode="contained"
-              style={styles.addBtn}
+              style={[styles.addBtn, { backgroundColor: theme.colors.primary }]}
               onPress={addService}
               icon="plus"
+              textColor={theme.colors.onPrimary}
             >
               Add Service
             </Button>
 
-            <Text variant="titleMedium" style={styles.sectionTitle}>
+            <Text
+              style={[styles.sectionTitle, { color: theme.colors.primary }]}
+            >
               Summary
             </Text>
             <TextInput
               label="Labor Cost"
               mode="outlined"
               keyboardType="numeric"
-              style={styles.input}
+              style={[styles.input, { backgroundColor: theme.colors.surface }]}
               value={laborCost}
               onChangeText={setLaborCost}
+              theme={{ colors: { primary: theme.colors.primary } }}
+              textColor={theme.colors.onSurface}
             />
             <TextInput
               label="Service Tax"
               mode="outlined"
               keyboardType="numeric"
-              style={styles.input}
+              style={[styles.input, { backgroundColor: theme.colors.surface }]}
               value={serviceTax}
               onChangeText={setServiceTax}
+              theme={{ colors: { primary: theme.colors.primary } }}
+              textColor={theme.colors.onSurface}
             />
             <TextInput
               label="Additional Notes"
               mode="outlined"
-              style={styles.input}
+              style={[styles.input, { backgroundColor: theme.colors.surface }]}
               value={notes}
               multiline
               onChangeText={setNotes}
+              theme={{ colors: { primary: theme.colors.primary } }}
+              textColor={theme.colors.onSurface}
             />
 
-            <Text variant="titleMedium" style={styles.sectionTitle}>
-              Total Cost: RM {totalCost}
+            <Text
+              style={[styles.sectionTitle, { color: theme.colors.primary }]}
+            >
+              Total Cost:{" "}
+              <Text style={{ color: theme.colors.primary }}>
+                RM {totalCost}
+              </Text>
             </Text>
 
-            <Card style={styles.card}>
-              <Card.Title title="Service History Info" />
+            <Card
+              style={[styles.card, { backgroundColor: theme.colors.surface }]}
+            >
+              <Card.Title
+                title="Service History Info"
+                titleStyle={{ color: theme.colors.primary }}
+              />
               <Card.Content>
                 <TextInput
                   label="Current Mileage (km)"
                   mode="outlined"
                   keyboardType="numeric"
-                  style={styles.input}
+                  style={{
+                    ...styles.input,
+                    backgroundColor: theme.colors.surface,
+                  }}
                   value={currentMileage}
                   onChangeText={setCurrentMileage}
+                  theme={{ colors: { primary: theme.colors.primary } }}
+                  textColor={theme.colors.onSurface}
                 />
                 <Button
-                  icon={() => <CalendarDays size={18} color="#0284c7" />}
+                  icon={() => (
+                    <Ionicons
+                      name="calendar-outline"
+                      size={18}
+                      color={theme.colors.primary}
+                    />
+                  )}
                   mode="outlined"
                   onPress={() => setShowDatePicker(true)}
                   style={styles.input}
+                  textColor={theme.colors.primary}
                 >
                   {`Service Date: ${
                     nextServiceDate.toISOString().split("T")[0]
@@ -430,13 +416,18 @@ export default function MaintenanceUpdateForm() {
             <Button
               mode="contained"
               onPress={handleConfirm}
-              style={{ marginVertical: 16 }}
+              style={{
+                marginVertical: 16,
+                backgroundColor: theme.colors.primary,
+              }}
+              textColor={theme.colors.onPrimary}
             >
               Preview & Confirm
             </Button>
             <Button
               mode="outlined"
-              style={{ marginBottom: 16 }}
+              style={{ marginBottom: 16, borderColor: theme.colors.primary }}
+              textColor={theme.colors.primary}
               onPress={() => router.back()}
             >
               Cancel Edit
@@ -444,41 +435,90 @@ export default function MaintenanceUpdateForm() {
           </>
         ) : (
           <>
-            <Card style={styles.card}>
-              <Card.Title title="✅ Maintenance Summary" />
+            <Card
+              style={[styles.card, { backgroundColor: theme.colors.surface }]}
+            >
+              <Card.Title
+                title="✅ Maintenance Summary"
+                titleStyle={{ color: theme.colors.primary }}
+              />
               <Card.Content>
                 <View style={{ marginBottom: 12 }}>
-                  <Text style={styles.label}>
-                    🗓 Service Date:{" "}
-                    <Text style={styles.value}>
+                  <Text style={[styles.label, { color: theme.colors.primary }]}>
+                    <Ionicons
+                      name="calendar-outline"
+                      size={16}
+                      color={theme.colors.primary}
+                    />{" "}
+                    Service Date:{" "}
+                    <Text
+                      style={[styles.value, { color: theme.colors.onSurface }]}
+                    >
                       {nextServiceDate.toISOString().split("T")[0]}
                     </Text>
                   </Text>
-                  <Text style={styles.label}>
-                    📏 Mileage:{" "}
-                    <Text style={styles.value}>{currentMileage} km</Text>
+                  <Text style={[styles.label, { color: theme.colors.primary }]}>
+                    <Ionicons
+                      name="speedometer-outline"
+                      size={16}
+                      color={theme.colors.primary}
+                    />{" "}
+                    Mileage:{" "}
+                    <Text
+                      style={[styles.value, { color: theme.colors.onSurface }]}
+                    >
+                      {currentMileage} km
+                    </Text>
                   </Text>
-                  <Text style={styles.label}>
-                    🔧 Mechanic:{" "}
-                    <Text style={styles.value}>{mechanic || "—"}</Text>
+                  <Text style={[styles.label, { color: theme.colors.primary }]}>
+                    <Ionicons
+                      name="person-outline"
+                      size={16}
+                      color={theme.colors.primary}
+                    />{" "}
+                    Mechanic:{" "}
+                    <Text
+                      style={[styles.value, { color: theme.colors.onSurface }]}
+                    >
+                      {mechanic || "—"}
+                    </Text>
                   </Text>
-                  <Text style={styles.label}>
-                    📝 Notes:{" "}
-                    <Text style={styles.value}>{notes?.trim() || "—"}</Text>
+                  <Text style={[styles.label, { color: theme.colors.primary }]}>
+                    <Ionicons
+                      name="document-text-outline"
+                      size={16}
+                      color={theme.colors.primary}
+                    />{" "}
+                    Notes:{" "}
+                    <Text
+                      style={[styles.value, { color: theme.colors.onSurface }]}
+                    >
+                      {notes?.trim() || "—"}
+                    </Text>
                   </Text>
                 </View>
                 <Divider style={styles.divider} />
 
-                <Divider style={styles.divider} />
-
-                <Text style={{ fontWeight: "bold", marginBottom: 4 }}>
+                <Text
+                  style={{
+                    fontWeight: "bold",
+                    marginBottom: 4,
+                    color: theme.colors.primary,
+                  }}
+                >
                   Services:
                 </Text>
                 {services.length > 0 ? (
                   services
                     .filter((s) => s.checked)
                     .map((s, i) => (
-                      <Text key={i}>
+                      <Text
+                        key={i}
+                        style={{
+                          marginBottom: 4,
+                          color: theme.colors.onSurface,
+                        }}
+                      >
                         • {s.name} - RM {parseFloat(s.cost).toFixed(2)}
                       </Text>
                     ))
@@ -488,23 +528,28 @@ export default function MaintenanceUpdateForm() {
 
                 <Divider style={styles.divider} />
 
-                <Text style={styles.total}>
+                <Text style={[styles.total, { color: theme.colors.primary }]}>
                   Subtotal: RM{" "}
                   {services
                     .filter((s) => s.checked)
                     .reduce((sum, s) => sum + parseFloat(s.cost || 0), 0)
                     .toFixed(2)}
                 </Text>
-                <Text style={styles.total}>
+                <Text style={[styles.total, { color: theme.colors.primary }]}>
                   Labor Cost: RM {parseFloat(laborCost || 0).toFixed(2)}
                 </Text>
-                <Text style={styles.total}>
+                <Text style={[styles.total, { color: theme.colors.primary }]}>
                   Service Tax: RM {parseFloat(serviceTax || 0).toFixed(2)}
                 </Text>
 
                 <Divider style={styles.divider} />
 
-                <Text style={[styles.total, { fontSize: 17 }]}>
+                <Text
+                  style={[
+                    styles.total,
+                    { fontSize: 17, color: theme.colors.primary },
+                  ]}
+                >
                   💰 Total Cost: RM {totalCost}
                 </Text>
 
@@ -512,30 +557,42 @@ export default function MaintenanceUpdateForm() {
               </Card.Content>
             </Card>
 
-            <Button
-              mode="contained"
-              onPress={handleUpdate}
-              style={{ marginVertical: 16 }}
-            >
-              Save & Mark as Done
-            </Button>
-
             <View style={styles.buttonRow}>
               <Button
                 mode="contained"
-                style={styles.saveBtn}
+                style={[
+                  styles.saveBtn,
+                  { backgroundColor: theme.colors.primary },
+                ]}
+                textColor={theme.colors.onPrimary}
                 onPress={handleSaveUpdates}
+                loading={loadingSave}
+                disabled={loadingSave || loadingDone}
               >
                 Save Updates
               </Button>
               <Button
                 mode="contained"
-                style={styles.doneBtn}
+                style={[
+                  styles.doneBtn,
+                  { backgroundColor: theme.colors.success || "#22c55e" },
+                ]}
+                textColor="#fff"
                 onPress={handleUpdate}
+                loading={loadingDone}
+                disabled={loadingDone || loadingSave}
               >
                 Mark as Done
               </Button>
             </View>
+            <Button
+              mode="outlined"
+              style={{ marginTop: 16, borderColor: theme.colors.primary }}
+              textColor={theme.colors.primary}
+              onPress={() => setShowConfirm(false)}
+            >
+              Back to Edit
+            </Button>
           </>
         )}
       </ScrollView>
@@ -546,20 +603,27 @@ export default function MaintenanceUpdateForm() {
 const styles = StyleSheet.create({
   container: {
     padding: 16,
-    backgroundColor: "#f8f9fa",
+    paddingTop: 50,
+    minHeight: "100%",
   },
   title: {
     marginBottom: 8,
+    fontWeight: "bold",
+    fontSize: 22,
   },
   subtitle: {
     marginBottom: 16,
-    color: "#666",
+    fontSize: 14,
   },
   sectionTitle: {
     marginVertical: 12,
+    fontWeight: "bold",
+    fontSize: 16,
   },
   serviceCard: {
     marginBottom: 12,
+    borderRadius: 10,
+    elevation: 1,
   },
   serviceRow: {
     flexDirection: "row",
@@ -577,27 +641,44 @@ const styles = StyleSheet.create({
   },
   addBtn: {
     marginBottom: 16,
+    borderRadius: 8,
+  },
+  card: {
+    marginBottom: 16,
+    borderRadius: 10,
+    elevation: 1,
   },
   buttonRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginTop: 20,
+    gap: 12,
   },
   saveBtn: {
     flex: 1,
-    marginRight: 8,
+    marginRight: 0,
+    borderRadius: 8,
   },
   doneBtn: {
     flex: 1,
-    marginLeft: 8,
+    marginLeft: 0,
+    borderRadius: 8,
   },
   label: {
     fontWeight: "600",
     color: "#374151",
     marginBottom: 4,
+    fontSize: 14,
   },
   value: {
     fontWeight: "normal",
-    color: "#111827",
+  },
+  total: {
+    fontWeight: "bold",
+    fontSize: 15,
+    marginTop: 4,
+  },
+  divider: {
+    marginVertical: 8,
   },
 });

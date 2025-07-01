@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, FlatList, Pressable } from "react-native";
+import { View, FlatList, Pressable, StyleSheet, Alert } from "react-native";
 import {
   Card,
   Text,
@@ -8,13 +8,16 @@ import {
   ActivityIndicator,
   Dialog,
   Portal,
+  useTheme,
+  Provider,
+  Avatar,
+  Badge,
 } from "react-native-paper";
 import {
   collection,
   query,
   where,
   onSnapshot,
-  deleteDoc,
   doc,
   getDocs,
   writeBatch,
@@ -22,26 +25,23 @@ import {
 import { db, auth } from "../../config/FirebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
 import { useRouter } from "expo-router";
+import { formatDistanceToNow } from "date-fns";
+import { globalStyles, getThemedStyles } from "../../styles/globalStyles";
 
 export default function DirectlyNotifyInboxScreen() {
   const [messages, setMessages] = useState([]);
   const [userId, setUserId] = useState(null);
   const [viewedMessages, setViewedMessages] = useState({});
-  const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
-  const [selectedToDelete, setSelectedToDelete] = useState(null);
   const [loading, setLoading] = useState(true);
+  const theme = useTheme();
   const router = useRouter();
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setUserId(user.uid);
-      } else {
-        setUserId(null);
-        setMessages([]);
-      }
+      setUserId(user?.uid ?? null);
+      if (!user) setMessages([]);
     });
-    return () => unsubscribeAuth();
+    return unsubscribeAuth;
   }, []);
 
   useEffect(() => {
@@ -68,137 +68,148 @@ export default function DirectlyNotifyInboxScreen() {
     });
   };
 
-  const handleDeleteMessage = async () => {
-    try {
-      if (!selectedToDelete) return;
-
-      const messageRef = doc(db, "vehicleMessages", selectedToDelete);
-      const repliesRef = collection(
-        db,
-        "vehicleMessages",
-        selectedToDelete,
-        "replies"
-      );
-
-      // 1. Get all reply docs
-      const repliesSnapshot = await getDocs(repliesRef);
-
-      // 2. Create batch to delete all replies
-      const batch = writeBatch(db);
-      repliesSnapshot.forEach((replyDoc) => {
-        batch.delete(replyDoc.ref);
-      });
-
-      // 3. Delete parent message document
-      batch.delete(messageRef);
-
-      // 4. Commit all deletions
-      await batch.commit();
-
-      setDeleteDialogVisible(false);
-      setSelectedToDelete(null);
-      console.log("Message and replies deleted.");
-    } catch (error) {
-      console.error("Failed to delete message with replies:", error);
-    }
-  };
-
-  const confirmDelete = (id) => {
-    setSelectedToDelete(id);
-    setDeleteDialogVisible(true);
-  };
-
   const renderMessageItem = ({ item }) => {
     const currentUserId = auth.currentUser?.uid;
     const hasRead = !!item.readStatus?.[currentUserId];
     const viewed = viewedMessages[item.id];
 
+    const timestamp =
+      item.timestamp?.toDate?.() || new Date(item.timestamp ?? Date.now());
+    const relativeTime = formatDistanceToNow(timestamp, { addSuffix: true });
+
     return (
-      <Card mode="outlined" style={{ marginHorizontal: 12, marginVertical: 6 }}>
-        <Pressable
-          android_ripple={{ color: "#eee" }}
-          onPress={() => handleViewMessage(item.id)}
+      <Pressable onPress={() => handleViewMessage(item.id)}>
+        <Card
+          mode="outlined"
+          style={[
+            styles.card,
+            {
+              backgroundColor: theme.colors.surface,
+              borderColor: theme.colors.outlineVariant,
+            },
+          ]}
         >
           <Card.Title
-            title={
-              <Text
-                numberOfLines={1}
+            title={item.title || "Untitled Notification"}
+            subtitle={relativeTime}
+            left={(props) => (
+              <Avatar.Text
+                {...props}
+                label={(item.title || "N")[0].toUpperCase()}
                 style={{
-                  color: hasRead ? "#888" : "#000",
-                  fontWeight: hasRead ? "normal" : "bold",
+                  backgroundColor: hasRead
+                    ? theme.colors.secondaryContainer
+                    : theme.colors.primary,
                 }}
-              >
-                {item.title || "Untitled Notification"}
-              </Text>
+                color={
+                  hasRead
+                    ? theme.colors.onSecondaryContainer
+                    : theme.colors.onPrimary
+                }
+              />
+            )}
+            right={() =>
+              !hasRead && (
+                <Badge
+                  size={12}
+                  style={{
+                    backgroundColor: theme.colors.error,
+                    marginRight: 12,
+                  }}
+                />
+              )
             }
-            subtitle={
-              item.timestamp?.toDate
-                ? new Date(item.timestamp.toDate()).toLocaleString()
-                : ""
-            }
+            titleStyle={{
+              fontWeight: hasRead ? "normal" : "bold",
+              color: hasRead ? theme.colors.onSurface : theme.colors.primary,
+            }}
+            subtitleStyle={{ color: theme.colors.onSurfaceVariant }}
           />
-          <Card.Content>
-            <Text numberOfLines={2} style={{ marginBottom: 6 }}>
+          <Card.Content style={{ paddingTop: 0 }}>
+            <Text numberOfLines={2} style={{ color: theme.colors.onSurface }}>
               {item.message || "No content available."}
             </Text>
           </Card.Content>
-        </Pressable>
-
-        {viewed && (
-          <Card.Actions style={{ justifyContent: "flex-end" }}>
-            <Button
-              icon="delete-outline"
-              mode="contained-tonal"
-              onPress={() => confirmDelete(item.id)}
-            >
-              Delete
-            </Button>
-          </Card.Actions>
-        )}
-      </Card>
+        </Card>
+      </Pressable>
     );
   };
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator animating={true} size="large" />
+      <View style={styles.centered}>
+        <ActivityIndicator
+          animating={true}
+          size="large"
+          color={theme.colors.primary}
+        />
       </View>
     );
   }
 
   return (
-    <>
-      <FlatList
-        data={messages}
-        keyExtractor={(item) => item.id}
-        renderItem={renderMessageItem}
-        ItemSeparatorComponent={() => <Divider />}
-        ListEmptyComponent={
-          <View style={{ padding: 30, alignItems: "center" }}>
-            <Text style={{ color: "#999", fontSize: 16 }}>
-              You have no notifications
-            </Text>
-          </View>
-        }
-      />
-      <Portal>
-        <Dialog
-          visible={deleteDialogVisible}
-          onDismiss={() => setDeleteDialogVisible(false)}
+    <Provider>
+      <View
+        style={{
+          ...styles.container,
+          backgroundColor: theme.colors.background,
+        }}
+      >
+        <Text
+          style={{
+            ...styles.title,
+            color: theme.colors.onSurface,
+          }}
         >
-          <Dialog.Title>Delete Message</Dialog.Title>
-          <Dialog.Content>
-            <Text>Are you sure you want to delete this message?</Text>
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button onPress={() => setDeleteDialogVisible(false)}>
-              Cancel
-            </Button>
-            <Button onPress={handleDeleteMessage}>Delete</Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
-    </>
+          Inbox
+        </Text>
+        <FlatList
+          style={{ backgroundColor: theme.colors.background }}
+          data={messages}
+          keyExtractor={(item) => item.id}
+          renderItem={renderMessageItem}
+          ItemSeparatorComponent={() => <Divider />}
+          contentContainerStyle={messages.length === 0 && styles.emptyPadding}
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <Text style={{ color: theme.colors.onSurfaceVariant }}>
+                You have no notifications
+              </Text>
+            </View>
+          }
+        />
+      </View>
+    </Provider>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    paddingTop: 40,
+  },
+  card: {
+    marginHorizontal: 12,
+    marginVertical: 6,
+    borderRadius: 10,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginHorizontal: 12,
+    marginBottom: 10,
+  },
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  empty: {
+    padding: 30,
+    alignItems: "center",
+  },
+  emptyPadding: {
+    flexGrow: 1,
+    justifyContent: "center",
+  },
+});

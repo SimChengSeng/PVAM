@@ -7,6 +7,10 @@ import { auth, db } from "../config/FirebaseConfig";
 import { doc, setDoc } from "firebase/firestore";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { scheduleLocalReminder } from "../utils/notifications/scheduleReminder";
+import {
+  rescheduleWeeklyRemindersOnLogin,
+  rescheduleRemindersOnLogin,
+} from "../utils/notifications/rescheduleRemindersOnLogin";
 import { Snackbar } from "react-native-paper";
 
 Notifications.setNotificationHandler({
@@ -44,14 +48,19 @@ export default function NotificationProvider({ children }) {
     };
   }, []);
 
-  useEffect(() => {
-    saveUserPushToken();
-  }, [expoPushToken]);
+  // useEffect(() => {
+  //   const unsubscribe = auth.onAuthStateChanged((user) => {
+  //     if (user && expoPushToken) {
+  //       saveUserPushToken(user);
+  //       rescheduleRemindersOnLogin(user.email);
+  //       rescheduleWeeklyRemindersOnLogin(user.uid);
+  //     }
+  //   });
+  //   return unsubscribe;
+  // }, [expoPushToken]);
 
-  const saveUserPushToken = async () => {
-    const user = auth.currentUser;
+  const saveUserPushToken = async (user) => {
     if (!user?.uid || !expoPushToken) return;
-
     try {
       await setDoc(
         doc(db, "notificationTokens", user.uid),
@@ -63,9 +72,9 @@ export default function NotificationProvider({ children }) {
         },
         { merge: true }
       );
-      console.log("Push token saved to Firestore");
+      console.log("✅ Push token saved for:", user.email);
     } catch (error) {
-      console.error("Failed to save token:", error);
+      console.error("❌ Failed to save token:", error);
     }
   };
 

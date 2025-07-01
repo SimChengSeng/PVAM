@@ -15,11 +15,12 @@ export default {
     },
     android: {
       adaptiveIcon: {
-        foregroundImage: "./assets/images/adaptive-icon.png",
+        foregroundImage: "./assets/images/icon.png",
         backgroundColor: "#ffffff",
       },
       package: "com.josephsim501.PVAM",
       googleServicesFile: "./google-services.json",
+      permissions: ["android.permission.SCHEDULE_EXACT_ALARM"],
     },
     web: {
       bundler: "metro",
@@ -32,14 +33,18 @@ export default {
         "expo-splash-screen",
         {
           image: "./assets/images/splash-icon.png",
-          imageWidth: 200,
           resizeMode: "contain",
           backgroundColor: "#ffffff",
+          dark: {
+            image: "./assets/images/splash-icon-dark.png",
+            backgroundColor: "#18181b",
+          },
         },
       ],
     ],
     experiments: {
       typedRoutes: true,
+      router: true,
     },
     extra: {
       router: {

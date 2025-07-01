@@ -1,5 +1,12 @@
 import React, { useState } from "react";
-import { View, StyleSheet, KeyboardAvoidingView, Platform } from "react-native";
+import {
+  View,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableOpacity,
+  Image,
+} from "react-native";
 import { useRouter } from "expo-router";
 import {
   createUserWithEmailAndPassword,
@@ -14,11 +21,15 @@ import {
   Text,
   HelperText,
   useTheme,
+  Card,
+  Snackbar,
 } from "react-native-paper";
+import { Ionicons } from "@expo/vector-icons";
+import { globalStyles, getThemedStyles } from "../../styles/globalStyles";
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const theme = useTheme();
+  const { colors } = useTheme();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -26,6 +37,7 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showSuccess, setShowSuccess] = useState(false);
   const customUserId = Date.now().toString();
 
   const handleRegister = () => {
@@ -49,13 +61,17 @@ export default function RegisterScreen() {
             name,
             email,
             phone: "",
+            emergencyContact: "",
             profileImage: "",
             role: "owner",
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
           });
           await sendEmailVerification(user);
-          router.replace("/(auth)/LoginScreen");
+          setShowSuccess(true);
+          setTimeout(() => {
+            router.replace("/(auth)/LoginScreen");
+          }, 2000);
         } catch (err) {
           setError("Something went wrong");
         } finally {
@@ -80,13 +96,35 @@ export default function RegisterScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
     >
-      <View style={styles.card}>
+      <Card style={[globalStyles.card, getThemedStyles.card]}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={{
+            marginBottom: 16,
+            flexDirection: "row",
+            alignItems: "center",
+          }}
+        >
+          <Ionicons name="arrow-back" size={20} color={colors.primary} />
+          <Text
+            style={[styles.backLink, { color: colors.primary, marginLeft: 6 }]}
+          >
+            Back to Login
+          </Text>
+        </TouchableOpacity>
         <View style={styles.iconCircle}>
-          <Text style={styles.carIcon}>🚗</Text>
+          <Image
+            source={require("../../assets/images/splash-icon.png")}
+            style={styles.logo}
+            resizeMode="contain"
+          />
         </View>
-        <Text variant="titleLarge" style={styles.title}>
+        <Text
+          variant="titleLarge"
+          style={[styles.title, { color: colors.primary }]}
+        >
           Create an Account
         </Text>
         <Text variant="bodyMedium" style={styles.subtitle}>
@@ -159,7 +197,16 @@ export default function RegisterScreen() {
         >
           Already have an account? Sign In
         </Button>
-      </View>
+
+        <Snackbar
+          visible={showSuccess}
+          onDismiss={() => setShowSuccess(false)}
+          duration={2000}
+          style={{ backgroundColor: colors.primary, marginTop: 20 }}
+        >
+          Successfully created!
+        </Snackbar>
+      </Card>
     </KeyboardAvoidingView>
   );
 }
@@ -167,12 +214,10 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
     justifyContent: "center",
     padding: 20,
   },
   card: {
-    backgroundColor: "#fff",
     padding: 25,
     borderRadius: 12,
     elevation: 6,
@@ -184,7 +229,10 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     marginBottom: 16,
   },
-  carIcon: { fontSize: 28 },
+  logo: {
+    width: 48,
+    height: 48,
+  },
   title: {
     textAlign: "center",
     fontSize: 22,

@@ -7,15 +7,17 @@ import {
   Pressable,
   Alert,
 } from "react-native";
-import { doc, deleteDoc } from "firebase/firestore";
+import { doc, deleteDoc, getDoc } from "firebase/firestore";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Card, Divider } from "react-native-paper";
+import { Card, Divider, useTheme } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
-import { db } from "../../config/FirebaseConfig"; // Ensure this path is correct
+import { db } from "../../config/FirebaseConfig";
+import { cancelReminder } from "../../utils/notifications/cancelReminder";
 
 export default function MaintenanceDetailScreen() {
   const params = useLocalSearchParams();
   const router = useRouter();
+  const theme = useTheme();
 
   const services = (() => {
     try {
@@ -26,69 +28,184 @@ export default function MaintenanceDetailScreen() {
     }
   })();
 
-  const formatCurrency = (val) => `RM ${Number(val).toFixed(2)}`;
+  const formatCurrency = (val) =>
+    val !== undefined && val !== null && val !== ""
+      ? `RM ${Number(val).toFixed(2)}`
+      : "-";
 
   if (!params.id) {
     Alert.alert("Error", "Maintenance record ID is missing.");
-    return;
+    return null;
   }
 
-  console.log("MaintenanceUpdateForm params:", params);
+  const statusDone = params.statusDone === "true" || params.statusDone === true;
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Maintenance Record</Text>
-      <Text style={styles.subtitle}>Here is the detailed record</Text>
-      <Text style={styles.sectionTitle}>Services Performed</Text>
-      {services.map((s, index) => (
-        <Card key={index} style={styles.serviceCard}>
-          <View style={styles.serviceRow}>
-            <Ionicons name="checkmark" size={18} color="#4caf50" />
-            <Text style={styles.serviceName}>{s.name}</Text>
-            <Text style={styles.serviceCost}>{formatCurrency(s.cost)}</Text>
-          </View>
-        </Card>
-      ))}
+    <ScrollView
+      contentContainerStyle={[
+        styles.container,
+        { backgroundColor: theme.colors.background },
+      ]}
+    >
+      <Text style={[styles.title, { color: theme.colors.primary }]}>
+        Maintenance Record
+      </Text>
+      <Text style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>
+        Here is the detailed record
+      </Text>
 
-      <Divider style={{ marginVertical: 16 }} />
-      <Text style={styles.sectionTitle}>Summary</Text>
+      <Text style={[styles.sectionTitle, { color: theme.colors.primary }]}>
+        Services Performed
+      </Text>
+      {services.length === 0 ? (
+        <Text
+          style={{ color: theme.colors.onSurfaceVariant, marginBottom: 12 }}
+        >
+          No services found.
+        </Text>
+      ) : (
+        services.map((s, index) => (
+          <Card
+            key={index}
+            style={[
+              styles.serviceCard,
+              {
+                backgroundColor:
+                  theme.colors.elevation?.level2 ||
+                  theme.colors.secondaryContainer,
+              },
+            ]}
+          >
+            <View style={styles.serviceRow}>
+              <Ionicons
+                name="checkmark"
+                size={18}
+                color={theme.colors.primary}
+              />
+              <Text
+                style={[styles.serviceName, { color: theme.colors.onSurface }]}
+              >
+                {s.name}
+              </Text>
+              {s.cost !== undefined && s.cost !== null && s.cost !== "" && (
+                <Text
+                  style={[
+                    styles.serviceCost,
+                    { color: theme.colors.onSurface },
+                  ]}
+                >
+                  {formatCurrency(s.cost)}
+                </Text>
+              )}
+            </View>
+          </Card>
+        ))
+      )}
+
+      <Divider
+        style={{
+          marginVertical: 16,
+          backgroundColor: theme.colors.outlineVariant,
+        }}
+      />
+
+      <Text style={[styles.sectionTitle, { color: theme.colors.primary }]}>
+        Summary
+      </Text>
       <View style={styles.summaryRow}>
-        <Text style={styles.label}>Labor Cost:</Text>
-        <Text>{formatCurrency(params.laborCost)}</Text>
+        <Text style={[styles.label, { color: theme.colors.onSurfaceVariant }]}>
+          Labor Cost:
+        </Text>
+        <Text style={{ color: theme.colors.onSurface }}>
+          {formatCurrency(params.laborCost)}
+        </Text>
       </View>
       <View style={styles.summaryRow}>
-        <Text style={styles.label}>Service Tax:</Text>
-        <Text>{formatCurrency(params.serviceTax)}</Text>
+        <Text style={[styles.label, { color: theme.colors.onSurfaceVariant }]}>
+          Service Tax:
+        </Text>
+        <Text style={{ color: theme.colors.onSurface }}>
+          {formatCurrency(params.serviceTax)}
+        </Text>
       </View>
       <View style={styles.summaryRow}>
-        <Text style={styles.label}>Total Cost:</Text>
-        <Text style={{ fontWeight: "bold" }}>
+        <Text style={[styles.label, { color: theme.colors.onSurfaceVariant }]}>
+          Total Cost:
+        </Text>
+        <Text style={{ fontWeight: "bold", color: theme.colors.primary }}>
           {formatCurrency(params.cost)}
         </Text>
       </View>
       <View style={styles.summaryRow}>
-        <Text style={styles.label}>Status:</Text>
+        <Text style={[styles.label, { color: theme.colors.onSurfaceVariant }]}>
+          Status:
+        </Text>
         <Text
           style={{
-            color: params.statusDone === "true" ? "#4caf50" : "#f44336",
+            color: statusDone
+              ? theme.colors.success || "#4caf50"
+              : theme.colors.error || "#f44336",
+            fontWeight: "bold",
           }}
         >
-          {params.statusDone === "true" ? "Completed" : "Pending"}
+          {statusDone ? "Completed" : "Pending"}
         </Text>
       </View>
-      <Divider style={{ marginVertical: 16 }} />
-      <Text style={styles.sectionTitle}>Additional Info</Text>
-      <Text style={styles.label}>Notes: {params.notes || "None"}</Text>
-      <Text style={styles.label}>
-        Mileage: {params.currentServiceMileage} km
-      </Text>
-      <Text style={styles.label}>
-        Maintenance Date: {params.nextServiceDate}
-      </Text>
 
-      {/* Add Edit and Mark as Done Button */}
+      <Divider
+        style={{
+          marginVertical: 16,
+          backgroundColor: theme.colors.outlineVariant,
+        }}
+      />
+
+      <Text style={[styles.sectionTitle, { color: theme.colors.primary }]}>
+        Additional Info
+      </Text>
+      <View style={styles.infoRow}>
+        <Ionicons
+          name="document-text-outline"
+          size={18}
+          color={theme.colors.primary}
+          style={{ marginRight: 8 }}
+        />
+        <Text style={[styles.label, { color: theme.colors.onSurfaceVariant }]}>
+          Notes:
+        </Text>
+        <Text style={{ color: theme.colors.onSurface, flex: 1 }}>
+          {params.notes || "None"}
+        </Text>
+      </View>
+      <View style={styles.infoRow}>
+        <Ionicons
+          name="speedometer-outline"
+          size={18}
+          color={theme.colors.primary}
+          style={{ marginRight: 8 }}
+        />
+        <Text style={[styles.label, { color: theme.colors.onSurfaceVariant }]}>
+          Mileage:
+        </Text>
+        <Text style={{ color: theme.colors.onSurface }}>
+          {params.currentServiceMileage || "-"} km
+        </Text>
+      </View>
+      <View style={styles.infoRow}>
+        <Ionicons
+          name="calendar-outline"
+          size={18}
+          color={theme.colors.primary}
+          style={{ marginRight: 8 }}
+        />
+        <Text style={[styles.label, { color: theme.colors.onSurfaceVariant }]}>
+          Maintenance Date:
+        </Text>
+        <Text style={{ color: theme.colors.onSurface }}>
+          {params.nextServiceDate || "-"}
+        </Text>
+      </View>
       <Pressable
-        style={styles.editButton}
+        style={[styles.editButton, { flexDirection: "row" }]}
         onPress={() =>
           router.push({
             pathname: "/maintenanceManage/maintenanceUpdateForm",
@@ -104,23 +221,14 @@ export default function MaintenanceDetailScreen() {
       </Pressable>
 
       <Pressable
-        style={styles.editButton}
-        onPress={() =>
-          router.push({
-            pathname: "/maintenanceManage/Refactored_MaintenanceUpdateForm",
-            params: {
-              ...params,
-              services: JSON.stringify(services),
-            },
-          })
-        }
-      >
-        <Ionicons name="create-outline" size={20} color="#fff" />
-        <Text style={styles.editButtonText}>Edit or Mark as Done</Text>
-      </Pressable>
-
-      <Pressable
-        style={styles.deleteButton}
+        style={[
+          styles.deleteButton,
+          {
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+          },
+        ]}
         onPress={() =>
           Alert.alert(
             "Confirm Delete",
@@ -132,18 +240,25 @@ export default function MaintenanceDetailScreen() {
                 style: "destructive",
                 onPress: async () => {
                   try {
-                    console.log("Deleting record with ID:", params.id); // Debugging log
+                    // 1. Cancel all reminders for this maintenance record
                     const recordRef = doc(db, "maintenanceRecords", params.id);
-                    console.log("Document Reference:", recordRef); // Debugging log
-
+                    const recordSnap = await getDoc(recordRef);
+                    const recordData = recordSnap.data();
+                    if (Array.isArray(recordData?.reminders)) {
+                      for (const reminder of recordData.reminders) {
+                        if (reminder.reminderId) {
+                          await cancelReminder(reminder.reminderId);
+                        }
+                      }
+                    }
+                    // 2. Delete the maintenance record
                     await deleteDoc(recordRef);
                     if (router.canGoBack()) {
                       router.back();
                     } else {
-                      router.push("/maintenanceManage"); // Fallback to maintenance list
+                      router.push("/maintenanceManage");
                     }
                   } catch (error) {
-                    console.error("Error deleting maintenance record:", error);
                     Alert.alert(
                       "Error",
                       "Failed to delete the maintenance record."
@@ -156,7 +271,7 @@ export default function MaintenanceDetailScreen() {
         }
       >
         <Ionicons name="trash-outline" size={20} color="#fff" />
-        {/* <Text style={styles.deleteButtonText}>Delete</Text> */}
+        <Text style={styles.deleteButtonText}>Delete</Text>
       </Pressable>
     </ScrollView>
   );
@@ -165,7 +280,8 @@ export default function MaintenanceDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     padding: 16,
-    backgroundColor: "#f8f9fa",
+    paddingTop: 40,
+    minHeight: "100%",
   },
   title: {
     fontSize: 22,
@@ -174,16 +290,15 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
-    color: "#666",
-    marginBottom: 20,
+    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 12,
+    fontWeight: "bold",
+    marginBottom: 10,
+    marginTop: 16,
   },
   serviceCard: {
-    backgroundColor: "#fff",
     borderRadius: 10,
     padding: 12,
     marginBottom: 10,
@@ -197,23 +312,29 @@ const styles = StyleSheet.create({
   serviceName: {
     flex: 1,
     marginLeft: 8,
-    color: "#333",
+    fontSize: 15,
   },
   serviceCost: {
-    color: "#333",
     fontWeight: "600",
+    fontSize: 15,
   },
   summaryRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 8,
+    alignItems: "center",
   },
   label: {
     fontSize: 14,
-    color: "#555",
+    minWidth: 80,
+  },
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+    gap: 4,
   },
   editButton: {
-    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#007bff",
@@ -232,9 +353,11 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginTop: 12,
     alignItems: "center",
+    justifyContent: "center",
   },
   deleteButtonText: {
     color: "#fff",
     fontWeight: "bold",
+    marginLeft: 8,
   },
 });

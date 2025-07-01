@@ -2,6 +2,16 @@
   "functions": {
     "runtime": "nodejs18",
     "source": "functions",
+    "codebase": "default",
+    "buildConfig": {
+      "runtime": "nodejs18",
+      "function": {
+        "notifyByPlate": {
+          "entryPoint": "notifyByPlate",
+          "platform": "gcfv1" 
+        }
+      }
+    },
     "ignore": ["node_modules", ".git", "firebase-debug.log", "firebase-debug.*.log"]
   }
 }

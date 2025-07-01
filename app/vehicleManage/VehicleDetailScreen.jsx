@@ -12,9 +12,8 @@ import {
   Text,
   Card,
   Divider,
-  Portal,
-  Dialog,
-  Button,
+  useTheme,
+  ActivityIndicator,
 } from "react-native-paper";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import {
@@ -31,12 +30,15 @@ import { useFocusEffect } from "@react-navigation/native";
 import { db } from "../../config/FirebaseConfig";
 import { calculateVehicleConditionExtended } from "../../utils/calculateVehicleCondition";
 import { Ionicons } from "@expo/vector-icons";
-import { globalStyles } from "../../styles/globalStyles";
+import { globalStyles, getThemedStyles } from "../../styles/globalStyles";
+import VehicleCategoryIcon from "./components/VehicleCategoryIcon";
+import { cancelReminder } from "../../utils/notifications/cancelReminder";
 
 export default function VehicleDetailScreen() {
+  const theme = useTheme();
+  const themed = getThemedStyles(theme);
   const router = useRouter();
   const params = useLocalSearchParams();
-  console.log("Vehicle Detail Params:", params);
 
   const [plate, setPlate] = useState(params.plate);
   const [brand, setBrand] = useState(params.brand);
@@ -50,7 +52,7 @@ export default function VehicleDetailScreen() {
   const [healthScore, setHealthScore] = useState(undefined);
   const [partScores, setPartScores] = useState([]);
   const [maintenanceRecords, setMaintenanceRecords] = useState([]);
-  const [showHealthDetails, setShowHealthDetails] = useState(false);
+  const [updating, setUpdating] = useState(false);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -87,42 +89,51 @@ export default function VehicleDetailScreen() {
   };
 
   const getColor = (score) => {
-    if (score >= 85) return "#28a745"; // Green
-    if (score >= 60) return "#ffc107"; // Yellow
-    return "#dc3545"; // Red
+    if (score >= 85) return "#28a745";
+    if (score >= 60) return "#ffc107";
+    return "#dc3545";
   };
 
   useEffect(() => {
     fetchMaintenanceRecords();
   }, []);
 
-  useEffect(() => {
-    const loadHealthScore = async () => {
-      try {
-        const vehicleData = await fetchVehicleWithParts(params.id);
-        console.log("📦 vehicleData:", vehicleData);
+  useFocusEffect(
+    React.useCallback(() => {
+      const loadHealthScore = async () => {
+        try {
+          const vehicleData = await fetchVehicleWithParts(params.id);
 
-        // Set updated mileage if needed
-        setMileage(vehicleData.Mileage.toString());
+          // ✅ Always set updated mileage when refocused
+          setMileage(vehicleData.Mileage.toString());
 
-        const { totalScore, partScores } =
-          calculateVehicleConditionExtended(vehicleData);
+          const { totalScore, partScores } =
+            calculateVehicleConditionExtended(vehicleData);
 
-        console.log("🧠 Health Score:", totalScore);
-        console.log("📊 Part Scores:", partScores);
+          setHealthScore(totalScore);
+          setPartScores(partScores);
+        } catch (error) {
+          console.error("Failed to calculate health score:", error);
+        }
+      };
 
-        setHealthScore(totalScore);
-        setPartScores(partScores);
-      } catch (error) {
-        console.error("Failed to calculate health score:", error);
-      }
-    };
-
-    loadHealthScore();
-  }, [params.id]);
+      loadHealthScore();
+    }, [params.id])
+  );
 
   const handleUpdate = async () => {
+    setUpdating(true);
     try {
+      // Prevent updating to a lower mileage
+      if (parseInt(Mileage) < parseInt(params.Mileage)) {
+        Alert.alert(
+          "Invalid Mileage",
+          "Mileage cannot be lower than the current mileage."
+        );
+        setUpdating(false);
+        return;
+      }
+
       const ref = doc(db, "vehicles", params.id);
       await updateDoc(ref, {
         plate,
@@ -143,6 +154,8 @@ export default function VehicleDetailScreen() {
         "Error",
         "Mileage updated and health score recalculated. Please try again."
       );
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -176,46 +189,103 @@ export default function VehicleDetailScreen() {
         })
       }
     >
-      <Card style={styles.recordCard}>
+      <Card style={[globalStyles.card, getThemedStyles.card]}>
         <Card.Title
           title="Maintenance Summary"
           subtitle={`Next Service: ${item.nextServiceDate}`}
           left={(props) => (
-            <Ionicons name="construct" size={28} color="#f57c00" {...props} />
+            <Ionicons
+              name="construct"
+              size={28}
+              color={theme.colors.primary}
+              {...props}
+            />
           )}
         />
         <Card.Content>
-          <Text style={styles.sectionLabel}>Services Included:</Text>
+          <Text
+            style={[styles.sectionLabel, { color: theme.colors.onSurface }]}
+          >
+            Services Included:
+          </Text>
           {item.services?.map((service, idx) => (
             <View key={idx} style={styles.serviceItem}>
-              <Ionicons name="checkmark" size={16} color="#4caf50" />
-              <Text style={styles.serviceText}>
+              <Ionicons
+                name="checkmark"
+                size={16}
+                color={theme.colors.success || "#4caf50"}
+              />
+              <Text
+                style={[styles.serviceText, { color: theme.colors.onSurface }]}
+              >
                 {service.name} — {formatCurrency(service.cost)}
               </Text>
             </View>
           ))}
-          <Divider style={{ marginVertical: 10 }} />
+          <Divider
+            style={{
+              marginVertical: 10,
+              backgroundColor: theme.colors.outlineVariant,
+            }}
+          />
           <View style={styles.detailRow}>
-            <Text style={styles.label}>Mileage:</Text>
-            <Text>{item.nextServiceMileage} km</Text>
+            <Text
+              style={[styles.label, { color: theme.colors.onSurfaceVariant }]}
+            >
+              Mileage:
+            </Text>
+            <Text style={[styles.value, { color: theme.colors.onSurface }]}>
+              {item.nextServiceMileage} km
+            </Text>
           </View>
           <View style={styles.detailRow}>
-            <Text style={styles.label}>Labor:</Text>
-            <Text>{formatCurrency(item.laborCost)}</Text>
+            <Text
+              style={[styles.label, { color: theme.colors.onSurfaceVariant }]}
+            >
+              Labor:
+            </Text>
+            <Text style={[styles.value, { color: theme.colors.onSurface }]}>
+              {formatCurrency(item.laborCost)}
+            </Text>
           </View>
           <View style={styles.detailRow}>
-            <Text style={styles.label}>Tax:</Text>
-            <Text>{formatCurrency(item.serviceTax)}</Text>
+            <Text
+              style={[styles.label, { color: theme.colors.onSurfaceVariant }]}
+            >
+              Tax:
+            </Text>
+            <Text style={[styles.value, { color: theme.colors.onSurface }]}>
+              {formatCurrency(item.serviceTax)}
+            </Text>
           </View>
           <View style={styles.detailRow}>
-            <Text style={styles.label}>Total Cost:</Text>
-            <Text style={{ fontWeight: "bold" }}>
+            <Text
+              style={[styles.label, { color: theme.colors.onSurfaceVariant }]}
+            >
+              Total Cost:
+            </Text>
+            <Text
+              style={[
+                styles.value,
+                { color: theme.colors.onSurface, fontWeight: "bold" },
+              ]}
+            >
               {formatCurrency(item.cost)}
             </Text>
           </View>
           <View style={styles.detailRow}>
-            <Text style={styles.label}>Status:</Text>
-            <Text style={{ color: item.statusDone ? "#4caf50" : "#f44336" }}>
+            <Text
+              style={[styles.label, { color: theme.colors.onSurfaceVariant }]}
+            >
+              Status:
+            </Text>
+            <Text
+              style={{
+                color: item.statusDone
+                  ? theme.colors.success || "#4caf50"
+                  : theme.colors.error || "#f44336",
+              }}
+            >
               {item.statusDone ? "Completed" : "Pending"}
             </Text>
           </View>
@@ -235,14 +305,48 @@ export default function VehicleDetailScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              await deleteDoc(doc(db, "vehicles", params.id));
+              // 1. Delete all maintenanceRecords for this vehicle and cancel their reminders
+              const q = query(
+                collection(db, "maintenanceRecords"),
+                where("vehicleId", "==", params.id)
+              );
+              const snapshot = await getDocs(q);
+              for (const docSnap of snapshot.docs) {
+                const data = docSnap.data();
+                if (Array.isArray(data.reminders)) {
+                  for (const reminder of data.reminders) {
+                    if (reminder.reminderId) {
+                      await cancelReminder(reminder.reminderId);
+                    }
+                  }
+                }
+                await deleteDoc(doc(db, "maintenanceRecords", docSnap.id));
+              }
+
+              // 2. Cancel weekly reminder if exists
+              const vehicleRef = doc(db, "vehicles", params.id);
+              const vehicleSnap = await getDoc(vehicleRef);
+              const vehicleData = vehicleSnap.data();
+              if (
+                vehicleData?.weeklyReminderMeta &&
+                vehicleData.weeklyReminderMeta.reminderId
+              ) {
+                await cancelReminder(vehicleData.weeklyReminderMeta.reminderId);
+              }
+
+              // 3. Delete the vehicle itself
+              await deleteDoc(vehicleRef);
+
               if (router.canGoBack()) {
                 router.back();
               } else {
-                router.push("/"); // Fallback to vehicle list
+                router.push("/(tabs)/1_index");
               }
             } catch (error) {
-              console.error("Error deleting vehicle:", error);
+              console.error(
+                "Error deleting vehicle and related records:",
+                error
+              );
             }
           },
         },
@@ -251,73 +355,171 @@ export default function VehicleDetailScreen() {
   };
 
   const vehicleColour = [
-    { label: "black", colorCode: "#000000" },
-    { label: "white", colorCode: "#FFFFFF" },
-    { label: "silver", colorCode: "#C0C0C0" },
-    { label: "red", colorCode: "#FF0000" },
-    { label: "blue", colorCode: "#0000FF" },
-    { label: "gray", colorCode: "#808080" },
-    { label: "green", colorCode: "#008000" },
-    { label: "yellow", colorCode: "#FFFF00" },
-    { label: "orange", colorCode: "#FFA500" },
-    { label: "brown", colorCode: "#8B4513" },
-    { label: "purple", colorCode: "#800080" },
-    { label: "gold", colorCode: "#FFD700" },
+    { label: "Black", colorCode: "#000000" },
+    { label: "White", colorCode: "#FFFFFF" },
+    { label: "Silver", colorCode: "#C0C0C0" },
+    { label: "Red", colorCode: "#FF0000" },
+    { label: "Blue", colorCode: "#0000FF" },
+    { label: "Gray", colorCode: "#808080" },
+    { label: "Green", colorCode: "#008000" },
+    { label: "Yellow", colorCode: "#FFFF00" },
+    { label: "Orange", colorCode: "#FFA500" },
+    { label: "Brown", colorCode: "#8B4513" },
+    { label: "Purple", colorCode: "#800080" },
+    { label: "Gold", colorCode: "#FFD700" },
   ];
 
-  useEffect(() => {
-    const onBackPress = () => {
-      // Always go to main screen
-      router.replace("/");
-      return true; // Prevent default behavior
-    };
+  useFocusEffect(
+    React.useCallback(() => {
+      const onBackPress = () => {
+        if (router.canGoBack()) {
+          router.back();
+        } else {
+          router.push("/(tabs)/1_index");
+        }
+        return true;
+      };
+      BackHandler.addEventListener("hardwareBackPress", onBackPress);
 
-    BackHandler.addEventListener("hardwareBackPress", onBackPress);
+      return () => {
+        BackHandler.removeEventListener("hardwareBackPress", onBackPress);
+      };
+    }, [router])
+  );
 
-    return () => {
-      BackHandler.removeEventListener("hardwareBackPress", onBackPress);
-    };
-  }, [router]);
+  const colorObj = vehicleColour.find(
+    (c) => c.label.toLowerCase() === color?.toLowerCase()
+  );
+  const svgColor = colorObj ? colorObj.colorCode : "#000";
+
+  const getSortedUpcoming = (records) => {
+    const pending = records.filter((rec) => !rec.statusDone);
+    return pending.sort((a, b) => {
+      const dateA = new Date(a.nextServiceDate);
+      const dateB = new Date(b.nextServiceDate);
+      if (dateA - dateB !== 0) return dateA - dateB;
+      return (a.nextServiceMileage || 0) - (b.nextServiceMileage || 0);
+    });
+  };
+
+  const previewMaintenanceRecords = getSortedUpcoming(maintenanceRecords).slice(
+    0,
+    3
+  );
 
   return (
-    <View style={{ flex: 1 }}>
+    <View
+      style={{
+        flex: 1,
+        height: "100%",
+        backgroundColor: theme.colors.background,
+      }}
+    >
       <FlatList
-        data={maintenanceRecords}
+        data={previewMaintenanceRecords}
         keyExtractor={(item) => item.id}
         renderItem={renderMaintenanceRecord}
         ListHeaderComponent={
           <>
-            {/* Vehicle Overview */}
-            <View style={styles.vehicleCard}>
-              {/* Header */}
-              <Text style={styles.vehicleTitle}>{plate}</Text>
-              <Text style={styles.vehicleSubtitle}>
-                {brand} {model} • {year}
-              </Text>
-
-              {/* Overview */}
-              <Text style={styles.sectionTitle}>Vehicle Overview</Text>
-              <Text style={styles.sectionSubtitle}>
-                View and manage your vehicle details and maintenance
-              </Text>
-
-              {/* Detail Grid */}
-              <View style={styles.vehicleDetails}>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Vehicle Category</Text>
-                  <Text style={styles.detailValue}>{vehicleCategory}</Text>
+            <View
+              style={[
+                globalStyles.card,
+                { backgroundColor: theme.colors.secondaryContainer },
+              ]}
+            >
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <View>
+                  <Text
+                    style={[
+                      styles.vehicleTitle,
+                      { color: theme.colors.onSurface },
+                    ]}
+                  >
+                    {plate}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.vehicleSubtitle,
+                      { color: theme.colors.onSurfaceVariant },
+                    ]}
+                  >
+                    {brand} {model} • {year}
+                  </Text>
                 </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Color</Text>
-                  <Text style={styles.detailValue}>{color}</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Mileage</Text>
-                  <Text style={styles.detailValue}>{Mileage} km</Text>
+                <View style={{ marginRight: 100 }}>
+                  <VehicleCategoryIcon
+                    category={vehicleCategory}
+                    color={color}
+                  />
                 </View>
               </View>
-
-              {/* Health Score Card */}
+              <Text
+                style={[styles.sectionTitle, { color: theme.colors.primary }]}
+              >
+                Vehicle Overview
+              </Text>
+              <View style={styles.vehicleDetails}>
+                <View style={styles.detailRow}>
+                  <Text
+                    style={[
+                      styles.detailLabel,
+                      { color: theme.colors.onSurfaceVariant },
+                    ]}
+                  >
+                    Vehicle Category
+                  </Text>
+                  <Text
+                    style={[
+                      styles.detailValue,
+                      { color: theme.colors.onSurface },
+                    ]}
+                  >
+                    {vehicleCategory}
+                  </Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text
+                    style={[
+                      styles.detailLabel,
+                      { color: theme.colors.onSurfaceVariant },
+                    ]}
+                  >
+                    Color
+                  </Text>
+                  <Text
+                    style={[
+                      styles.detailValue,
+                      { color: theme.colors.onSurface },
+                    ]}
+                  >
+                    {color}
+                  </Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text
+                    style={[
+                      styles.detailLabel,
+                      { color: theme.colors.onSurfaceVariant },
+                    ]}
+                  >
+                    Mileage
+                  </Text>
+                  <Text
+                    style={[
+                      styles.detailValue,
+                      { color: theme.colors.onSurface },
+                    ]}
+                  >
+                    {Mileage} km
+                  </Text>
+                </View>
+              </View>
               <Pressable
                 onPress={() =>
                   router.push({
@@ -334,13 +536,35 @@ export default function VehicleDetailScreen() {
                   })
                 }
               >
-                <Card style={styles.healthScoreCard}>
+                <Card
+                  style={[
+                    globalStyles.card,
+                    { backgroundColor: theme.colors.surface },
+                  ]}
+                >
                   <Card.Content>
-                    <Text style={styles.healthScoreLabel}>Health Score</Text>
-                    <Text style={styles.healthScoreSubtitle}>
+                    <Text
+                      style={[
+                        styles.healthScoreLabel,
+                        { color: theme.colors.primary },
+                      ]}
+                    >
+                      Health Score
+                    </Text>
+                    <Text
+                      style={[
+                        styles.healthScoreSubtitle,
+                        { color: theme.colors.onSurfaceVariant },
+                      ]}
+                    >
                       Tap to view part details
                     </Text>
-                    <View style={styles.healthScoreBar}>
+                    <View
+                      style={[
+                        styles.healthScoreBar,
+                        { backgroundColor: theme.colors.secondaryContainer },
+                      ]}
+                    >
                       <View
                         style={[
                           styles.healthScoreFill,
@@ -351,7 +575,12 @@ export default function VehicleDetailScreen() {
                         ]}
                       />
                     </View>
-                    <Text style={styles.healthScoreValue}>
+                    <Text
+                      style={[
+                        styles.healthScoreValue,
+                        { color: theme.colors.onSurface },
+                      ]}
+                    >
                       {healthScore !== undefined
                         ? `${healthScore}%`
                         : "Calculating..."}
@@ -360,113 +589,178 @@ export default function VehicleDetailScreen() {
                 </Card>
               </Pressable>
             </View>
-
-            {/* Mileage Update */}
-            <View style={styles.mileageCard}>
-              <Text style={styles.sectionTitle}>Update Mileage</Text>
+            <Text
+              style={[styles.sectionTitle, { color: theme.colors.primary }]}
+            >
+              Update Mileage
+            </Text>
+            <View
+              style={[
+                globalStyles.card,
+                { backgroundColor: theme.colors.secondaryContainer },
+              ]}
+            >
               <TextInput
-                style={styles.input}
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor:
+                      theme.colors.elevation?.level1 || theme.colors.background,
+                    color: theme.colors.onSurface,
+                    borderColor: theme.colors.outline,
+                  },
+                ]}
                 value={Mileage}
                 onChangeText={setMileage}
                 keyboardType="numeric"
                 placeholder="Enter new mileage"
+                placeholderTextColor={theme.colors.outline}
+                editable={!updating}
               />
-              <Pressable style={styles.updateButton} onPress={handleUpdate}>
-                <Text style={styles.updateButtonText}>Update Mileage</Text>
+              <Pressable
+                style={[
+                  styles.updateButton,
+                  {
+                    backgroundColor: theme.colors.primary,
+                    flexDirection: "row",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  },
+                ]}
+                onPress={handleUpdate}
+                disabled={updating}
+              >
+                {updating && (
+                  <ActivityIndicator
+                    size={20}
+                    color="#fff"
+                    style={{ marginRight: 8 }}
+                  />
+                )}
+                <Text style={styles.updateButtonText}>
+                  {updating ? "Updating..." : "Update Mileage"}
+                </Text>
               </Pressable>
             </View>
 
-            {/* Maintenance Records Section Title */}
-            <Text style={styles.sectionTitle}>Upcoming Maintenance</Text>
+            <Text
+              style={[styles.sectionTitle, { color: theme.colors.primary }]}
+            >
+              Upcoming Maintenance
+            </Text>
+            {previewMaintenanceRecords.length === 0 && (
+              <View style={{ padding: 16, alignItems: "center" }}>
+                <Ionicons
+                  name="checkmark-done-circle-outline"
+                  size={40}
+                  color={theme.colors.primary}
+                />
+                <Text
+                  style={{
+                    color: theme.colors.onSurfaceVariant,
+                    marginTop: 8,
+                    fontSize: 16,
+                    textAlign: "center",
+                  }}
+                >
+                  No upcoming maintenance scheduled for this vehicle.
+                </Text>
+              </View>
+            )}
           </>
         }
         ListFooterComponent={
           <View>
-            <Pressable
-              style={styles.addButton}
-              onPress={() =>
-                router.push({
-                  pathname: "/maintenanceManage/UnifiedMaintenanceForm",
-                  params: {
-                    vehicleId: params.id,
-                    plateNumber: params.plate,
-                    brand: params.brand,
-                    model: params.model,
-                    category: params.vehicleCategory,
-                    userEmail: params.userEmail,
+            <View style={{ flexDirection: "row", gap: 8, marginVertical: 6 }}>
+              <Pressable
+                style={[
+                  styles.addButton,
+                  {
+                    backgroundColor: theme.colors.primary,
+                    flex: 1,
+                    marginVertical: 0,
                   },
-                })
-              }
-            >
-              <Text style={styles.addButtonText}>
-                Add New Maintenance Record
-              </Text>
-            </Pressable>
-            <Pressable
-              style={{ ...styles.addButton, backgroundColor: "#ffcc00" }}
-              onPress={() =>
-                router.push({
-                  pathname: "/maintenanceManage/ScheduleReminderForm",
-                  params: {
-                    vehicleId: params.id,
-                    plateNumber: params.plate,
-                    brand: params.brand,
-                    model: params.model,
-                    category: params.vehicleCategory,
-                    userEmail: params.userEmail,
-                  },
-                })
-              }
-            >
-              <Text style={styles.addButtonText}>Schedule New Maintenance</Text>
-            </Pressable>
+                ]}
+                onPress={() =>
+                  router.push({
+                    pathname: "/maintenanceManage/MaintenanceListScreen",
+                    params: {
+                      vehicleId: params.id,
+                      plateNumber: plate,
+                      brand,
+                      model,
+                      category: vehicleCategory,
+                    },
+                  })
+                }
+              >
+                <Text style={[styles.addButtonText, { color: "#fff" }]}>
+                  View All Maintenance
+                </Text>
+              </Pressable>
 
-            <View style={styles.tipsCard}>
-              <Text style={styles.sectionTitle}>Maintenance Tips</Text>
-              <Text style={styles.tip}>• Check your oil level regularly.</Text>
-              <Text style={styles.tip}>
+              <Pressable
+                style={[styles.addButton, { flex: 1, marginVertical: 0 }]}
+                onPress={() =>
+                  router.push({
+                    pathname: "/maintenanceManage/UnifiedMaintenanceForm",
+                    params: {
+                      vehicleId: params.id,
+                      plateNumber: params.plate,
+                      brand: params.brand,
+                      model: params.model,
+                      category: params.vehicleCategory,
+                      userEmail: params.userEmail,
+                    },
+                  })
+                }
+              >
+                <Text style={styles.addButtonText}>Add Maintenance Record</Text>
+              </Pressable>
+            </View>
+            <Text
+              style={[styles.sectionTitle, { color: theme.colors.primary }]}
+            >
+              Maintenance Tips
+            </Text>
+            <View
+              style={[
+                globalStyles.card,
+                { backgroundColor: theme.colors.secondaryContainer },
+              ]}
+            >
+              <Text style={[styles.tip, { color: theme.colors.onSurface }]}>
+                • Check your oil level regularly.
+              </Text>
+              <Text style={[styles.tip, { color: theme.colors.onSurface }]}>
                 • Rotate your tires every 10,000 km.
               </Text>
-              <Text style={styles.tip}>
+              <Text style={[styles.tip, { color: theme.colors.onSurface }]}>
                 • Replace air filters every 15,000 km.
               </Text>
-              <Text style={styles.tip}>• Inspect brakes every 20,000 km.</Text>
+              <Text style={[styles.tip, { color: theme.colors.onSurface }]}>
+                • Inspect brakes every 20,000 km.
+              </Text>
             </View>
             <Pressable style={styles.deleteButton} onPress={handleDelete}>
               <Text style={styles.deleteButtonText}>Delete Vehicle</Text>
             </Pressable>
           </View>
         }
-        contentContainerStyle={styles.container}
+        contentContainerStyle={[
+          styles.container,
+          { backgroundColor: theme.colors.background },
+        ]}
       />
-
-      {/* Floating Add Maintenance Button */}
-      <View style={styles.fabContainer}>
-        <Pressable
-          style={styles.fabButton}
-          onPress={() => router.push("/vehicleManage/add-new-vehicle")}
-        >
-          <Ionicons name="add" size={28} color="#fff" />
-        </Pressable>
-      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    padding: 16,
-    backgroundColor: "#f8f9fa",
-  },
-  vehicleCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    paddingHorizontal: 16,
+    paddingTop: 50,
+    paddingBottom: 32,
   },
   vehicleTitle: {
     fontSize: 24,
@@ -483,7 +777,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     marginBottom: 8,
-    color: "#333",
+    marginTop: 16,
   },
   sectionSubtitle: {
     fontSize: 14,
@@ -496,7 +790,7 @@ const styles = StyleSheet.create({
   detailRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 4,
+    marginTop: 2,
   },
   detailLabel: {
     fontSize: 14,
@@ -507,15 +801,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#333",
     marginBottom: 12,
-  },
-  healthScoreCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 16,
-    width: "100%", // ⬅️ ensure it's full width
-    alignSelf: "center", // optional
-    elevation: 3,
   },
   healthScoreLabel: {
     fontSize: 16,
@@ -546,16 +831,7 @@ const styles = StyleSheet.create({
     color: "#333",
     textAlign: "right",
   },
-  mileageCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
+
   input: {
     backgroundColor: "#f1f3f5",
     borderRadius: 8,
@@ -573,16 +849,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   updateButtonText: {
-    color: "#fff",
     fontWeight: "bold",
+    color: "#fff",
   },
-  recordCard: {
-    marginVertical: 12,
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    elevation: 3,
-    padding: 8,
-  },
+
   sectionLabel: {
     fontSize: 14,
     fontWeight: "600",
@@ -599,15 +869,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#555",
   },
-  tipsCard: {
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    padding: 16,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
+
   tip: {
     fontSize: 14,
     color: "#333",
@@ -650,11 +912,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#28a745",
     paddingVertical: 12,
     borderRadius: 8,
-    marginBottom: 12,
+    marginVertical: 3,
     alignItems: "center",
   },
   addButtonText: {
-    color: "#fff",
     fontWeight: "bold",
+    color: "#fff",
   },
 });

@@ -5,6 +5,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
+  Alert,
 } from "react-native";
 import {
   TextInput,
@@ -13,20 +14,25 @@ import {
   Card,
   Appbar,
   useTheme,
+  Provider,
+  Dialog,
+  Portal,
 } from "react-native-paper";
 import {
   collection,
   addDoc,
   getDoc,
-  getDocs,
   doc,
   query,
   orderBy,
   Timestamp,
   onSnapshot,
   setDoc,
+  getDocs,
+  writeBatch,
+  deleteDoc,
 } from "firebase/firestore";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { db, auth } from "../../config/FirebaseConfig";
 import { sendPushToUser } from "../../utils/notifications/sendPushToUser";
 
@@ -36,8 +42,11 @@ export default function DirectlyNotifyChatScreen() {
   const [message, setMessage] = useState("");
   const [parentData, setParentData] = useState(null);
   const [sending, setSending] = useState(false);
+  const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
+  const [loadingDelete, setLoadingDelete] = useState(false);
   const flatListRef = useRef();
   const theme = useTheme();
+  const router = useRouter();
 
   useEffect(() => {
     const loadChat = async () => {
@@ -93,7 +102,7 @@ export default function DirectlyNotifyChatScreen() {
   const handleSend = async () => {
     if (!messageId || !message.trim()) return;
 
-    setSending(true); // disable button
+    setSending(true);
 
     try {
       const reply = {
@@ -107,18 +116,10 @@ export default function DirectlyNotifyChatScreen() {
         reply
       );
       setMessage("");
-      console.log("Test reply sent:", reply);
-      // Only send push if recipient is not the current user and not actively viewing this chat
-
-      // Determine recipient (the other participant)
       const recipientId =
         parentData?.senderId === auth.currentUser.uid
           ? parentData?.receiverId
           : parentData?.senderId;
-
-      // Optionally: get activeChatId from context if you want to avoid sending if recipient is viewing this chat
-      // const { activeChatId } = useAppContext();
-      // if (recipientId && activeChatId !== messageId) { ... }
 
       if (recipientId) {
         const token = await getUserPushToken(recipientId);
@@ -138,13 +139,39 @@ export default function DirectlyNotifyChatScreen() {
     } catch (error) {
       console.error("Send failed", error);
     } finally {
-      setSending(false); // re-enable button
+      setSending(false);
     }
   };
 
   const getUserPushToken = async (userId) => {
     const tokenDoc = await getDoc(doc(db, "notificationTokens", userId));
     return tokenDoc.exists() ? tokenDoc.data()?.token : null;
+  };
+
+  // Delete message and all replies
+  const handleDeleteMessage = async () => {
+    setLoadingDelete(true);
+    try {
+      const messageRef = doc(db, "vehicleMessages", messageId);
+      const repliesRef = collection(
+        db,
+        "vehicleMessages",
+        messageId,
+        "replies"
+      );
+      const repliesSnapshot = await getDocs(repliesRef);
+      const batch = writeBatch(db);
+      repliesSnapshot.forEach((replyDoc) => {
+        batch.delete(replyDoc.ref);
+      });
+      batch.delete(messageRef);
+      await batch.commit();
+      setDeleteDialogVisible(false);
+      router.back();
+    } catch (error) {
+      Alert.alert("Delete Failed", error.message || "Unable to delete.");
+    }
+    setLoadingDelete(false);
   };
 
   const renderMessage = ({ item }) => {
@@ -162,14 +189,27 @@ export default function DirectlyNotifyChatScreen() {
             {
               backgroundColor: isSender
                 ? theme.colors.primaryContainer
-                : "#f0f0f0",
+                : theme.colors.surface,
+              borderWidth: 1,
+              borderColor: isSender
+                ? theme.colors.primary
+                : theme.colors.outlineVariant || "#e0e0e0",
             },
           ]}
         >
           <Card.Content>
-            <Text>{item.message}</Text>
-            <Text style={styles.timestamp}>
-              {new Date(item.timestamp.seconds * 1000).toLocaleTimeString()}
+            <Text style={{ color: theme.colors.onSurface }}>
+              {item.message}
+            </Text>
+            <Text
+              style={[
+                styles.timestamp,
+                { color: theme.colors.onSurfaceVariant },
+              ]}
+            >
+              {item.timestamp?.seconds
+                ? new Date(item.timestamp.seconds * 1000).toLocaleTimeString()
+                : ""}
             </Text>
           </Card.Content>
         </Card>
@@ -178,63 +218,142 @@ export default function DirectlyNotifyChatScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <Appbar.Header>
-        <Appbar.Content
-          title={parentData?.plateNumber ?? "Vehicle Chat"}
-          subtitle="Direct Message"
+    <Provider>
+      <KeyboardAvoidingView
+        style={{ flex: 1, backgroundColor: theme.colors.background }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <Appbar.Header style={{ backgroundColor: theme.colors.surface }}>
+          <Appbar.Content
+            title={parentData?.plateNumber ?? "Vehicle Chat"}
+            subtitle="Direct Message"
+            titleStyle={{ color: theme.colors.primary }}
+            subtitleStyle={{ color: theme.colors.onSurfaceVariant }}
+          />
+          {/* Delete button in the header */}
+          <Appbar.Action
+            icon="delete-outline"
+            color={theme.colors.error}
+            onPress={() => setDeleteDialogVisible(true)}
+            accessibilityLabel="Delete conversation"
+          />
+        </Appbar.Header>
+
+        {parentData && (
+          <Card
+            style={[
+              styles.parentMessageCard,
+              { backgroundColor: theme.colors.surface },
+            ]}
+          >
+            <Card.Content>
+              <Text
+                style={[styles.parentTitle, { color: theme.colors.primary }]}
+              >
+                {parentData.plateNumber} - Notification
+              </Text>
+              <Text style={{ color: theme.colors.onSurface }}>
+                {parentData.message}
+              </Text>
+              <Text
+                style={[
+                  styles.timestamp,
+                  { color: theme.colors.onSurfaceVariant },
+                ]}
+              >
+                {parentData.timestamp?.seconds
+                  ? new Date(
+                      parentData.timestamp.seconds * 1000
+                    ).toLocaleString()
+                  : ""}
+              </Text>
+            </Card.Content>
+          </Card>
+        )}
+
+        <FlatList
+          ref={flatListRef}
+          data={replies}
+          keyExtractor={(item, index) => item.id ?? index.toString()}
+          renderItem={renderMessage}
+          contentContainerStyle={{ padding: 12 }}
+          onContentSizeChange={() =>
+            flatListRef.current?.scrollToEnd({ animated: true })
+          }
         />
-      </Appbar.Header>
 
-      {parentData && (
-        <Card style={styles.parentMessageCard}>
-          <Card.Content>
-            <Text style={styles.parentTitle}>
-              {parentData.plateNumber} - Notification
-            </Text>
-            <Text>{parentData.message}</Text>
-            <Text style={styles.timestamp}>
-              {parentData.timestamp?.seconds
-                ? new Date(parentData.timestamp.seconds * 1000).toLocaleString()
-                : ""}
-            </Text>
-          </Card.Content>
-        </Card>
-      )}
-
-      <FlatList
-        ref={flatListRef}
-        data={replies}
-        keyExtractor={(item, index) => item.id ?? index.toString()}
-        renderItem={renderMessage}
-        contentContainerStyle={{ padding: 12 }}
-        onContentSizeChange={() =>
-          flatListRef.current?.scrollToEnd({ animated: true })
-        }
-      />
-
-      <View style={styles.inputBar}>
-        <TextInput
-          value={message}
-          onChangeText={setMessage}
-          placeholder="Type a message..."
-          mode="outlined"
-          style={styles.input}
-        />
-        <Button
-          mode="contained"
-          onPress={handleSend}
-          style={styles.sendButton}
-          disabled={sending || !message.trim()}
-          loading={sending}
+        <View
+          style={[
+            styles.inputBar,
+            {
+              backgroundColor: theme.colors.surface,
+              borderColor: theme.colors.outlineVariant || "#ddd",
+            },
+          ]}
         >
-          Send
-        </Button>
-      </View>
-    </KeyboardAvoidingView>
+          <TextInput
+            value={message}
+            onChangeText={setMessage}
+            placeholder="Type a message..."
+            mode="outlined"
+            style={[styles.input, { backgroundColor: theme.colors.surface }]}
+            theme={{
+              colors: {
+                primary: theme.colors.primary,
+                text: theme.colors.onSurface,
+                placeholder: theme.colors.onSurfaceVariant,
+                background: theme.colors.surface,
+              },
+            }}
+            textColor={theme.colors.onSurface}
+            placeholderTextColor={theme.colors.onSurfaceVariant}
+          />
+          <Button
+            mode="contained"
+            onPress={handleSend}
+            style={[
+              styles.sendButton,
+              { backgroundColor: theme.colors.primary },
+            ]}
+            disabled={sending || !message.trim()}
+            loading={sending}
+            labelStyle={{ color: theme.colors.onPrimary }}
+          >
+            Send
+          </Button>
+        </View>
+
+        {/* Delete confirmation dialog */}
+        <Portal>
+          <Dialog
+            visible={deleteDialogVisible}
+            onDismiss={() => setDeleteDialogVisible(false)}
+            style={{ backgroundColor: theme.colors.surface }}
+          >
+            <Dialog.Title style={{ color: theme.colors.primary }}>
+              Delete Conversation
+            </Dialog.Title>
+            <Dialog.Content>
+              <Text style={{ color: theme.colors.onSurface }}>
+                Are you sure you want to delete this message and its replies?
+              </Text>
+            </Dialog.Content>
+            <Dialog.Actions>
+              <Button onPress={() => setDeleteDialogVisible(false)}>
+                Cancel
+              </Button>
+              <Button
+                onPress={handleDeleteMessage}
+                textColor={theme.colors.error}
+                loading={loadingDelete}
+              >
+                Delete
+              </Button>
+            </Dialog.Actions>
+          </Dialog>
+        </Portal>
+      </KeyboardAvoidingView>
+    </Provider>
   );
 }
 
@@ -244,8 +363,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 8,
     borderTopWidth: 1,
-    borderColor: "#ddd",
-    backgroundColor: "#fff",
   },
   input: {
     flex: 1,
@@ -253,6 +370,7 @@ const styles = StyleSheet.create({
   },
   sendButton: {
     paddingVertical: 6,
+    borderRadius: 8,
   },
   messageContainer: {
     flexDirection: "row",
@@ -268,19 +386,21 @@ const styles = StyleSheet.create({
     maxWidth: "80%",
     borderRadius: 12,
     padding: 6,
+    elevation: 1,
   },
   timestamp: {
     fontSize: 10,
-    color: "#888",
     marginTop: 4,
   },
   parentMessageCard: {
     margin: 12,
     borderRadius: 12,
     overflow: "hidden",
+    elevation: 1,
   },
   parentTitle: {
     fontWeight: "bold",
     marginBottom: 4,
+    fontSize: 15,
   },
 });

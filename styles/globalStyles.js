@@ -1,67 +1,43 @@
 import { StyleSheet } from "react-native";
 
 export const globalStyles = StyleSheet.create({
+  generalPadding: { paddingHorizontal: 10, paddingTop: 50 },
   container: {
     flex: 1,
-    backgroundColor: "#ffffff", // Light background
     alignItems: "center",
   },
   list: {
     flex: 1,
-    backgroundColor: "#f9f9f9", // Light gray background for lists
   },
   card: {
-    backgroundColor: "#ffffff", // White card background
     borderRadius: 12,
     padding: 16,
-    marginVertical: 8,
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    marginBottom: 12,
+    // shadowOffset: { width: 0, height: 2 },
+    // shadowOpacity: 0.08,
+    // shadowRadius: 6,
+    // elevation: 4,
+    borderWidth: 1,
   },
-  addButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#007aff", // Blue button
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 25,
-    position: "absolute",
-    bottom: 30,
-    right: 30,
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 6,
+  cardHeaderTitle: {
+    fontWeight: "bold",
+    fontSize: 20,
   },
-  addText: {
-    color: "#ffffff", // White text for the button
-    marginLeft: 8,
-    fontWeight: "600",
-  },
-  newStyle: {
-    fontSize: 14,
-    color: "#ff0000", // Red text
-    marginTop: 10,
+  cardHeaderSubtitle: {
+    fontSize: 13,
   },
   label: {
     marginTop: 8,
     fontWeight: "bold",
-    color: "#333",
   },
   value: {
     marginBottom: 12,
-    color: "#333",
   },
   input: {
-    backgroundColor: "#333",
     padding: 10,
     borderRadius: 8,
     marginBottom: 12,
   },
-
-  // Empty state styles
   emptyState: {
     alignItems: "center",
     justifyContent: "center",
@@ -70,25 +46,91 @@ export const globalStyles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 20,
-    color: "#555", // Darker gray for empty state title
     marginTop: 12,
     fontWeight: "600",
   },
   emptyMessage: {
     fontSize: 14,
-    color: "#777", // Medium gray for empty state message
     textAlign: "center",
     marginTop: 4,
   },
-
-  // Vehicle name and details
   vehicleName: {
     fontSize: 16,
-    color: "#333", // Darker text for vehicle name
     fontWeight: "bold",
   },
   textDetail: {
     marginTop: 4,
-    color: "#666", // Medium gray for details
+  },
+  addButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 25,
+    position: "absolute",
+    bottom: 30,
+    right: 30,
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 6,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  addText: {
+    marginLeft: 8,
+    fontWeight: "600",
+  },
+});
+
+export const getThemedStyles = (theme) => ({
+  containerBg: {
+    backgroundColor: theme.colors.background,
+  },
+  card: {
+    backgroundColor:
+      theme.colors.elevation?.level2 || theme.colors.secondaryContainer,
+    shadowColor: theme.colors.shadow || "#000",
+    borderColor: theme.colors.outlineVariant || "#e0e0e0",
+  },
+  cardHeaderTitle: {
+    color: theme.colors.onSurface,
+  },
+  cardHeaderSubtitle: {
+    color: theme.colors.onSurfaceVariant,
+  },
+
+  label: {
+    color: theme.colors.onSurface,
+  },
+  value: {
+    color: theme.colors.onSurfaceVariant || theme.colors.onSurface,
+  },
+  input: {
+    backgroundColor: theme.colors.surfaceVariant || "#eee",
+    color: theme.colors.onSurface,
+    labelColor: theme.colors.onSurfaceVariant || theme.colors.onSurface,
+  },
+  emptyTitle: {
+    color: theme.colors.onSurface,
+  },
+  emptyMessage: {
+    color: theme.colors.outline,
+  },
+  vehicleName: {
+    color: theme.colors.onSurface,
+  },
+  textDetail: {
+    color: theme.colors.onSurfaceVariant || theme.colors.onSurface,
+  },
+  addButton: {
+    backgroundColor: theme.colors.primary,
+    shadowColor: theme.colors.shadow || "#000",
+  },
+  addText: {
+    color: theme.colors.onPrimary,
+  },
+  newStyle: {
+    fontSize: 14,
+    color: theme.colors.error,
+    marginTop: 10,
   },
 });
