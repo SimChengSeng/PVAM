@@ -12,6 +12,7 @@ import Mirco from "../../../assets/svg/Car-Icon-Mirco";
 import MPV from "../../../assets/svg/Car-Icon-MPV";
 import Pickup from "../../../assets/svg/Car-Icon-Pickup";
 import Supercar from "../../../assets/svg/Car-Icon-Supercar";
+import GT from "../../../assets/svg/Car-Icon-GT";
 
 // Motor icons
 import MotorSport from "../../../assets/svg/Motor-Icon_Sport";
@@ -38,6 +39,7 @@ const categoryIcons = {
   mpv: MPV,
   pickup: Pickup,
   supercar: Supercar,
+  gt: GT,
   // Motorcycles
   sport: MotorSport,
   chopper: MotorChopper,
