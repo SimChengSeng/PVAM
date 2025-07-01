@@ -22,6 +22,7 @@ import {
   HelperText,
   useTheme,
   Card,
+  Snackbar,
 } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import { globalStyles, getThemedStyles } from "../../styles/globalStyles";
@@ -36,6 +37,7 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showSuccess, setShowSuccess] = useState(false);
   const customUserId = Date.now().toString();
 
   const handleRegister = () => {
@@ -66,7 +68,10 @@ export default function RegisterScreen() {
             updatedAt: serverTimestamp(),
           });
           await sendEmailVerification(user);
-          router.replace("/(auth)/LoginScreen");
+          setShowSuccess(true);
+          setTimeout(() => {
+            router.replace("/(auth)/LoginScreen");
+          }, 2000);
         } catch (err) {
           setError("Something went wrong");
         } finally {
@@ -192,6 +197,15 @@ export default function RegisterScreen() {
         >
           Already have an account? Sign In
         </Button>
+
+        <Snackbar
+          visible={showSuccess}
+          onDismiss={() => setShowSuccess(false)}
+          duration={2000}
+          style={{ backgroundColor: colors.primary, marginTop: 20 }}
+        >
+          Successfully created!
+        </Snackbar>
       </Card>
     </KeyboardAvoidingView>
   );
