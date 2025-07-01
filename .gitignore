@@ -1,38 +1,69 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+# Learn more: https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
 
-# dependencies
+# Dependencies
 node_modules/
 
-# Expo
+# Expo / EAS
 .expo/
+.expo-shared/
 dist/
+build/
 web-build/
+*.turtle/
+*.tar.gz
+*.zip
+*.apk
+*.aab
 expo-env.d.ts
 
-# Native
-*.orig.*
+# Firebase (Sensitive files)
+GoogleService-Info.plist
+firebase-adminsdk.json
+serviceAccountKey.json
+fcm-service-account.json
+
+
+# Environment Variables / Local Config
+.env
+.env.*
+.env*.local
+
+# Metro / Cache
+.cache/
+metro-cache/
+tmp/
+*.tmp
+.metro-health-check*
+
+# Native Builds (iOS / Android)
+ios/build/
+android/app/build/
+android/.gradle/
+android/.idea/
+*.keystore
 *.jks
 *.p8
 *.p12
 *.key
 *.mobileprovision
 
-# Metro
-.metro-health-check*
-
-# debug
+# Debug Logs
 npm-debug.*
 yarn-debug.*
 yarn-error.*
+*.log
 
-# macOS
+# IDE / OS Specific
 .DS_Store
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.orig.*
 *.pem
 
-# local env files
-.env*.local
-
-# typescript
+# TypeScript
 *.tsbuildinfo
 
+# Misc
 app-example
