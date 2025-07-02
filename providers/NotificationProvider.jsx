@@ -48,16 +48,16 @@ export default function NotificationProvider({ children }) {
     };
   }, []);
 
-  // useEffect(() => {
-  //   const unsubscribe = auth.onAuthStateChanged((user) => {
-  //     if (user && expoPushToken) {
-  //       saveUserPushToken(user);
-  //       rescheduleRemindersOnLogin(user.email);
-  //       rescheduleWeeklyRemindersOnLogin(user.uid);
-  //     }
-  //   });
-  //   return unsubscribe;
-  // }, [expoPushToken]);
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user && expoPushToken) {
+        saveUserPushToken(user);
+        rescheduleRemindersOnLogin(user.email);
+        rescheduleWeeklyRemindersOnLogin(user.uid);
+      }
+    });
+    return unsubscribe;
+  }, [expoPushToken]);
 
   const saveUserPushToken = async (user) => {
     if (!user?.uid || !expoPushToken) return;

@@ -51,6 +51,8 @@ const categoryIcons = {
   // Truck & Van
   truck: Truck,
   van: Van,
+  minivan: Van,
+  CommercialVan: Van,
 };
 
 // Map alternative category names to icon keys

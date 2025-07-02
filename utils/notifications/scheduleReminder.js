@@ -14,7 +14,7 @@ export const scheduleReminder = async (nextServiceDate, option, data = {}) => {
   const serviceDate = new Date(nextServiceDate);
   const reminderDate = new Date(serviceDate);
   reminderDate.setDate(reminderDate.getDate() - offsetDays);
-  reminderDate.setHours(11, 0, 0, 0); // Reminder at 11:00 AM
+  reminderDate.setHours(15, 0, 0, 0); // Reminder at 3:00 PM
 
   const now = new Date();
   if (reminderDate <= now) {
